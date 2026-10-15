@@ -1,0 +1,24 @@
+.dot {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  transition: background-color var(--motion);
+}
+
+.online {
+  background: var(--success);
+}
+
+.away {
+  background: var(--warning);
+}
+
+.dnd {
+  background: var(--red);
+}
+
+.offline {
+  background: var(--ink-muted);
+}

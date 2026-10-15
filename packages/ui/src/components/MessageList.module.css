@@ -1,0 +1,45 @@
+.scroller {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  padding: 0 var(--space-4) var(--space-4);
+}
+
+.older {
+  align-self: center;
+  margin: var(--space-3) 0;
+  font-size: 13px;
+  padding: var(--space-1) var(--space-3);
+}
+
+.day {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+/* Sticky so the reader always knows which day they are in. */
+.separator {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  align-self: center;
+  margin: var(--space-3) 0 0;
+  padding: 2px var(--space-3);
+  border-radius: 999px;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  font-family: var(--font-text);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink-muted);
+}
+
+/* A run of messages from one sender: tight spacing inside, room between runs. */
+.run {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}

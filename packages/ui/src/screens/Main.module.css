@@ -1,0 +1,25 @@
+.main {
+  height: 100%;
+  display: flex;
+  overflow: hidden;
+}
+
+.empty {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-4);
+  padding: var(--space-8);
+  text-align: center;
+}
+
+.emptyText {
+  margin: 0;
+  max-width: 320px;
+  font-family: var(--font-heading);
+  font-variation-settings: 'SOFT' 100;
+  font-size: 18px;
+  color: var(--ink-muted);
+}

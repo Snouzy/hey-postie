@@ -1,0 +1,107 @@
+.bubble {
+  position: relative;
+  max-width: min(70%, 560px);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-bubble);
+  box-shadow: var(--shadow-card);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+/* Incoming: cream paper. Outgoing: the uniform navy. */
+.in {
+  align-self: flex-start;
+  background: var(--paper-raised);
+  color: var(--ink);
+  border-bottom-left-radius: var(--radius-sm);
+}
+
+.out {
+  align-self: flex-end;
+  background: var(--navy);
+  color: var(--navy-contrast);
+  border-bottom-right-radius: var(--radius-sm);
+}
+
+.out a {
+  color: inherit;
+}
+
+.body,
+.sealed {
+  margin: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.sealed {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-family: var(--font-heading);
+  font-variation-settings: 'SOFT' 100;
+  font-style: italic;
+  color: var(--ink-muted);
+}
+
+/* The wax seal. */
+.seal {
+  color: var(--red);
+  flex-shrink: 0;
+}
+
+.meta {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-2);
+  font-size: 11px;
+  opacity: 0;
+  transition: opacity var(--motion-fast);
+}
+
+.last .meta,
+.bubble:hover .meta,
+.bubble:focus-within .meta,
+.bubble[data-status='failed'] .meta,
+.bubble[data-status='pending'] .meta {
+  opacity: 1;
+}
+
+/* The stamp: delivery status at the bottom right of an outgoing bubble, in the bubble's own
+   contrast color so it reads on navy in both themes. */
+.stamp {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  color: var(--navy-contrast);
+}
+
+/* Failed and read need to stand out: a small chip on paper, with ink or mailbox red. */
+.bubble[data-status='read'] .stamp,
+.bubble[data-status='failed'] .stamp {
+  padding: 0 var(--space-1);
+  border-radius: var(--radius-sm);
+  background: var(--paper-raised);
+  color: var(--ink);
+}
+
+.bubble[data-status='failed'] .stamp {
+  color: var(--red);
+}
+
+.stampLabel {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+}
+
+.retry {
+  align-self: flex-end;
+  padding: 2px var(--space-3);
+  font-size: 13px;
+  background: var(--paper-raised);
+}

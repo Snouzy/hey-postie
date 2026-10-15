@@ -25,6 +25,10 @@ export function useCore(): Core {
   return useContextValue().core;
 }
 
+export function useLocale(): Locale {
+  return useContextValue().locale;
+}
+
 /** Translates a key in the current locale. */
 export function useText(): (key: MessageKey) => string {
   const { locale } = useContextValue();

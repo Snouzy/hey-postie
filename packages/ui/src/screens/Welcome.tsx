@@ -2,8 +2,12 @@ import { useText } from '../core/CoreProvider';
 import { Postie } from '../illustrations/Postie';
 import styles from './Welcome.module.css';
 
-/** The first screen: Postie, the name, and the two doors in. Behavior comes with milestone 1. */
-export function Welcome() {
+interface WelcomeProps {
+  onSignIn: () => void;
+}
+
+/** The first screen: Postie, the name, and the two doors in. Account creation comes with milestone 5. */
+export function Welcome({ onSignIn }: WelcomeProps) {
   const text = useText();
   return (
     <main className={styles.welcome}>
@@ -11,10 +15,15 @@ export function Welcome() {
       <h1 className={styles.title}>{text('welcome.title')}</h1>
       <p className={styles.tagline}>{text('welcome.tagline')}</p>
       <div className={styles.actions}>
-        <button type="button" className={styles.primary}>
+        <button type="button" className={styles.primary} onClick={onSignIn}>
           {text('welcome.signIn')}
         </button>
-        <button type="button" className={styles.secondary}>
+        <button
+          type="button"
+          className={styles.secondary}
+          disabled
+          title={text('welcome.createAccountSoon')}
+        >
           {text('welcome.createAccount')}
         </button>
       </div>
