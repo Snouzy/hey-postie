@@ -11,23 +11,26 @@ through `useCore()` (services) and `core.events`; it never imports Converse, Tau
 
 `App.tsx` holds the whole routing in one component, `Screens`:
 
-| Account state (`useAccount()`) | User's own click | Screen |
-|---|---|---|
-| `null`, `offline`, `error` | none yet, or "Back" | `Welcome` |
-| `null`, `offline`, `error`, `connecting` | "Sign in" | `SignIn` |
-| `online` | any | `Main` |
+| Has been online in this session | Account state (`useAccount()`) | User's own click | Screen |
+|---|---|---|---|
+| no | `null`, `offline`, `error` | none yet, or "Back" | `Welcome` |
+| no | any | "Sign in" | `SignIn` |
+| yes | any (`connecting`, `offline`, `error` show a banner) | any | `Main` |
 
-Two inputs, so two pieces of state: the account from the core, and a `door` (`'welcome' |
-'signIn'`) that the user's clicks move. `Main` calls `onSignedOut` after `accounts.signOut()`
-so the door goes back to `welcome`. Errors while connecting keep the user on `SignIn`, where Postie
-`oops` says the sentence for the error code (`i18n/errors.ts` maps a `DomainError` code to
-`error.<Code>`, falling back to `error.Unknown`).
+Three inputs: the account from the core, a `door` (`'welcome' | 'signIn'`) that the user's clicks
+move, and `inside`, set the first time the account is `online`. Once inside, `Main` stays mounted
+through reconnections and drops: the sidebar shows "I am back on the bike" while `connecting`,
+and an offline banner with "Sign in again" on `offline` / `error`. Only a sign out, from `Main`
+(`onLeave('welcome' | 'signIn')`), leaves it. Errors while first connecting keep the user on
+`SignIn`, where Postie `oops` says the sentence for the error code (`i18n/errors.ts` is a
+`Record<ErrorCode, MessageKey>`, so a new code in the contracts fails the build until it has its
+sentence).
 
 | Screen | File | What it does |
 |---|---|---|
 | Welcome | `screens/Welcome.tsx` | Postie `happy`, "Sign in", "Create an account" (not wired yet). |
 | Sign in | `screens/SignIn.tsx` | JID, password, "Remember me". On blur of a valid-looking JID, asks `accounts.rememberedPassword` and prefills. While `connecting`: Postie `delivering`, form disabled. |
-| Main | `screens/Main.tsx` | Three columns: `Sidebar`, `Conversation` (or the empty state with Postie `asleep`), optional `Details`. Owns the selected chat and the open dialog. |
+| Main | `screens/Main.tsx` | Three columns: `Sidebar`, `Conversation` (keyed by chat id, so drafts and in-flight loads stay with their chat; or the empty state with Postie `asleep`), optional `Details`. Owns the selected chat, the open dialog and the error sentence of background actions. Subscribes to `chat.requested` (notification click, `xmpp:` link) and opens the chat if it is not listed yet. |
 
 ## How the UI subscribes to the core
 
@@ -46,20 +49,27 @@ unsubscribe function:
 
 What `Main` tells the core: `notifications.setOpenChat(id)` and `chats.markRead(id)` when the
 selection changes; `notifications.setWindowFocused` on window `focus` / `blur`. `Conversation`
-marks a message read as it arrives in the open chat.
+marks a message read as it arrives in the open chat only while `document.hasFocus()`, and again
+when the window regains focus. Messages are merged by id (`mergeById`), so one that arrives while
+the history is loading is kept. `useChats` numbers its requests so an older `list()` answer never
+overwrites a newer one.
 
 ## Keyboard
 
 Cmd/Ctrl+K focuses the search (listener in `Main`). Esc closes the open dialog (listener in
-`Dialog`) or, when no dialog is open, the details pane (listener in `Main`). Arrow keys move
+`Dialog`, which also traps Tab inside the card and gives the focus back to the opener) or, when no
+dialog is open, the details pane (listener in `Main`). Enter in the composer sends, except while an
+IME is composing (`isComposing`). Arrow keys move
 between rows of the chat list (`ChatList.moveWithArrows`). Every control is a `<button>`,
 `<input>` or `<a>`, so Tab reaches it; `:focus-visible` is styled once in `tokens.css`.
 
 ## Links in messages
 
-`Linkify` turns `http(s)://` and `xmpp:` URLs into anchors with `rel="noreferrer"`; the click is
-prevented and handed to `onOpenLink`, which `App` receives as a prop (default: `window.open`).
-The desktop app will route it to the system browser. Nothing else in a body becomes clickable,
+`Linkify` turns `http(s)://` and `xmpp:` URLs into anchors with `rel="noreferrer"` (trailing
+punctuation is left out of the link); the click is prevented. A web link goes to `onOpenLink`,
+which `App` receives as a prop (default: `window.open`); the desktop app will route it to the
+system browser. An `xmpp:` link stays in the app: `Linkify` emits `chat.requested` with the bare
+JID and `Main` opens that chat. Nothing else in a body becomes clickable,
 and bodies are always rendered as text (no HTML).
 
 ## Adding a screen

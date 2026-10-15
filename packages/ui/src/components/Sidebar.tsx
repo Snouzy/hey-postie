@@ -2,6 +2,7 @@ import type { Account, Chat, Contact } from '@hey-postie/core';
 import { LogOut, Plus, Search, UserPlus } from 'lucide-react';
 import { type RefObject, useState } from 'react';
 import { useText } from '../core/CoreProvider';
+import type { MessageKey } from '../i18n';
 import { Button } from './Button';
 import { ChatList } from './ChatList';
 import { ContactList } from './ContactList';
@@ -16,14 +17,17 @@ interface SidebarProps {
   contacts: Contact[];
   selectedChatId: string | null;
   searchRef: RefObject<HTMLInputElement | null>;
+  /** A failed background action (sign out, opening a chat), in Postie's words. */
+  error: MessageKey | null;
   onSelectChat: (chat: Chat) => void;
   onSelectContact: (contact: Contact) => void;
   onNewChat: () => void;
   onAddContact: () => void;
   onSignOut: () => void;
+  onSignInAgain: () => void;
 }
 
-/** The left column: who is signed in, a search, the chats or the address book. */
+/** The left column: who is signed in and how the line is, a search, the chats or the address book. */
 export function Sidebar(props: SidebarProps) {
   const text = useText();
   const [tab, setTab] = useState<SidebarTab>('chats');
@@ -35,25 +39,42 @@ export function Sidebar(props: SidebarProps) {
   const contacts = needle
     ? props.contacts.filter((contact) => contact.name.toLowerCase().includes(needle))
     : props.contacts;
+  const online = props.account.state === 'online';
 
   return (
     <nav className={styles.sidebar}>
       <header className={styles.account}>
-        <PresenceDot presence="online" />
+        <PresenceDot presence={online ? 'online' : 'offline'} />
         <span className={styles.accountName}>{props.account.displayName}</span>
         <Button variant="ghost" onClick={props.onSignOut} aria-label={text('main.signOut')}>
           <LogOut size={18} aria-hidden />
         </Button>
       </header>
 
-      <div className={styles.tabs} role="tablist">
+      {props.account.state === 'connecting' && (
+        <p className={styles.banner} role="status">
+          {text('banner.reconnecting')}
+        </p>
+      )}
+      {(props.account.state === 'offline' || props.account.state === 'error') && (
+        <div className={styles.banner} data-tone="error" role="alert">
+          {text('banner.offline')}
+          <Button onClick={props.onSignInAgain}>{text('banner.signInAgain')}</Button>
+        </div>
+      )}
+      {props.error && (
+        <p className={styles.banner} data-tone="error" role="alert">
+          {text(props.error)}
+        </p>
+      )}
+
+      <div className={styles.tabs}>
         {(['chats', 'contacts'] as const).map((name) => (
           <button
             key={name}
             type="button"
-            role="tab"
             className={styles.tab}
-            aria-selected={tab === name}
+            aria-pressed={tab === name}
             onClick={() => setTab(name)}
           >
             {text(`main.tabs.${name}`)}

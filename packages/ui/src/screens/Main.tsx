@@ -8,19 +8,23 @@ import { Sidebar } from '../components/Sidebar';
 import { useCore, useText } from '../core/CoreProvider';
 import { useChats } from '../core/useChats';
 import { useContacts } from '../core/useContacts';
+import { useCoreEvent } from '../core/useCoreEvent';
+import type { MessageKey } from '../i18n';
+import { errorKey } from '../i18n/errors';
 import { Postie } from '../illustrations/Postie';
 import styles from './Main.module.css';
 
 interface MainProps {
   account: Account;
   onOpenLink: (url: string) => void;
-  onSignedOut: () => void;
+  /** After sign out: back to the welcome screen, or straight to the sign-in form. */
+  onLeave: (door: 'welcome' | 'signIn') => void;
 }
 
 type OpenDialog = 'newChat' | 'addContact' | null;
 
 /** The three columns. Owns the selection and tells the notifications service what is on screen. */
-export function Main({ account, onOpenLink, onSignedOut }: MainProps) {
+export function Main({ account, onOpenLink, onLeave }: MainProps) {
   const core = useCore();
   const text = useText();
   const { chats, refresh } = useChats();
@@ -28,6 +32,7 @@ export function Main({ account, onOpenLink, onSignedOut }: MainProps) {
   const [selected, setSelected] = useState<Chat | null>(null);
   const [dialog, setDialog] = useState<OpenDialog>(null);
   const [detailsOpen, setDetailsOpen] = useState(false);
+  const [error, setError] = useState<MessageKey | null>(null);
   const searchRef = useRef<HTMLInputElement>(null);
 
   // The list is the fresh source once the chat is in it (title, unread count).
@@ -37,7 +42,7 @@ export function Main({ account, onOpenLink, onSignedOut }: MainProps) {
 
   useEffect(() => {
     core.notifications.setOpenChat(chatId);
-    if (chatId) void core.chats.markRead(chatId);
+    if (chatId) core.chats.markRead(chatId).catch(() => {});
   }, [core, chatId]);
 
   useEffect(() => {
@@ -65,16 +70,32 @@ export function Main({ account, onOpenLink, onSignedOut }: MainProps) {
     return () => window.removeEventListener('keydown', onKeyDown);
   }, [dialog]);
 
+  // A notification click or an `xmpp:` link asks for a chat, by id (the bare JID for a direct chat).
+  useCoreEvent('chat.requested', ({ chatId: requested }) => {
+    const known = chats.find((c) => c.id === requested);
+    if (known) setSelected(known);
+    else void openWith(requested);
+  });
+
   async function openWith(jid: string) {
-    const opened = await core.chats.open(jid);
-    await refresh();
-    setSelected(opened);
-    setDialog(null);
+    try {
+      const opened = await core.chats.open(jid);
+      await refresh();
+      setSelected(opened);
+      setDialog(null);
+      setError(null);
+    } catch (caught) {
+      setError(errorKey(caught));
+    }
   }
 
-  async function signOut() {
-    await core.accounts.signOut();
-    onSignedOut();
+  async function leave(door: 'welcome' | 'signIn') {
+    try {
+      await core.accounts.signOut();
+      onLeave(door);
+    } catch (caught) {
+      setError(errorKey(caught));
+    }
   }
 
   return (
@@ -83,16 +104,20 @@ export function Main({ account, onOpenLink, onSignedOut }: MainProps) {
         account={account}
         chats={chats}
         contacts={contacts}
-        selectedChatId={chat?.id ?? null}
+        selectedChatId={chatId}
         searchRef={searchRef}
+        error={dialog ? null : error}
         onSelectChat={setSelected}
         onSelectContact={(c: Contact) => void openWith(c.jid)}
         onNewChat={() => setDialog('newChat')}
         onAddContact={() => setDialog('addContact')}
-        onSignOut={() => void signOut()}
+        onSignOut={() => void leave('welcome')}
+        onSignInAgain={() => void leave('signIn')}
       />
       {chat ? (
         <Conversation
+          // A new key per chat: the draft, the loaded messages and in-flight work stay with their chat.
+          key={chat.id}
           chat={chat}
           contact={contact}
           detailsOpen={detailsOpen}
@@ -108,8 +133,12 @@ export function Main({ account, onOpenLink, onSignedOut }: MainProps) {
       {chat && detailsOpen && <Details chat={chat} onClose={() => setDetailsOpen(false)} />}
       {dialog === 'newChat' && (
         <NewChat
-          onOpened={(opened) => void openWith(opened.peerJid)}
-          onClose={() => setDialog(null)}
+          error={error}
+          onOpen={(jid) => void openWith(jid)}
+          onClose={() => {
+            setDialog(null);
+            setError(null);
+          }}
         />
       )}
       {dialog === 'addContact' && <AddContact onClose={() => setDialog(null)} />}

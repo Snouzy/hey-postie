@@ -6,7 +6,7 @@ interface WelcomeProps {
   onSignIn: () => void;
 }
 
-/** The first screen: Postie, the name, and the two doors in. Account creation comes later. */
+/** The first screen: Postie, the name, and the two doors in. Account creation comes with milestone 5. */
 export function Welcome({ onSignIn }: WelcomeProps) {
   const text = useText();
   return (
@@ -18,7 +18,12 @@ export function Welcome({ onSignIn }: WelcomeProps) {
         <button type="button" className={styles.primary} onClick={onSignIn}>
           {text('welcome.signIn')}
         </button>
-        <button type="button" className={styles.secondary}>
+        <button
+          type="button"
+          className={styles.secondary}
+          disabled
+          title={text('welcome.createAccountSoon')}
+        >
           {text('welcome.createAccount')}
         </button>
       </div>

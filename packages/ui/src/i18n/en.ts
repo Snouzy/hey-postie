@@ -4,6 +4,7 @@ export const en = {
   'welcome.tagline': 'Your letters, sealed and delivered.',
   'welcome.signIn': 'Sign in',
   'welcome.createAccount': 'Create an account',
+  'welcome.createAccountSoon': 'Account creation comes in a later version.',
   'postie.hello': 'Hello! I carry your messages, sealed, from door to door.',
   'postie.alt.happy': 'Postie, smiling, satchel on his shoulder',
   'postie.alt.delivering': 'Postie on his bike, a letter in hand',
@@ -26,6 +27,10 @@ export const en = {
   'error.CertificateInvalid': 'This server shows a certificate I cannot trust. I stopped here.',
   'error.KeychainUnavailable': 'I cannot reach the keychain, so I will not keep this password.',
   'error.EmptyMessage': 'There is nothing to send yet.',
+  'error.RegistrationUnsupported': 'This server does not let me open new accounts.',
+  'error.AccountConflict': 'Somebody already has this name at this address.',
+  'error.FileTooLarge': 'This parcel is too heavy for the server.',
+  'error.EncryptionUnavailable': 'I cannot seal this letter right now.',
   'error.Unknown': 'Something went wrong on my round. Let us try again.',
 
   'main.tabs.chats': 'Chats',
@@ -37,6 +42,9 @@ export const en = {
   'main.empty': 'No letter open. Pick a chat, or start a new one.',
   'main.details': 'Details',
   'main.closeDetails': 'Close details',
+  'banner.reconnecting': 'I am back on the bike to reach the server…',
+  'banner.offline': 'I lost the line to the server.',
+  'banner.signInAgain': 'Sign in again',
 
   'chatList.empty': 'No chat yet. Press + to write a first letter.',
   'chatList.unread': 'unread',
@@ -60,6 +68,9 @@ export const en = {
 
   'details.jid': 'Address',
   'details.removeContact': 'Remove contact',
+  'details.confirmRemove': 'Remove this contact from the address book?',
+  'details.confirm': 'Remove',
+  'conversation.log': 'Messages',
 
   'message.undecryptable': 'This letter was sealed for another device. I cannot open it here.',
   'message.loadOlder': 'Load older',

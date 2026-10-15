@@ -25,16 +25,29 @@ export function App({ core, locale, onOpenLink }: AppProps) {
 type Door = 'welcome' | 'signIn';
 
 /**
- * The state machine: the account state decides between Welcome and Main; the user's own clicks
- * ("Sign in", "Back") decide between Welcome and SignIn while nobody is online.
+ * The state machine. Before the first successful sign-in, the account state and the user's own
+ * clicks ("Sign in", "Back") pick between Welcome and SignIn. Once the account has been online,
+ * Main stays mounted through reconnections and drops (it shows a banner); only a sign out, from
+ * Main itself, leaves it.
  */
 function Screens({ onOpenLink }: { onOpenLink: (url: string) => void }) {
   const account = useAccount();
   const [door, setDoor] = useState<Door>('welcome');
+  const [inside, setInside] = useState(false);
 
-  if (account?.state === 'online') {
+  // Derived during render rather than in an effect, so Main appears on the same frame.
+  if (account?.state === 'online' && !inside) setInside(true);
+
+  if (inside && account) {
     return (
-      <Main account={account} onOpenLink={onOpenLink} onSignedOut={() => setDoor('welcome')} />
+      <Main
+        account={account}
+        onOpenLink={onOpenLink}
+        onLeave={(next) => {
+          setInside(false);
+          setDoor(next);
+        }}
+      />
     );
   }
   if (door === 'signIn') return <SignIn onBack={() => setDoor('welcome')} />;

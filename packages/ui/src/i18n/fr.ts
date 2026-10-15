@@ -6,6 +6,7 @@ export const fr: Record<MessageKey, string> = {
   'welcome.tagline': 'Vos lettres, scellées et livrées.',
   'welcome.signIn': 'Se connecter',
   'welcome.createAccount': 'Créer un compte',
+  'welcome.createAccountSoon': 'La création de compte arrive dans une version suivante.',
   'postie.hello': 'Bonjour ! Je porte vos messages, scellés, de porte à porte.',
   'postie.alt.happy': 'Postie, souriant, sa sacoche à l’épaule',
   'postie.alt.delivering': 'Postie sur son vélo, une lettre à la main',
@@ -30,6 +31,10 @@ export const fr: Record<MessageKey, string> = {
   'error.KeychainUnavailable':
     'Je n’arrive pas à ouvrir le trousseau, je ne garderai donc pas ce mot de passe.',
   'error.EmptyMessage': 'Il n’y a encore rien à envoyer.',
+  'error.RegistrationUnsupported': 'Ce serveur ne me laisse pas ouvrir de nouveaux comptes.',
+  'error.AccountConflict': 'Quelqu’un porte déjà ce nom à cette adresse.',
+  'error.FileTooLarge': 'Ce colis est trop lourd pour le serveur.',
+  'error.EncryptionUnavailable': 'Je ne peux pas sceller cette lettre pour le moment.',
   'error.Unknown': 'Quelque chose a cloché pendant ma tournée. Réessayons.',
 
   'main.tabs.chats': 'Discussions',
@@ -41,6 +46,9 @@ export const fr: Record<MessageKey, string> = {
   'main.empty': 'Aucune lettre ouverte. Choisissez une discussion, ou commencez-en une.',
   'main.details': 'Détails',
   'main.closeDetails': 'Fermer les détails',
+  'banner.reconnecting': 'Je reprends le vélo pour rejoindre le serveur…',
+  'banner.offline': 'J’ai perdu la ligne avec le serveur.',
+  'banner.signInAgain': 'Se reconnecter',
 
   'chatList.empty': 'Pas encore de discussion. Appuyez sur + pour écrire une première lettre.',
   'chatList.unread': 'non lus',
@@ -64,6 +72,9 @@ export const fr: Record<MessageKey, string> = {
 
   'details.jid': 'Adresse',
   'details.removeContact': 'Retirer le contact',
+  'details.confirmRemove': 'Retirer ce contact du carnet d’adresses ?',
+  'details.confirm': 'Retirer',
+  'conversation.log': 'Messages',
 
   'message.undecryptable':
     'Cette lettre a été scellée pour un autre appareil. Je ne peux pas l’ouvrir ici.',
