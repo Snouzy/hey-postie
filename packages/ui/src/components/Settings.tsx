@@ -13,7 +13,7 @@ interface SettingsProps {
   onOpenLink: (url: string) => void;
 }
 
-export const REPOSITORY_URL = 'https://github.com/snouzylabs/hey-postie';
+export const REPOSITORY_URL = 'https://github.com/Snouzy/hey-postie';
 
 /** Each language is named in itself, so a reader lost in the wrong one still finds their own. */
 const LANGUAGE_NAMES: Record<Exclude<LocaleChoice, 'system'>, string> = {
