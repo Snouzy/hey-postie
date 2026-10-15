@@ -14,7 +14,7 @@ interface Mock {
   api: {
     connection: { get(): MockConnection | undefined };
     listen: { once(name: string, handler: (...args: never[]) => void): void };
-    user: { logout(): Promise<void> };
+    user: { logout(): Promise<void>; settings: { clear(): Promise<unknown> } };
   };
   _converse: {
     state: { chatboxes: { get(jid: string): { get(key: string): unknown } | undefined } };
@@ -74,6 +74,10 @@ beforeAll(async () => {
   window.fetch = () => Promise.reject(new Error('no network in tests'));
   // `converse.initialize` drops every listener: initialize (a no-op sign-out) before hooking events.
   await repositories.xmpp.disconnect();
+  // Test-env only: `isTestEnv()` makes every disconnect clear the cache, and the logout cascade
+  // runs `clearUserSettings` concurrently, which races on its module variable (converse.md §12).
+  const clear = mock.api.user.settings.clear.bind(mock.api.user.settings);
+  mock.api.user.settings.clear = () => clear().catch(() => undefined);
 });
 
 async function connection(): Promise<MockConnection> {
@@ -118,6 +122,18 @@ function failNextConnectionWith(outcome: (connection: MockConnection) => void): 
   });
 }
 
+/**
+ * Simulates the relay closing the WebSocket before the stream opened. The mock transport is BOSH,
+ * so a stub stands in for Strophe's WebSocket `_onClose` before the repository wraps it.
+ */
+function closeNextSocketWith(code: number, reason: string): void {
+  mock.api.listen.once('connectionInitialized', () => {
+    const connection = mock.api.connection.get();
+    if (connection && !connection._proto._onClose) connection._proto._onClose = () => undefined;
+  });
+  failNextConnectionWith((connection) => connection._proto._onClose({ code, reason }));
+}
+
 async function connectAndLoadRoster(password = 'secret'): Promise<void> {
   const connecting = repositories.xmpp.connect({ jid: JID, password, websocketUrl: '' });
   await answerRoster();
@@ -139,14 +155,7 @@ describe('ConverseXmppRepository', () => {
   });
 
   it('rejects with CertificateInvalid when the relay closes the socket with that reason', async () => {
-    // The mock transport is BOSH: stand in for Strophe's WebSocket `_onClose` before it is wrapped.
-    failNextConnectionWith((connection) =>
-      connection._proto._onClose({ code: 1008, reason: 'CertificateInvalid' }),
-    );
-    mock.api.listen.once('connectionInitialized', () => {
-      const conn = mock.api.connection.get();
-      if (conn && !conn._proto._onClose) conn._proto._onClose = () => undefined;
-    });
+    closeNextSocketWith(1008, 'CertificateInvalid');
     const error = await repositories.xmpp
       .connect({ jid: JID, password: 'secret', websocketUrl: '' })
       .catch((e: unknown) => e);
@@ -154,7 +163,7 @@ describe('ConverseXmppRepository', () => {
   });
 
   it('rejects with ServerUnreachable on a clean close without reason, and on timeout', async () => {
-    failNextConnectionWith((connection) => connection._proto._onClose({ code: 1000, reason: '' }));
+    closeNextSocketWith(1000, '');
     const closed = await repositories.xmpp
       .connect({ jid: JID, password: 'secret', websocketUrl: '' })
       .catch((e: unknown) => e);

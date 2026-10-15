@@ -228,6 +228,11 @@ installed package and by `repositories.test.ts`, which drives the real headless 
   the already closed connection re-enters `onDisconnected` → `finishDisconnection` twice more. Those
   late passes destroy whatever connection exists at that moment, including a fresh login's.
   `connect()` and `disconnect()` wait until no connection has existed for three 10 ms ticks.
+- In the test hook, `isTestEnv()` makes `shouldClearCache` true, so every disconnect runs
+  `clearUserSettings` (`shared/settings/user/utils.js`); the cascade above runs it concurrently and
+  the second pass sets its module variable to `undefined` under the first (`TypeError: reading
+  'clear'`, an unhandled rejection that fails Vitest). Not reachable in production (trusted config,
+  `clear_cache_on_logout` false); the repository test wraps `api.user.settings.clear` to swallow it.
 - Opening a chat with a JID that is not in the roster awaits `api.blocklist.get()`
   (`shared/model-with-contact.js:59`): fine with a server, but the mock never answers that IQ.
 - Vite (rolldown) resolves the `import('./libomemo.esm.min.js')` at build time and emits
