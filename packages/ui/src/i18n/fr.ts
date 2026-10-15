@@ -73,6 +73,8 @@ export const fr: Record<MessageKey, string> = {
   'error.RoomBanned': 'Ce salon vous a fermé sa porte.',
   'error.NickTaken': 'Quelqu’un porte déjà ce pseudo dans ce salon.',
   'error.RegistrationRejected': 'Le serveur n’a pas accepté ces informations.',
+  'error.AccountCreatedSignInFailed':
+    'Votre compte existe désormais, mais je n’ai pas pu vous connecter. Essayez de vous connecter.',
   'error.DeviceNotFound': 'Je ne connais plus cet appareil.',
   'error.Unknown': 'Quelque chose a cloché pendant ma tournée. Réessayons.',
 

@@ -12,4 +12,5 @@ export {
 } from './fakes';
 export type { ConverseRepositories, EngineOptions } from './repositories/converse';
 export { createConverseRepositories } from './repositories/converse';
+export { MIN_PASSWORD_LENGTH } from './services/accounts';
 export { domainOf, normalizeJid } from './services/jid';

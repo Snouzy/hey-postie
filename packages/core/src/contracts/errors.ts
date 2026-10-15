@@ -6,6 +6,7 @@ export type ErrorCode =
   | 'RegistrationUnsupported'
   | 'AccountConflict'
   | 'RegistrationRejected'
+  | 'AccountCreatedSignInFailed'
   | 'KeychainUnavailable'
   | 'FileTooLarge'
   | 'EmptyMessage'

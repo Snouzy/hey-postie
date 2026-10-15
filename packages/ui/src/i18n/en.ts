@@ -68,6 +68,8 @@ export const en = {
   'error.RoomBanned': 'This hall has shut its door on you.',
   'error.NickTaken': 'Someone in this hall already goes by that nickname.',
   'error.RegistrationRejected': 'The server did not accept these details.',
+  'error.AccountCreatedSignInFailed':
+    'Your account exists now, but I could not sign you in. Try signing in.',
   'error.DeviceNotFound': 'I do not know this device any more.',
   'error.Unknown': 'Something went wrong on my round. Let us try again.',
 
