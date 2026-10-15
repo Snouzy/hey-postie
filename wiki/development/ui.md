@@ -81,8 +81,10 @@ Deleting the account is therefore two clicks away, as App Store rule 5.1.1(v) as
 "Delete my account…" opens `components/DeleteAccountDialog.tsx` from `Main`: a plain sentence
 (no joke; it is permanent on the server), a field where the user types their own JID
 (`aria-describedby` the sentence; compared trimmed and lower-cased), and a `danger` button that
-stays disabled until it matches. Submit calls `accounts.deleteAccount()`; on success `Main`
-leaves to Welcome (`onLeave('welcome')`), on failure the sentence shows and the dialog stays.
+stays disabled until it matches. Submit calls `accounts.deleteAccount()`; while it runs the dialog
+is not closable (`Dialog closable={false}`: Esc and the X are ignored, Cancel disabled); on
+success `Main` leaves to Welcome (`onLeave('welcome')`), on failure the sentence shows and the
+dialog stays.
 
 ## How the UI subscribes to the core
 
@@ -214,7 +216,7 @@ sent),
 `AccountMenu.test.tsx` (JID outside the menu, arrows incl. Up from outside, Esc, Tab out, click
 outside, focus back on the row before acting), `DeleteAccountDialog.test.tsx`
 (two clicks away, button asleep until the JID matches, `deleteCurrent` recorded and Welcome
-shown, failure sentence, Esc), `ChatList.test.tsx` (order, badge, sealed preview),
+shown, failure sentence, not closable while deleting, Esc with focus back on the row), `ChatList.test.tsx` (order, badge, sealed preview),
 `MessageList.test.tsx` (grouping, day labels, retry, undecryptable, links, load older),
 `Composer.test.tsx` (Enter / Shift+Enter, empty disabled, inline error), `Main.test.tsx`
 (empty state, markRead and notification rules, new chat dialog, contacts, sign out through the

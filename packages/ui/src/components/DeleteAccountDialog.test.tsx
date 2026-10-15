@@ -55,6 +55,20 @@ describe('DeleteAccountDialog', () => {
     await waitFor(() => expect(button).toBeEnabled());
   });
 
+  it('ignores Esc and the X while the deletion is in flight', async () => {
+    const { deps, button } = await openDialog();
+    deps.fakes.registration.deleteCurrent = () => new Promise<void>(() => {});
+    fireEvent.change(screen.getByLabelText('Type your address to confirm'), {
+      target: { value: 'alice@x.org' },
+    });
+    fireEvent.click(button);
+    expect(await screen.findByRole('status')).toHaveTextContent('closing your letter box');
+    fireEvent.keyDown(window, { key: 'Escape' });
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Close' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Cancel' })).toBeDisabled();
+  });
+
   it('closes on Esc without deleting anything, focus back on the account row', async () => {
     const { deps } = await openDialog();
     fireEvent.keyDown(window, { key: 'Escape' });
