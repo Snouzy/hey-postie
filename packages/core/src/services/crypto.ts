@@ -41,5 +41,10 @@ export function createCryptoService(
 export function formatFingerprint(fingerprint: string): string {
   const clean = fingerprint.replace(/[\s:-]/g, '');
   if (!/^[0-9a-f]*$/i.test(clean)) return fingerprint;
-  return clean.toUpperCase().match(/.{1,8}/g)?.join(' ') ?? '';
+  return (
+    clean
+      .toUpperCase()
+      .match(/.{1,8}/g)
+      ?.join(' ') ?? ''
+  );
 }
