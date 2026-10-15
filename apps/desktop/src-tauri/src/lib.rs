@@ -1,8 +1,11 @@
-//! The Rust side of Hey Postie: plugins, commands, tray, links, and the `--smoke` self-check.
+//! The Rust side of Hey Postie: plugins, commands, tray, links, save panel, and the `--smoke`
+//! self-check.
 
+mod i18n;
 mod keychain;
 mod links;
 mod relay;
+mod save;
 mod smoke;
 mod tray;
 mod window;
@@ -39,8 +42,20 @@ fn smoke_login(login: tauri::State<smoke::Login>) -> Option<(String, String)> {
 }
 
 #[tauri::command]
-fn set_unread_count(app: AppHandle, count: u32) -> Result<(), String> {
-    tray::set_unread(&app, count).map_err(|error| error.to_string())
+fn set_unread_count(
+    app: AppHandle,
+    language: tauri::State<i18n::Language>,
+    count: u32,
+) -> Result<(), String> {
+    tray::set_unread(&app, *language, count).map_err(|error| error.to_string())
+}
+
+/// Shows the save panel for the bytes in the request body and writes the file (see `save.rs`).
+#[tauri::command]
+async fn save_file(app: AppHandle, request: tauri::ipc::Request<'_>) -> Result<bool, String> {
+    save::save(&app, request)
+        .await
+        .map_err(|error| error.to_string())
 }
 
 /// On macOS and Windows the close button hides the window: the app stays in the tray, "Quit"
@@ -54,7 +69,16 @@ pub fn run() {
     keychain::install_platform_store();
 
     let app = tauri::Builder::default()
+        // First, so that a second instance (an `xmpp:` link on Windows or Linux) hands its
+        // arguments to this one and exits before anything else starts.
+        .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
+            if let Err(error) = window::show_main(app) {
+                eprintln!("single-instance: cannot show the window: {error}");
+            }
+        }))
         .plugin(tauri_plugin_notification::init())
+        .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_store::Builder::new().build())
         .plugin(tauri_plugin_deep_link::init())
         .invoke_handler(tauri::generate_handler![
@@ -63,7 +87,8 @@ pub fn run() {
             keychain_delete,
             relay_url,
             smoke_login,
-            set_unread_count
+            set_unread_count,
+            save_file
         ])
         .on_window_event(|window, event| {
             if !CLOSE_HIDES {
@@ -77,9 +102,10 @@ pub fn run() {
             }
         })
         .manage(login)
+        .manage(i18n::system_language())
         .setup(move |app| {
             app.manage(relay::start()?);
-            tray::install(app.handle())?;
+            tray::install(app.handle(), *app.state::<i18n::Language>())?;
             links::arm(app.handle());
             if smoke {
                 smoke::arm(app.handle().clone(), with_login);

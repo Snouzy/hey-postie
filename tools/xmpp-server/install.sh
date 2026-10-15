@@ -82,10 +82,12 @@ done
 "${luarocks_local[@]}" install luasec OPENSSL_DIR="$SSL_DIR"
 
 step "Certificates (mkcert)"
+# One certificate for the account host and both components: http_file_share hands out
+# https://upload.localhost:5281/... URLs and mod_http routes by Host header. File names are fixed
+# so prosody.cfg.lua does not depend on the number of names. Regenerated on every run.
 mkdir -p "$XMPP_DIR/certs"
-if [ ! -f "$XMPP_DIR/certs/localhost+2.pem" ]; then
-	(cd "$XMPP_DIR/certs" && mkcert localhost 127.0.0.1 ::1)
-fi
+(cd "$XMPP_DIR/certs" && mkcert -cert-file localhost+2.pem -key-file localhost+2-key.pem \
+	localhost upload.localhost rooms.localhost 127.0.0.1 ::1)
 if ! security find-certificate -c "mkcert" /Library/Keychains/System.keychain >/dev/null 2>&1; then
 	cat <<'EOF'
 

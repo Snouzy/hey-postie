@@ -1,16 +1,19 @@
-import type { Chat, Contact, Message, Room } from '@hey-postie/core';
+import type { Chat, Contact, Room } from '@hey-postie/core';
 import { Info, Users } from 'lucide-react';
-import { useEffect, useState } from 'react';
 import { useCore, useText } from '../core/CoreProvider';
-import { useCoreEvent } from '../core/useCoreEvent';
 import { useEncryption } from '../core/useEncryption';
+import { useFileDrop } from '../core/useFileDrop';
+import { useMessages } from '../core/useMessages';
 import { useRoomMembers } from '../core/useRoomMembers';
-import type { MessageKey } from '../i18n';
+import { useUploads } from '../core/useUploads';
 import { errorKey } from '../i18n/errors';
+import type { SaveFile } from './Attachments';
 import { Button } from './Button';
 import { Composer } from './Composer';
 import styles from './Conversation.module.css';
+import { DropOverlay } from './DropOverlay';
 import { MessageList } from './MessageList';
+import { PendingParcel } from './PendingParcel';
 import { PresenceDot } from './PresenceDot';
 import { SealToggle } from './SealToggle';
 
@@ -25,6 +28,8 @@ interface ConversationProps {
   /** Opens the details pane on its Encryption section (from a letter sealed for another device). */
   onOpenEncryption: () => void;
   onOpenLink: (url: string) => void;
+  /** Where a saved parcel goes. The desktop app routes it to a file dialog. */
+  onSaveFile: SaveFile;
 }
 
 /** The center column: header, messages, composer. Owns the messages of the open chat. */
@@ -36,13 +41,13 @@ export function Conversation({
   onToggleDetails,
   onOpenEncryption,
   onOpenLink,
+  onSaveFile,
 }: ConversationProps) {
   const core = useCore();
   const text = useText();
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [hasOlder, setHasOlder] = useState(true);
-  const [error, setError] = useState<MessageKey | null>(null);
+  const letters = useMessages(chat);
   const seal = useEncryption(chat);
+  const uploads = useUploads(chat.id, letters.add);
   const members = useRoomMembers(room?.jid ?? '');
   const nicks = room
     ? members.map((member) => member.nick).filter((nick) => nick !== room.nick)
@@ -51,71 +56,22 @@ export function Conversation({
   const outside = chat.kind === 'room' && !room?.joined;
   // The details pane exists for a direct chat, or for a hall the app has a record of.
   const hasDetails = chat.kind === 'direct' || room !== undefined;
-
-  useEffect(() => {
-    let cancelled = false;
-    core.chats
-      .messages(chat.id)
-      // Messages received while loading are already in the list: keep them.
-      .then((loaded) => !cancelled && setMessages((current) => mergeById(loaded, current)))
-      .catch((caught: unknown) => !cancelled && setError(errorKey(caught)));
-    return () => {
-      cancelled = true;
-    };
-  }, [core, chat.id]);
-
-  useCoreEvent('message.received', (message) => {
-    if (message.chatId !== chat.id) return;
-    setMessages((current) => mergeById(current, [message]));
-    // Only a reader who can see the window has read it.
-    if (document.hasFocus()) void core.chats.markRead(chat.id).catch(() => {});
-  });
-
-  useCoreEvent('message.updated', (message) => {
-    if (message.chatId !== chat.id) return;
-    setMessages((current) => current.map((m) => (m.id === message.id ? message : m)));
-  });
-
-  useEffect(() => {
-    const onFocus = () => void core.chats.markRead(chat.id).catch(() => {});
-    window.addEventListener('focus', onFocus);
-    return () => window.removeEventListener('focus', onFocus);
-  }, [core, chat.id]);
-
-  async function loadOlder(): Promise<boolean> {
-    try {
-      const older = await core.chats.loadOlder(chat.id);
-      if (older.length === 0) setHasOlder(false);
-      else setMessages((current) => mergeById(older, current));
-      return older.length > 0;
-    } catch (caught) {
-      setError(errorKey(caught));
-      return false;
-    }
-  }
-
-  async function send(body: string) {
-    const sent = await core.chats.send(chat.id, body);
-    setMessages((current) => mergeById(current, [sent]));
-  }
+  const drop = useFileDrop((files) => !outside && uploads.add(files));
+  const myJid = core.accounts.current()?.jid.split('/')[0] ?? null;
 
   async function joinAgain() {
     if (!room) return;
     try {
       await core.rooms.join({ jid: room.jid, nick: room.nick });
-      setError(null);
+      letters.setError(null);
     } catch (caught) {
-      setError(errorKey(caught));
+      letters.setError(errorKey(caught));
     }
   }
 
-  function retry(failed: Message) {
-    setMessages((current) => current.filter((m) => m.id !== failed.id));
-    send(failed.body).catch(() => setMessages((current) => mergeById(current, [failed])));
-  }
-
   return (
-    <section className={styles.conversation} aria-label={chat.title}>
+    <section className={styles.conversation} aria-label={chat.title} {...drop.handlers}>
+      {drop.dragging && <DropOverlay />}
       <header className={styles.header}>
         <div className={styles.peer}>
           {contact && <PresenceDot presence={contact.presence} />}
@@ -156,26 +112,37 @@ export function Conversation({
         </div>
       )}
       <MessageList
-        messages={messages}
-        hasOlder={hasOlder}
-        onLoadOlder={loadOlder}
-        onRetry={retry}
+        messages={letters.messages}
+        hasOlder={letters.hasOlder}
+        onLoadOlder={letters.loadOlder}
+        myJid={myJid}
+        onRetry={letters.retry}
         onOpenLink={onOpenLink}
+        onReact={letters.react}
+        onSaveFile={onSaveFile}
         showSenders={chat.kind === 'room'}
         onShowDevices={hasDetails ? onOpenEncryption : undefined}
+        footer={uploads.uploads.map((upload) => (
+          <PendingParcel
+            key={upload.id}
+            upload={upload}
+            onRetry={() => uploads.retry(upload.id)}
+            onDismiss={() => uploads.dismiss(upload.id)}
+          />
+        ))}
       />
-      {error && (
+      {letters.error && (
         <p className={styles.error} role="alert">
-          {text(error)}
+          {text(letters.error)}
         </p>
       )}
-      <Composer onSend={send} nicks={nicks} disabled={outside} sealed={seal.encrypted} />
+      <Composer
+        onSend={letters.send}
+        onAttach={uploads.add}
+        nicks={nicks}
+        disabled={outside}
+        sealed={seal.encrypted}
+      />
     </section>
   );
-}
-
-/** `first` then whatever in `second` is not already there, by id. Order within each is kept. */
-export function mergeById(first: Message[], second: Message[]): Message[] {
-  const seen = new Set(first.map((m) => m.id));
-  return [...first, ...second.filter((m) => !seen.has(m.id))];
 }

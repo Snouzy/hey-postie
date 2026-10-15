@@ -140,3 +140,24 @@
   font-size: 13px;
   background: var(--paper-raised);
 }
+
+/* The hover toolbar (React): floats at the top corner away from the edge, shown on hover or focus. */
+.tools {
+  position: absolute;
+  top: -14px;
+  opacity: 0;
+  transition: opacity var(--motion-fast);
+}
+
+.in .tools {
+  right: var(--space-2);
+}
+
+.out .tools {
+  left: var(--space-2);
+}
+
+.bubble:hover .tools,
+.bubble:focus-within .tools {
+  opacity: 1;
+}

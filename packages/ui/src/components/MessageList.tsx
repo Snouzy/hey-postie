@@ -1,7 +1,8 @@
 import type { Message } from '@hey-postie/core';
-import { useLayoutEffect, useRef, useState } from 'react';
+import { type ReactNode, useLayoutEffect, useRef, useState } from 'react';
 import { useLocale, useText } from '../core/CoreProvider';
 import { dayKey, dayLabel } from '../i18n/dates';
+import type { SaveFile } from './Attachments';
 import { Button } from './Button';
 import { MessageBubble } from './MessageBubble';
 import styles from './MessageList.module.css';
@@ -11,12 +12,18 @@ interface MessageListProps {
   hasOlder: boolean;
   /** Resolves to true when something was prepended. */
   onLoadOlder: () => Promise<boolean>;
+  /** The account's bare JID, to tell my reactions apart. */
+  myJid: string | null;
   onRetry: (message: Message) => void;
   onOpenLink: (url: string) => void;
+  onReact: (message: Message, emoji: string) => void;
+  onSaveFile: SaveFile;
   /** In a hall: the sender's nick above each run of incoming messages. */
   showSenders?: boolean;
   /** From a letter sealed for another device: opens the sender's devices. */
   onShowDevices?: (() => void) | undefined;
+  /** Rendered after the last message, inside the scroller: the parcels on their way. */
+  footer?: ReactNode;
 }
 
 interface Run {
@@ -39,10 +46,14 @@ export function MessageList({
   messages,
   hasOlder,
   onLoadOlder,
+  myJid,
   onRetry,
   onOpenLink,
+  onReact,
+  onSaveFile,
   showSenders = false,
   onShowDevices,
+  footer,
 }: MessageListProps) {
   const text = useText();
   const locale = useLocale();
@@ -51,7 +62,7 @@ export function MessageList({
   const heightBeforeOlder = useRef<number | null>(null);
   const [loading, setLoading] = useState(false);
 
-  // biome-ignore lint/correctness/useExhaustiveDependencies: re-pins the scroll after every change of the list
+  // biome-ignore lint/correctness/useExhaustiveDependencies: re-pins the scroll after every change of the list or its footer
   useLayoutEffect(() => {
     const element = scroller.current;
     if (!element) return;
@@ -61,7 +72,7 @@ export function MessageList({
     } else if (atBottom.current) {
       element.scrollTop = element.scrollHeight;
     }
-  }, [messages]);
+  }, [messages, footer]);
 
   function onScroll() {
     const element = scroller.current;
@@ -109,8 +120,11 @@ export function MessageList({
                   key={message.id}
                   message={message}
                   last={index === run.messages.length - 1}
+                  myJid={myJid}
                   onRetry={onRetry}
                   onOpenLink={onOpenLink}
+                  onReact={onReact}
+                  onSaveFile={onSaveFile}
                   onShowDevices={onShowDevices}
                 />
               ))}
@@ -118,6 +132,7 @@ export function MessageList({
           ))}
         </section>
       ))}
+      {footer}
     </div>
   );
 }

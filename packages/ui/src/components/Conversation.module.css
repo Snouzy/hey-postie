@@ -1,4 +1,5 @@
 .conversation {
+  position: relative; /* the drop overlay covers the column */
   flex: 1;
   min-width: 0;
   display: flex;
