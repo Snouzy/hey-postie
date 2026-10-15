@@ -39,6 +39,7 @@ function roomModel(jid: string, initialized: Promise<unknown>): RoomModel {
     initialized,
     sendMessage: async () => undefined,
     sendFiles: async () => undefined,
+    onReconnection: async () => undefined,
     clearUnreadMsgCounter: () => undefined,
     getDisplayName: () => 'Hall',
     isEntered: () => false,

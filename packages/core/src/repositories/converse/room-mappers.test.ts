@@ -36,6 +36,7 @@ function room(attrs: Record<string, unknown>, status: number | null = ENTERED): 
     },
     sendMessage: async () => undefined,
     sendFiles: async () => undefined,
+    onReconnection: async () => undefined,
     clearUnreadMsgCounter: () => undefined,
     getDisplayName: () => String(attrs.name ?? ''),
     isEntered: () => status === ENTERED,

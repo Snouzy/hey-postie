@@ -305,6 +305,7 @@ describe('toChat for a room', () => {
       },
       sendMessage: async () => undefined,
       sendFiles: async () => undefined,
+      onReconnection: async () => undefined,
       clearUnreadMsgCounter: () => undefined,
       getDisplayName: () => 'The Hall',
     });
