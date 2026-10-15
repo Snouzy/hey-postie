@@ -81,6 +81,10 @@ export interface Reaction {
 export interface Message {
   id: string;
   chatId: string;
+  /**
+   * Bare JID of the sender. In a room: the sender's real bare JID when the room reveals it,
+   * otherwise `room@service/nick`, so that two occupants never share a `fromJid`.
+   */
   fromJid: string;
   fromNick?: string;
   body: string;

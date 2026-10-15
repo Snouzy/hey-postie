@@ -29,12 +29,13 @@ export function createRoomsService(
           ? { jid: roomJid, nick: trimmedNick, password }
           : { jid: roomJid, nick: trimmedNick },
       );
-      if (!room.bookmarked) await deps.room.setBookmarked(roomJid, true);
+      // A server without bookmark storage must not turn a successful join into an error.
+      if (!room.bookmarked) await deps.room.setBookmarked(roomJid, true).catch(() => undefined);
       return room;
     },
     async leave(jid) {
       const roomJid = normalizeJid(jid).split('/')[0] ?? '';
-      await deps.room.setBookmarked(roomJid, false);
+      await deps.room.setBookmarked(roomJid, false).catch(() => undefined);
       await deps.room.leave(roomJid);
     },
     members(jid) {

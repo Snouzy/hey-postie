@@ -44,6 +44,17 @@ describe('rooms.join', () => {
   });
 });
 
+describe('rooms.join without bookmark storage', () => {
+  it('still succeeds', async () => {
+    deps.fakes.room.setBookmarked = async () => {
+      throw new DomainError('Unknown', 'Unknown: no bookmark storage');
+    };
+    const room = await core.rooms.join({ jid: 'hall@rooms.localhost', nick: 'a' });
+    expect(room.joined).toBe(true);
+    await expect(core.rooms.leave('hall@rooms.localhost')).resolves.toBeUndefined();
+  });
+});
+
 describe('rooms.leave', () => {
   it('removes the bookmark and leaves', async () => {
     await core.rooms.join({ jid: 'hall@rooms.localhost', nick: 'a' });
