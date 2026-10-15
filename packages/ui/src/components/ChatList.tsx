@@ -33,7 +33,10 @@ export function ChatList({ chats, rooms = [], selectedId, onSelect }: ChatListPr
           >
             <span className={styles.top}>
               {chat.kind === 'room' && (
-                <Users size={14} className={styles.hall} aria-label={text('chatList.room')} />
+                <>
+                  <Users size={14} className={styles.hall} aria-hidden />
+                  <span className={styles.srOnly}>{text('chatList.room')} </span>
+                </>
               )}
               <span className={styles.title}>{chat.title}</span>
               {chat.lastMessage && (

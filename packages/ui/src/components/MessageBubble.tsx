@@ -27,11 +27,8 @@ export function MessageBubble({ message, last, onRetry, onOpenLink }: MessageBub
   ].join(' ');
 
   return (
-    <div
-      className={classes}
-      data-status={message.status}
-      title={mention ? text('message.mention') : undefined}
-    >
+    <div className={classes} data-status={message.status}>
+      {mention && <span className={styles.srOnly}>{text('message.mention')}</span>}
       <p className={sealed ? styles.sealed : styles.body}>
         {sealed ? (
           <>

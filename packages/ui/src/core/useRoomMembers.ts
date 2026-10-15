@@ -15,14 +15,16 @@ export function useRoomMembers(jid: string): RoomMember[] {
     if (!jid) return;
     requests.current += 1;
     const mine = requests.current;
-    const list = await core.rooms.members(jid);
-    if (mine === requests.current) setMembers(list);
+    try {
+      const list = await core.rooms.members(jid);
+      if (mine === requests.current) setMembers(list);
+    } catch {
+      if (mine === requests.current) setMembers([]);
+    }
   }, [core, jid]);
-  useEffect(() => {
-    refresh().catch(() => setMembers([]));
-  }, [refresh]);
+  useEffect(() => void refresh(), [refresh]);
   useCoreEvent('room.members', (payload) => {
-    if (payload.jid === jid) void refresh().catch(() => {});
+    if (payload.jid === jid) void refresh();
   });
   return members;
 }

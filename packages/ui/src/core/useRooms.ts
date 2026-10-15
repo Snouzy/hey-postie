@@ -14,13 +14,15 @@ export function useRooms(): { rooms: Room[]; refresh: () => Promise<void> } {
   const refresh = useCallback(async () => {
     requests.current += 1;
     const mine = requests.current;
-    const list = await core.rooms.list();
-    if (mine === requests.current) setRooms(list.filter((room) => room.joined || room.bookmarked));
+    try {
+      const list = await core.rooms.list();
+      if (mine === requests.current) setRooms(list.filter((r) => r.joined || r.bookmarked));
+    } catch {
+      if (mine === requests.current) setRooms([]);
+    }
   }, [core]);
-  useEffect(() => {
-    refresh().catch(() => setRooms([]));
-  }, [refresh]);
-  useCoreEvent('room.updated', () => void refresh().catch(() => {}));
+  useEffect(() => void refresh(), [refresh]);
+  useCoreEvent('room.updated', () => void refresh());
   return { rooms, refresh };
 }
 
@@ -34,11 +36,10 @@ export function withRooms(chats: Chat[], rooms: Room[]): Chat[] {
     const room = byJid.get(chat.id);
     return room ? { ...chat, kind: 'room' as const, title: room.name } : chat;
   });
+  // A hall with no message yet is most likely the one just joined: it goes to the top.
   const listed = new Set(chats.map((chat) => chat.id));
-  for (const room of rooms) {
-    if (!listed.has(room.jid)) rows.push(roomChat(room));
-  }
-  return rows;
+  const fresh = rooms.filter((room) => !listed.has(room.jid)).map(roomChat);
+  return [...fresh, ...rows];
 }
 
 export function roomChat(room: Room): Chat {
