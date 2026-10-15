@@ -10,7 +10,7 @@ import {
   errorOf,
   NS,
   type ParsedRegistration,
-  parseRegistrationQuery,
+  parseRegistrationReply,
 } from './registrationForm';
 import { wrapSocketClose } from './socketClose';
 
@@ -18,6 +18,9 @@ type Target = { domain: string; websocketUrl: string };
 type SubmitInput = Target & { values: Record<string, string> };
 
 const DEFAULT_TIMEOUT_MS = 20_000;
+/** A stream kept open after `form()` is closed when `submit()` does not follow within this time. */
+const IDLE_MS = 5 * 60_000;
+const LOOPBACK_HOSTS = new Set(['127.0.0.1', 'localhost', '[::1]']);
 /** localForage database and key prefix of Converse's per-account store (`utils/init.js:130-136`). */
 const PERSISTENT_STORE = 'converse-persistent';
 const SESSION_JID_KEY = 'conversejs-session-jid';
@@ -38,6 +41,7 @@ interface PendingRegistration extends Target {
  */
 export class ConverseRegistrationRepository implements RegistrationRepository {
   private pending: PendingRegistration | null = null;
+  private idleTimer: ReturnType<typeof setTimeout> | null = null;
   /** What `exchange` is waiting on per stream, rejected when the server closes it meanwhile. */
   private readonly dropped = new Map<StropheConnection, () => void>();
 
@@ -47,9 +51,12 @@ export class ConverseRegistrationRepository implements RegistrationRepository {
   ) {}
 
   async form(target: Target): Promise<RegistrationForm> {
+    const opened = await this.open(target);
+    // Only now: a concurrent `form()` that resolved meanwhile is superseded, not a failed one.
     this.closePending();
-    this.pending = await this.open(target);
-    return this.pending.parsed.form;
+    this.pending = opened;
+    this.idleTimer = setTimeout(() => this.closePending(), IDLE_MS);
+    return opened.parsed.form;
   }
 
   /**
@@ -64,27 +71,39 @@ export class ConverseRegistrationRepository implements RegistrationRepository {
       this.pending?.domain === domain &&
       this.pending.websocketUrl === websocketUrl &&
       this.pending.connection.connected;
-    const pending =
-      reusable && this.pending ? this.pending : await this.open({ domain, websocketUrl });
-    this.pending = null;
-    const { connection, parsed } = pending;
+    const pending = reusable && this.pending ? this.takePending() : null;
+    const { connection, parsed } = pending ?? (await this.open({ domain, websocketUrl }));
     try {
       const id = connection.getUniqueId('register');
-      const reply = await this.exchange(connection, buildSubmitIq(id, parsed, values), id);
-      if (reply.getAttribute('type') === 'error') throw registrationError(reply);
+      expectResult(await this.exchange(connection, buildSubmitIq(id, parsed, values), id));
     } finally {
       connection.disconnect();
     }
   }
 
+  /**
+   * Straight on Strophe's `sendIQ` rather than `api.sendIQ`: on a timeout the latter also throws a
+   * `TimeoutError` from a detached `.catch` chain (`shared/api/send.js:63-68`), an unhandled
+   * rejection in addition to ours.
+   */
   async deleteCurrent(): Promise<void> {
     const { api } = await this.engine.ready();
-    try {
-      await api.sendIQ(buildRemoveIq(`remove-${Date.now().toString(36)}`));
-    } catch (error) {
-      if (error instanceof Element) throw registrationError(error);
+    const connection = api.connection.get();
+    if (!connection || !api.connection.connected()) {
+      throw new DomainError('ServerUnreachable', 'ServerUnreachable: not connected');
+    }
+    const reply = await new Promise<Element | null>((resolve) => {
+      connection.sendIQ(
+        buildRemoveIq(`remove-${Date.now().toString(36)}`),
+        resolve,
+        resolve,
+        this.timeoutMs,
+      );
+    });
+    if (!reply) {
       throw new DomainError('ServerUnreachable', 'ServerUnreachable: no answer to the removal');
     }
+    expectResult(reply);
   }
 
   /**
@@ -108,17 +127,15 @@ export class ConverseRegistrationRepository implements RegistrationRepository {
 
   /** Opens an unauthenticated stream to the domain and fetches its registration form. */
   private async open(target: Target): Promise<PendingRegistration> {
+    assertSecureUrl(target.websocketUrl);
     const loaded = await this.engine.ready();
     const connection = new loaded.env.Strophe.Connection(target.websocketUrl);
     try {
       await this.awaitStreamFeatures(loaded, connection, target.domain);
       const id = connection.getUniqueId('register');
       const reply = await this.exchange(connection, buildFormRequestIq(id), id);
-      if (reply.getAttribute('type') === 'error') throw registrationError(reply);
-      const query = reply.getElementsByTagNameNS(NS.register, 'query')[0];
-      if (!query)
-        throw new DomainError('RegistrationUnsupported', 'RegistrationUnsupported: no form');
-      return { ...target, connection, parsed: parseRegistrationQuery(query, target.domain) };
+      expectResult(reply);
+      return { ...target, connection, parsed: parseRegistrationReply(reply, target.domain) };
     } catch (error) {
       connection.disconnect();
       throw error;
@@ -181,11 +198,12 @@ export class ConverseRegistrationRepository implements RegistrationRepository {
       const fail = (detail: string) => {
         clearTimeout(timer);
         this.dropped.delete(connection);
+        connection.deleteHandler(handler);
         reject(new DomainError('ServerUnreachable', `ServerUnreachable: ${detail}`));
       };
       const timer = setTimeout(() => fail('timeout'), this.timeoutMs);
       this.dropped.set(connection, () => fail('stream closed'));
-      connection._addSysHandler(
+      const handler = connection._addSysHandler(
         (stanza) => {
           clearTimeout(timer);
           this.dropped.delete(connection);
@@ -202,9 +220,38 @@ export class ConverseRegistrationRepository implements RegistrationRepository {
   }
 
   private closePending(): void {
-    this.pending?.connection.disconnect();
-    this.pending = null;
+    this.takePending()?.connection.disconnect();
   }
+
+  private takePending(): PendingRegistration | null {
+    if (this.idleTimer) clearTimeout(this.idleTimer);
+    this.idleTimer = null;
+    const pending = this.pending;
+    this.pending = null;
+    return pending;
+  }
+}
+
+/** The relay is loopback `ws:`; anything else must be `wss:` so that no password travels in clear. */
+function assertSecureUrl(websocketUrl: string): void {
+  let url: URL;
+  try {
+    url = new URL(websocketUrl);
+  } catch {
+    throw new DomainError('ServerUnreachable', 'ServerUnreachable: invalid websocket url');
+  }
+  const secure =
+    url.protocol === 'wss:' || (url.protocol === 'ws:' && LOOPBACK_HOSTS.has(url.hostname));
+  if (!secure)
+    throw new DomainError('ServerUnreachable', 'ServerUnreachable: insecure websocket url');
+}
+
+/** Only `type="result"` is a success; an error maps to a domain error, anything else is a bug. */
+function expectResult(reply: Element): void {
+  const type = reply.getAttribute('type');
+  if (type === 'result') return;
+  if (type === 'error') throw registrationError(reply);
+  throw new DomainError('Unknown', 'Unknown: unexpected reply to a registration IQ');
 }
 
 /** XEP-0077 §3.1-3.2 error conditions, Prosody's `mod_register_ibr` included. */
@@ -219,7 +266,8 @@ function registrationError(stanza: Element): DomainError {
     'service-unavailable': 'RegistrationUnsupported',
   };
   const code = codes[condition] ?? 'Unknown';
-  return new DomainError(code, `${code}: ${condition}${text ? ` (${text})` : ''}`);
+  // The server's text may echo what the user typed: it stays out of the message, in `cause`.
+  return new DomainError(code, `${code}: ${condition}`, text || undefined);
 }
 
 function removeKeys(storage: Storage, matches: (key: string) => boolean): void {

@@ -338,39 +338,54 @@ handlers do not, `strophe.js/src/connection.js:1279`). The stream **stays open**
 form: `submit` answers on that same session, which a CAPTCHA challenge requires (XEP-0158 binds
 the answer to the stream). If the server closed it meanwhile (`connection.connected` false, or
 another domain), `submit` opens a new stream and fetches the form again. `submit` always ends with
-`connection.disconnect()` (`<close/>`, no presence since unauthenticated). A new `form()` closes
-any pending stream.
+`connection.disconnect()` (`<close/>`, no presence since unauthenticated). A `form()` that resolves
+closes the previously pending stream (so two concurrent `form()` calls keep the last one); a
+pending stream nobody submits on is closed after 5 minutes. Only `type="result"` is a success:
+`type="error"` maps as below, anything else is `Unknown`. `websocketUrl` must be `wss:`, or `ws:`
+to `127.0.0.1` / `localhost` / `[::1]` (the relay): anything else is refused with
+`ServerUnreachable` before a socket opens, so that no password travels in clear.
 
 **Parsing** (`registrationForm.ts`, pure DOM): an `<x xmlns="jabber:x:data"/>` child wins over
 the legacy children (Prosody sends both). x:data: `text-single`/no type → `text` (`password`,
 `email` by name), `text-private` → `password`, `hidden` → `hidden` (required, value kept in
-`defaults` and echoed back), `<required/>`; `fixed`, `boolean`, `list-*` are dropped. Legacy:
-every child except `instructions`, `registered`, `x` (`jabber:x:oob` URLs are ignored) and `key`
-is a required field. CAPTCHA: the `ocr` field's `<media><uri>cid:…</uri></media>` is matched to the
-`<data xmlns="urn:xmpp:bob" cid type>` sibling of the form → `captchaImageDataUrl`
-(`data:<type>;base64,…`), `captchaField: 'ocr'`.
+`defaults` and echoed back), `<required/>`; `fixed`, `boolean`, `list-*`, `jid-*` cannot be
+rendered: dropped when optional, `RegistrationUnsupported` when `<required/>`. Legacy: every child
+except `instructions`, `registered`, `x` (`jabber:x:oob` URLs are ignored) and `key` is a required
+field. CAPTCHA (XEP-0158 over XEP-0231): the `ocr` field's `<media><uri>cid:…</uri></media>` is
+matched by `cid` to a `<data xmlns="urn:xmpp:bob" cid type>` anywhere in the reply (XEP-0231 puts
+it as a child of the `<iq/>`, next to the query; some servers put it inside the query) →
+`captchaImageDataUrl` (`data:<type>;base64,…`), `captchaField: 'ocr'`. The data must be
+`image/png|jpeg|gif|webp`, base64 only, at most 256 KB decoded; otherwise, or with an `http:` URI,
+the form has no image. The local Prosody has no CAPTCHA module (`mod_register_ibr` only, checked on
+2026-10-15): the CAPTCHA path is covered by fixtures built from the XEP examples.
 
 **Submit** receives the visible fields only (`RegistrationField` has no value, so the UI neither
 renders hidden fields nor echoes them; the CAPTCHA answer comes under `captchaField`). The
 repository merges the hidden values it kept from `form()` (`FORM_TYPE`, a CAPTCHA's
 `challenge`/`sid`...) itself. It builds `<iq type="set"><query xmlns="jabber:iq:register">` with either
 `<x type="submit">` (every field of the form: the user's value, else the server default; empty
-optional fields skipped) or one legacy child per value (names restricted to `[a-z][\w-]*`). Stanzas
-are built as XML strings, escaped, and parsed with `DOMParser`: Strophe's `Builder.serialize`
+optional fields skipped) or one legacy child per value (names restricted to `[a-z][\w-]*`). A
+value with a character XML 1.0 cannot carry (C0 controls other than tab/LF/CR, U+FFFE, U+FFFF) is
+`RegistrationRejected` before anything is built. Stanzas are built as XML strings, escaped, and
+parsed with `DOMParser` (a `parsererror` throws: it would be our bug): Strophe's `Builder.serialize`
 writes the `xmlns` *attributes* it finds, and `createElementNS` would not produce any. Known limitation: when the stream of `form()` is gone and
 `submit` reopens one, the hidden values come from the re-fetched form; a CAPTCHA challenge of the
 first stream is then stale and the server rejects the answer (`RegistrationRejected`).
 
 **Errors.** `conflict` → `AccountConflict`; `not-acceptable`, `bad-request` →
-`RegistrationRejected` (Prosody's text, "The requested username is invalid.", is in the message);
-`not-allowed`, `forbidden`, `service-unavailable` → `RegistrationUnsupported`; else `Unknown`.
+`RegistrationRejected`; `not-allowed`, `forbidden`, `service-unavailable` →
+`RegistrationUnsupported`; else `Unknown`. The message is `<code>: <condition>` only; the server's
+`<text/>` (which may echo the username, e.g. Prosody's "The requested username is invalid.") goes
+to `DomainError.cause`, never to the message.
 CONNFAIL → `ServerUnreachable`, or `CertificateInvalid` when the WebSocket close reason says so
 (`socketClose.ts`, the same wrapper `xmpp.ts` uses); DISCONNECTED while waiting → `ServerUnreachable`;
 20 s without an answer (`connectTimeoutMs` of `createConverseRepositories`) → `ServerUnreachable`.
 
-**`deleteCurrent`** goes through the signed-in connection: `api.sendIQ(<iq type="set"><query
-xmlns="jabber:iq:register"><remove/></query></iq>)`; the rejection carries the error stanza (an
-`Element`) or `null` on timeout. Prosody closes the stream right after the result; the accounts
+**`deleteCurrent`** goes through the signed-in connection, calling Strophe's
+`connection.sendIQ(iq, callback, errback, timeout)` directly rather than `api.sendIQ`: on a timeout
+the latter also throws a `TimeoutError` from a detached `.catch` chain (`shared/api/send.js:63-68`),
+a second, unhandled rejection. `errback` gets the error stanza, or `null` on timeout
+(`ServerUnreachable`); not connected → `ServerUnreachable` without sending. Prosody closes the stream right after the result; the accounts
 service then calls `xmpp.disconnect()`, which is the normal logout path.
 
 **`wipeLocal(jid)`** removes, for the lower-cased bare JID: the localStorage keys prefixed
@@ -386,8 +401,9 @@ login info) lives in it. Not wiped: the keychain (the service does that), `sessi
 JID.
 
 **Strophe privates used:** `Connection#_connect_cb` (replaced), `_proto._connect_cb`,
-`_addSysHandler`, `connected` (set by hand, as the UI plugin does: `_onIdle` only flushes while
-connected), `_proto._onClose` (through `socketClose.ts`). Verify them on every Strophe upgrade
+`_addSysHandler` / `deleteHandler` (the IQ handler is removed on timeout or stream drop),
+`connected` (set by hand, as the UI plugin does: `_onIdle` only flushes while connected),
+`_proto._onClose` (through `socketClose.ts`). Verify them on every Strophe upgrade
 (`strophe.js` 4.0.0 today, a dependency of headless).
 
 **Contract test** (`registration.contract.test.ts`, part of `pnpm test:contract`): `form` of
