@@ -2,15 +2,18 @@ import { describe, expect, it } from 'vitest';
 import {
   type DeviceModel,
   fromTrust,
+  groupById,
+  groupTrust,
   isActive,
+  isGroupActive,
+  isGroupUsable,
   isRoom,
-  isUsable,
-  mergeVersions,
   toDevice,
   toTrust,
 } from './crypto-mappers';
 
 const ME = 'alice@example.org';
+const BOB = 'bob@example.org';
 
 function model(attributes: Record<string, unknown>): DeviceModel {
   return {
@@ -38,13 +41,49 @@ describe('trust mapping', () => {
   });
 });
 
+describe('groupById', () => {
+  it('groups the models of both version lists by device id, in list order', () => {
+    const legacy = [model({ id: '1', version: 'legacy' }), model({ id: 2 })];
+    const v2 = [model({ id: 1, version: 'v2' }), model({ id: '3' })];
+    const groups = groupById(BOB, [legacy, v2]);
+    expect(groups.map((g) => [g.id, g.models.length])).toEqual([
+      ['1', 2],
+      ['2', 1],
+      ['3', 1],
+    ]);
+    expect(groups[0]?.models.map((m) => m.get('version'))).toEqual(['legacy', 'v2']);
+    expect(groups.every((g) => g.jid === BOB)).toBe(true);
+  });
+});
+
+describe('a device across versions', () => {
+  const group = (...attributes: Array<Record<string, unknown>>) =>
+    groupById(BOB, [attributes.map(model)])[0] ?? { id: '', jid: BOB, models: [] };
+
+  it('takes the most restrictive trust: blocked, then unverified, then verified', () => {
+    expect(groupTrust(group({ trusted: 1 }, { trusted: 1 }))).toBe('verified');
+    expect(groupTrust(group({ trusted: 1 }, { trusted: 0 }))).toBe('untrusted');
+    expect(groupTrust(group({ trusted: 1 }, { trusted: -1 }))).toBe('blocked');
+    expect(groupTrust(group({ trusted: 0 }, { trusted: -1 }))).toBe('blocked');
+  });
+
+  it('is active only when active in every version, usable unless blocked somewhere', () => {
+    expect(isActive(model({}))).toBe(true);
+    expect(isActive(model({ active: false }))).toBe(false);
+    expect(isGroupActive(group({}, { active: false }))).toBe(false);
+    expect(isGroupUsable(group({ trusted: 0 }, { trusted: 1 }))).toBe(true);
+    expect(isGroupUsable(group({ trusted: 1 }, { trusted: -1 }))).toBe(false);
+    expect(isGroupUsable(group({ trusted: 1 }, { active: false }))).toBe(false);
+  });
+});
+
 describe('toDevice', () => {
-  it('reads the id as a number, the fingerprint from the bundle, and flags our own devices', () => {
-    const device = toDevice(
-      model({ id: '4242', jid: ME, trusted: 1, bundle: { fingerprint: 'ab'.repeat(32) } }),
-      ME,
-    );
-    expect(device).toEqual({
+  it('reads the id as a number, the first fingerprint found, and flags our own devices', () => {
+    const groups = groupById(ME, [
+      [model({ id: '4242', jid: ME, trusted: 1 })],
+      [model({ id: 4242, jid: ME, trusted: 1, bundle: { fingerprint: 'ab'.repeat(32) } })],
+    ]);
+    expect(groups[0] && toDevice(groups[0], ME)).toEqual({
       jid: ME,
       deviceId: 4242,
       fingerprint: 'ab'.repeat(32),
@@ -54,34 +93,13 @@ describe('toDevice', () => {
   });
 
   it('gives a device without a published bundle an empty fingerprint', () => {
-    const device = toDevice(model({ id: 7, jid: 'bob@example.org' }), ME);
-    expect(device).toMatchObject({
+    const [group] = groupById(BOB, [[model({ id: 7, jid: BOB })]]);
+    expect(group && toDevice(group, ME)).toMatchObject({
       deviceId: 7,
       fingerprint: '',
       trust: 'untrusted',
       isOwn: false,
     });
-  });
-});
-
-describe('usable devices', () => {
-  it('is active unless Converse marked it inactive, usable unless blocked too', () => {
-    expect(isActive(model({}))).toBe(true);
-    expect(isActive(model({ active: false }))).toBe(false);
-    expect(isUsable(model({ trusted: 0 }))).toBe(true);
-    expect(isUsable(model({ trusted: 1 }))).toBe(true);
-    expect(isUsable(model({ trusted: -1 }))).toBe(false);
-    expect(isUsable(model({ active: false }))).toBe(false);
-  });
-});
-
-describe('mergeVersions', () => {
-  it('keeps one model per device id, the legacy list first', () => {
-    const legacy = [model({ id: '1', version: 'legacy' }), model({ id: 2 })];
-    const v2 = [model({ id: 1, version: 'v2' }), model({ id: '3' })];
-    const merged = mergeVersions([legacy, v2]);
-    expect(merged.map((m) => String(m.get('id')))).toEqual(['1', '2', '3']);
-    expect(merged[0]?.get('version')).toBe('legacy');
   });
 });
 

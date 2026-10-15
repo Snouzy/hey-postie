@@ -30,7 +30,7 @@ tasks/             agents' plans and lessons, untracked
 - **Persistence**: `apps/desktop/app/repositories/keychain.ts` calls the Rust `keychain_*` commands;
   `packages/core/src/fakes/keychain.ts` keeps a `Map` in memory for tests.
   `packages/core/src/repositories/converse/` wraps `@converse/headless`: `engine.ts` owns the one
-  Converse instance, `xmpp.ts`, `roster.ts`, `chat.ts`, `room.ts`, `crypto.ts` (OMEMO devices and trust over
+  Converse instance, `xmpp.ts`, `roster.ts`, `chat.ts`, `room.ts`, `crypto.ts` + `crypto-lists.ts` (OMEMO devices and trust over
   Converse's device lists) and `registration.ts` (XEP-0077 over a bare Strophe connection, plus
   account deletion and local wipe) implement the repository contracts, `mappers.ts` and
   `crypto-mappers.ts` turn Converse models into the plain types of `contracts/`. `createConverseRepositories()`

@@ -536,19 +536,37 @@ and `contract-rooms.test.ts` (Prosody, `rooms.localhost`), both green on 2026-10
   not investigated further here.
 ## 15. OMEMO: what the repository does
 
-_Implementation of 2026-10-15, `crypto.ts` + `crypto-mappers.ts`, verified by
-`crypto-mappers.test.ts` (pure mapping), `crypto.test.ts` (the real engine over the `MockConnection`,
-every IQ answered by a scripted responder, device lists pushed as PEP events) and
-`omemo.contract.test.ts` (the local Prosody; bob publishes device lists and bundles by hand)._
+_Implementation of 2026-10-15, reviewed and hardened on 2026-10-16: `crypto.ts` (the repository),
+`crypto-lists.ts` (`DeviceListWatcher`: the trust rules on Converse's collections) and
+`crypto-mappers.ts` (types and pure mapping). Verified by `crypto-mappers.test.ts` (pure mapping),
+`crypto.test.ts` (the real engine over the `MockConnection`, every IQ answered by a scripted
+responder that also echoes our own publishes, device lists and bundles pushed as PEP events for
+both OMEMO versions), `crypto-init.test.ts` (an account without PEP) and `omemo.contract.test.ts`
+(the local Prosody; bob publishes device lists and bundles by hand)._
 
 **Engine.** Nothing to switch on: the plugin is enabled when `config.trusted` is true (always,
 `utils/init.js:69`) and `clear_cache_on_logout` is false (default). `initOMEMO` runs on
 `statusInitialized` at every login, rebuilds `_converse.state.devicelists` / `devicelists_v2`,
 generates the bundle on a first sign-in and ends in `OMEMOInitialized`, a promise renewed at logout
-(`api.promises.add`, `replace: true`). Every repository call awaits it, with a 30 s timeout that
-becomes `EncryptionUnavailable` (`available()` answers `false` instead). The desktop build emits
+(`api.promises.add`, `replace: true`). The desktop build emits
 `dist/assets/libomemo.esm.min-<hash>.js` and loads `curve25519_compiled.wasm` from
 `apps/desktop/public/` (§12, checked on the 2026-10-15 build output).
+
+**Readiness.** Every call starts with `ready()`: signed out (`api.connection.authenticated()`
+false) → `EncryptionUnavailable` at once; account without a `pubsub/pep` disco identity (checked
+after `statusInitialized` with `api.disco.getIdentity`, because `api.pubsub.publish` only warns and
+`initOMEMO` still ends in `OMEMOInitialized`: OMEMO would run blind) → `EncryptionUnavailable` at
+once; otherwise `OMEMOInitialized` is awaited up to 30 s (the first sign-in generates the bundle).
+`available()` answers `false` instead of throwing.
+
+**One device, two lists.** Converse keeps a device list per OMEMO version
+(`eu.siacs.conversations.axolotl` and `urn:xmpp:omemo:2`); a device speaking both appears in both
+with the same id. The repository always groups the models by id (`groupById`) and takes the most
+restrictive state: `blocked` if any version says `-1`, else `untrusted` if any says `0`, else
+`verified`; inactive in any version (dropped from that published list) hides the device.
+`available()` uses the same grouped view and also requires a bundle Converse can fetch (a device
+without one is listed with an empty fingerprint but cannot be encrypted to). `setTrust` writes every
+version's model.
 
 **Trust mapping.** Converse's `trusted` attribute against our `Trust`:
 
@@ -556,60 +574,80 @@ becomes `EncryptionUnavailable` (`available()` answers `false` instead). The des
 |---|---|---|---|
 | `0` (`UNDECIDED`, default) | Converse, when a device appears | `untrusted` | Blind trust (spec 3.6): used for encryption, not verified |
 | `1` (`TRUSTED`) | Only us, `setTrust(..., 'verified')` | `verified` | The user compared the fingerprint |
-| `-1` (`UNTRUSTED`) | Us (`'blocked'`), or the rule below | `blocked` | Excluded from encryption (`encryptKeyForDevices`) |
+| `-1` (`UNTRUSTED`) | Us (`'blocked'`), or the rules below | `blocked` | Excluded from encryption (`encryptKeyForDevices`) |
 
 Converse never writes `1` itself (`plugins/omemo/utils.js` only references `UNTRUSTED`), so no
 extra "verified by the user" flag is needed, and `Trust` `'trusted'` is never produced (`fromTrust`
-maps it to `0` should a caller send it). Converse has no "stop trusting blindly" rule, so the
-repository adds it: on `add` to a contact's devices collection, a device without our `hp_seen`
-marker is new; if the contact already has a `verified` device, the new one is saved `-1` and shows
-as `blocked` until the user verifies or unblocks it. Decision of 2026-10-15: no fourth UI state for
-"pending" (the contract has none and the Converse state is exactly `-1`); a device blocked by the
-rule and one blocked by the user look the same. Devices restored from storage carry `hp_seen` and
-are never re-flagged; our own devices are never flagged.
+maps it to `0` should a caller send it). Decision of 2026-10-15: no fourth UI state for "pending"
+(the contract has none and the Converse state is exactly `-1`); a device excluded by a rule and one
+blocked by the user look the same.
 
-**APIs used.** `u.omemo.getDevicesForContact(jid, version)` for both versions
-(`eu.siacs.conversations.axolotl` and `urn:xmpp:omemo:2`), merged by device id (legacy first), then
+**Rules Converse lacks** (`DeviceListWatcher`, bound at every `OMEMOInitialized` to both
+collections, existing lists and later `add`s, unbound at `logout`):
+
+- _New devices_ (`decide`, on `add` and once for the devices already in a list when it is bound,
+  since our own list is filled before `OMEMOInitialized`). A model without our `hp_seen` marker is
+  one this client never decided on. Both version lists of the JID are awaited first
+  (`api.omemo.devicelists.get` → `list.initialized`); the same id already decided in the other
+  version (or restored there from storage after a partial wipe) is not new: it inherits that
+  `trusted`. Otherwise it is saved `-1` in the same `save` as the marker when it claims to be one of
+  ours (any id but `api.omemo.getDeviceID()`), or when the contact already has a `verified` device
+  (spec 3.6). The user lifts it with verify or unblock.
+- _Identity key binding_ (`onBundleChanged`). `setTrust(..., 'verified')` fetches the bundle,
+  refuses with `EncryptionUnavailable` when there is no identity key, and stores it as
+  `hp_verified_key` (per model: the legacy key carries a `0x05` prefix, the omemo:2 one does not).
+  A bundle pushed by the server (`updateBundleFromStanza` → `change:bundle`) whose identity key
+  differs sets `trusted: -1`: the user must compare the new fingerprint. Converse itself only
+  refuses to _build a session_ on a changed key (`OMEMOStore.isTrustedIdentity`, libsignal's
+  "identity key changed"); it never touches `trusted`.
+- `change:bundle` on a bundle without fingerprint (a fresh server bundle) also notifies, so the
+  next `devices()` recomputes the fingerprint (`u.omemo.generateFingerprint`, which triggers
+  `change:bundle` again, this time with a fingerprint: no loop).
+
+**APIs used.** `u.omemo.getDevicesForContact(jid, version)` for both versions,
 `u.omemo.generateFingerprint(device)` → `device.get('bundle').fingerprint` (64 hex: the identity key
-without the `0x05` prefix byte). Devices Converse marked `active: false` (dropped from their owner's
-list) are hidden; a device without a published bundle is listed with an empty fingerprint.
-`api.omemo.getDeviceID()` is a string: `ownDeviceId()` returns `Number(...)`. `setTrust` saves
-`trusted` on the device in every version list; `DeviceNotFound` when no list has it.
-`removeOwnDevice` refuses the current device (`Unknown`), calls `devicelist.removeOwnDevices([id])`
-(destroys the model, publishes the list) for each version list holding it, then synchronizes: the
-server echoes our own list as a PEP event and `updateDevicesFromStanza` re-creates any device it
-lists that is no longer in the collection, so two quick removals resurrected the first device
-(contract test, 2026-10-15). Removals are serialized and each one ends with an IQ ping to the
-domain: a session's stanzas are handled in order, so the echo has been processed when the ping is
-answered. `available(chatId)`: for a `chatroom`, `features` `nonanonymous` + `membersonly`
-(Converse's `isOMEMOMUCEligible`) and every other occupant has a JID with a usable device (active,
-not blocked); otherwise the contact's usable devices. `setEncryption`: `chat.save({ omemo_active })`
-+ `u.omemo.setOMEMOActiveState(jid, enabled)` (the remembered choice across chat close and
-re-login); the chat repository listens to `change:omemo_active` on the collection and reports
-`encrypted` through `onChatChange` (verified by both tests). `onDevicesChange`: bound at every
-`OMEMOInitialized` to both device list collections (existing lists and `add`), then per list to
-`devices` `add` / `remove` / `change:trusted` / `change:active`, debounced to one notification per
-JID per tick (a list update fires one `add` per device), each carrying `devices(jid)`.
+without the `0x05` byte). `api.omemo.getDeviceID()` is a string: `ownDeviceId()` returns
+`Number(...)`. `setEncryption`: `chat.save({ omemo_active })` + `u.omemo.setOMEMOActiveState(jid,
+enabled)` (the remembered choice across chat close and re-login); the chat repository listens to
+`change:omemo_active` on the collection and reports `encrypted` through `onChatChange` (verified by
+both tests). `onDevicesChange`: `devices` `add` / `remove` / `change:trusted` / `change:active` /
+`change:bundle`, debounced to one notification per JID per tick (a list update fires one `add` per
+device), each carrying `devices(jid)`. Rooms: `available()` is Converse's `isOMEMOMUCEligible`
+(`features` `nonanonymous` + `membersonly`) and every other occupant _present_ has a JID with a
+usable device; members who are not in the room are not known to the model (decision of
+2026-10-16: present-occupants semantics, the spec is aligned by the lead).
+
+**Removing an own device** (`remove`, serialized). Refuses the current device (`Unknown`). For each
+version list holding the id, `devicelist.removeOwnDevices([id])` destroys the model and publishes
+the list; when the publish fails (error stanza → `Unknown`, `null` timeout → `ServerUnreachable`)
+the model is re-created with its previous state, since the server still has it. Then the
+repository synchronizes and re-checks: the server echoes our list as a PEP event and
+`updateDevicesFromStanza` re-creates any device it lists that is no longer in the collection, so two
+quick removals resurrected the first (contract test, 2026-10-15); another client of ours re-publishes
+itself as soon as its id disappears (`publishCurrentDevice`). A session's stanzas are handled in
+order, so an IQ ping to the domain (Strophe's `connection.sendIQ`, 5 s: Converse's `api.sendIQ`
+leaves a detached rejection on timeout, §13) means the echo has been processed; a timeout still
+re-checks. Three attempts, then `Unknown`.
 
 **Contract test** (`omemo.contract.test.ts`, run alone with a file filter or through
 `pnpm test:contract`, which is sequential since 2026-10-15: two files signed in as alice at once
 each see the other's device and re-publish it): alice's own list holds this device with a 64-hex
-fingerprint; the devices left by earlier runs are removed (the server keeps the list, every run is a
-new device). A removed device that comes straight back is a live one: another alice client signed in
-elsewhere (the author's app) re-publishes itself as soon as its id disappears
-(`publishCurrentDevice`), so the test only asserts that the list did not grow and warns; the exact
-published list is asserted over the mock. `bob.close()` is raced with a 2 s timer: jsdom's
-WebSocket sometimes never fires `close` (same Event mismatch as §11), which hung `afterAll`. Bob's PEP nodes are published by hand with `access_model: open` and static identity
-keys (`0x05` + 32 known bytes, so the expected fingerprint is known), deleted at the end: Converse
-only needs the identity key for the fingerprint, no session is built. Then: blind trust,
+fingerprint; the devices left by earlier runs are excluded (never decided on by this client) and
+removed, each one asserted absent 500 ms later, except a live one (another alice client signed in
+elsewhere, the author's app), which the repository gives up on with `Unknown` after three attempts
+and the test reports. Bob's PEP nodes are published by hand with `access_model: open` and static
+identity keys (`0x05` + 32 known bytes, so the expected fingerprint is known), deleted at the end:
+Converse only needs the identity key for the fingerprint, no session is built. Then: blind trust,
 `available`, verification kept across sign-out/sign-in (the lists are persisted per account), a
 second device pushed by PEP once the first is verified comes out `blocked`, unblocking, encryption
 on/off seen through `chat.onChatChange`, `available` false when every device is blocked. The PEP
 push needs alice's presence subscription to bob (`+notify` delivery follows presence): the test
-runs the roster dance of `contract.test.ts` first.
+runs the roster dance of `contract.test.ts` first. `bob.close()` is raced with a 2 s timer: jsdom's
+WebSocket sometimes never fires `close` (same Event mismatch as §11), which hung `afterAll`.
 
 **Gaps.** An end-to-end encrypted exchange needs two OMEMO clients; bob's hand-written client has
-none, and the engine is one per process (a second one would need another Vitest worker and a
-shared server state): not tested, Converse's own tests cover the cipher. Rooms: `available` is
-implemented from the model, not exercised against a server. `omemo_default` stays false: encryption
-on by default per chat (spec 3.6) is a service/UI decision for later.
+none, and the engine is one per process: not tested, Converse's own tests cover the cipher. Rooms:
+`available` is implemented from the model, not exercised against a server. `omemo_default` stays
+false: encryption on by default per chat (spec 3.6) is a service/UI decision for later. The identity
+key check runs on the bundle push; a device whose key changed while this client was offline is
+caught on the next `devices()` call (the bundle is re-fetched only when Converse has none cached).

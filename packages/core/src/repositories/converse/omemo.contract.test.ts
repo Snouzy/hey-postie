@@ -152,16 +152,23 @@ describe.skipIf(!SERVER)('Converse OMEMO repository against the XMPP test server
       await expect(repositories.crypto.removeOwnDevice(1)).rejects.toMatchObject({
         code: 'DeviceNotFound',
       });
-      // The server keeps alice's list between runs, and every run is a new device. A device that
-      // comes back is live: another alice client (the author's app) re-publishes itself as soon
-      // as we drop it. The exact published list is asserted in crypto.test.ts.
-      const others = own.filter((d) => d.deviceId !== ownId).map((d) => d.deviceId);
-      for (const deviceId of others) await repositories.crypto.removeOwnDevice(deviceId);
-      const after = (await repositories.crypto.ownDevices()).map((d) => d.deviceId);
-      expect(after).toContain(ownId);
-      expect(after.length).toBeLessThanOrEqual(own.length);
-      const live = after.filter((id) => id !== ownId);
+      // The server keeps alice's list between runs, and every run is a new device: this client has
+      // never decided on them, so they are excluded. A device that keeps coming back is live
+      // (another alice client, the author's app, re-publishes itself as soon as we drop it): the
+      // repository gives up on it with `Unknown`; every other one must stay gone.
+      const others = own.filter((d) => d.deviceId !== ownId);
+      expect(others.every((d) => d.trust === 'blocked')).toBe(true);
+      const live: number[] = [];
+      for (const { deviceId } of others) {
+        await repositories.crypto.removeOwnDevice(deviceId).catch((error: unknown) => {
+          expect(error).toMatchObject({ code: 'Unknown' });
+          live.push(deviceId);
+        });
+      }
       if (live.length > 0) console.warn('omemo contract: other alice devices online', live);
+      await new Promise((resolve) => setTimeout(resolve, 500));
+      const after = (await repositories.crypto.ownDevices()).map((d) => d.deviceId);
+      expect(after.sort()).toEqual([ownId, ...live].sort());
     },
     TIMEOUT,
   );
