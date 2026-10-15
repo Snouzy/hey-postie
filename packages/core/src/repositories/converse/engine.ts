@@ -1,4 +1,11 @@
-import type { ConverseApi, ConverseEnv, ConverseHeadless, ConverseState, Handler } from './models';
+import type {
+  ConverseApi,
+  ConverseEnv,
+  ConverseHeadless,
+  ConverseState,
+  Handler,
+  RoomStatus,
+} from './models';
 
 export type PersistentStore = 'IndexedDB' | 'localStorage';
 
@@ -16,6 +23,7 @@ export interface Loaded {
   state: ConverseState;
   storage: ConverseHeadless['_converse']['storage'];
   env: ConverseEnv;
+  roomStatus: RoomStatus;
   MAMPlaceholderMessage: ConverseHeadless['MAMPlaceholderMessage'];
 }
 
@@ -80,6 +88,7 @@ export class ConverseEngine {
       state: _converse.state,
       storage: _converse.storage,
       env: converse.env,
+      roomStatus: converse.ROOMSTATUS,
       MAMPlaceholderMessage,
     };
     for (const [name, handler] of this.listeners) api.listen.on(name, handler);
