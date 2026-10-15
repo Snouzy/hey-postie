@@ -10,19 +10,21 @@ import styles from './SignIn.module.css';
 
 interface SignInProps {
   onBack: () => void;
+  /** Coming from account creation: the address is known and Postie explains why we are here. */
+  prefill: { jid: string; error: MessageKey } | null;
 }
 
 // Just enough to ask the keychain; the service does the real validation on submit.
 const LOOKS_LIKE_JID = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
 
-export function SignIn({ onBack }: SignInProps) {
+export function SignIn({ onBack, prefill }: SignInProps) {
   const core = useCore();
   const text = useText();
   const account = useAccount();
-  const [jid, setJid] = useState('');
+  const [jid, setJid] = useState(prefill?.jid ?? '');
   const [password, setPassword] = useState('');
   const [remember, setRemember] = useState(true);
-  const [error, setError] = useState<MessageKey | null>(null);
+  const [error, setError] = useState<MessageKey | null>(prefill?.error ?? null);
   const connecting = account?.state === 'connecting';
 
   // What the keychain gave us, so that it can be taken back when the address changes.

@@ -31,7 +31,7 @@ sentence).
 | Screen | File | What it does |
 |---|---|---|
 | Welcome | `screens/Welcome.tsx` | Postie `happy`, "Sign in", "Create an account". |
-| Sign in | `screens/SignIn.tsx` | JID, password, "Remember me". On blur of a valid-looking JID, asks `accounts.rememberedPassword` and prefills. While `connecting`: Postie `delivering`, form disabled. |
+| Sign in | `screens/SignIn.tsx` | JID, password, "Remember me"; an optional `prefill` (JID and sentence) when coming from account creation. On blur of a valid-looking JID, asks `accounts.rememberedPassword` and prefills. While `connecting`: Postie `delivering`, form disabled. |
 | Create account | `screens/CreateAccount.tsx`, `screens/RegistrationForm.tsx` | Two steps, see [Create account](#create-account) below. |
 | Main | `screens/Main.tsx` | Three columns: `Sidebar`, `Conversation` (keyed by chat id, so drafts and in-flight loads stay with their chat; or the empty state with Postie `asleep`), optional `Details`. Owns the selected chat, the open dialog and the error sentence of background actions. Subscribes to `chat.requested` (notification click, `xmpp:` link) and opens the chat if it is not listed yet. |
 
@@ -47,32 +47,45 @@ server, `oops` on an error, `sealed` otherwise) and the focus in the first field
    `ServerUnreachable` and `CertificateInvalid` keep the user here with their sentence and the
    button reads "Try another server".
 2. **"Who?"** (`RegistrationForm.tsx`): the `RegistrationForm` from the core, rendered
-   generically. `text`, `password` and `email` fields become `Field`s (our own labels for
-   `username` and `password`, the server's `label` for the rest; `required` enforced; the server's
-   `instructions` shown as Postie's sentence with the domain). `hidden` fields are not shown and,
-   because the contract carries no value for them, not sent either. We add "Repeat password"
-   (must match) and require 8 characters, both checked before anything leaves the screen. When
-   `captchaImageDataUrl` is set the image is shown as it comes, with its answer field named after
-   `captchaField`. Submit calls `accounts.register({ domain, username, password, extra })`, where
-   `extra` is every other value (email, CAPTCHA answer, custom fields). `AccountConflict` puts the
-   focus back on the username; other errors show their sentence. Success signs in, so `App`
+   generically. Every visible field becomes a `Field` (our own labels for `username` and
+   `password`, the server's `label` for the rest; `required` enforced; the server's
+   `instructions` shown as Postie's sentence with the domain). The input type never comes from
+   the server: `password` is always `type="password"`, `email` stays `email`, everything else is
+   `text`. `hidden` fields are not shown and not sent: filling them is the repository's business.
+   We add "Repeat password" (must match) and require `MIN_PASSWORD_LENGTH` characters (exported
+   by the core, so the rule is written once), both checked before anything leaves the screen.
+   The CAPTCHA image is shown only when `captchaImageDataUrl` starts with `data:image/` (the core
+   already filters; the UI keeps its own belt), with its answer field named after `captchaField`.
+   Submit calls `accounts.register({ domain, username, password, extra })`, where `extra` holds
+   the other values **of this form only** (email, CAPTCHA answer, custom fields); a `busy` flag
+   disables the form and ignores a second submit while the first is in flight. `AccountConflict`
+   puts the focus back on the username; `AccountCreatedSignInFailed` (the account exists but the
+   sign-in that follows failed) hands over to `SignIn` with the JID prefilled and that sentence
+   shown (`App` keeps the JID in `createdJid`; "Sign in" from Welcome clears it); other errors
+   show their sentence. Any edit clears the sentence, on both steps. Success signs in, so `App`
    moves to Main on its own.
 
-"Back" goes from "Who?" to "Where?" (the domain is kept) and from "Where?" to Welcome.
+The typed values live in `CreateAccount`, so "Back" from "Who?" to "Where?" and "Continue" again
+lose nothing (the domain is kept too); "Back" from "Where?" goes to Welcome.
 
 ## Account menu
 
 The account row of the sidebar (`components/AccountMenu.tsx`) is a button
-(`aria-haspopup="menu"`) that opens a small `role="menu"`: the JID, "Sign out", "My devices…"
-(see Encryption) and "Delete my account…". The first item takes the focus, arrows move and wrap, Esc or a click
-outside closes it and the focus returns to the row. Deleting the account is therefore two clicks
-away, as App Store rule 5.1.1(v) asks.
+(`aria-haspopup="menu"`) that opens a small card: the JID (outside the menu, it is not an item)
+and a `role="menu"` with "Sign out", "My devices…" (see Encryption) and "Delete my
+account…". The first item takes the focus,
+arrows move and wrap (from outside the items, Down goes first and Up goes last), Esc, Tab out or a
+click outside closes it and the focus returns to the row. Picking an item puts the focus back on
+the row **before** acting, so the dialog it opens gives the focus back to the row when it closes.
+Deleting the account is therefore two clicks away, as App Store rule 5.1.1(v) asks.
 
 "Delete my account…" opens `components/DeleteAccountDialog.tsx` from `Main`: a plain sentence
 (no joke; it is permanent on the server), a field where the user types their own JID
 (`aria-describedby` the sentence; compared trimmed and lower-cased), and a `danger` button that
-stays disabled until it matches. Submit calls `accounts.deleteAccount()`; on success `Main`
-leaves to Welcome (`onLeave('welcome')`), on failure the sentence shows and the dialog stays.
+stays disabled until it matches. Submit calls `accounts.deleteAccount()`; while it runs the dialog
+is not closable (`Dialog closable={false}`: Esc and the X are ignored, Cancel disabled); on
+success `Main` leaves to Welcome (`onLeave('welcome')`), on failure the sentence shows and the
+dialog stays.
 
 ## How the UI subscribes to the core
 
@@ -240,10 +253,15 @@ and bodies are always rendered as text (no HTML).
 success goes to Main, password prefill), `CreateAccount.test.tsx` (directory link through
 `onOpenLink`, server without registration stays on "Where?", unreachable server, seeded form with
 email, hidden field and CAPTCHA, mismatched and short passwords never reach `registration.submit`,
-conflict focuses the username, success sends `extra` and lands in Main, back links),
-`AccountMenu.test.tsx` (JID, arrows, Esc, click outside, actions), `DeleteAccountDialog.test.tsx`
+conflict focuses the username, success sends `extra` and lands in Main, back links, one
+`register` for a double submit, hand-over to Sign in on `AccountCreatedSignInFailed`, password
+field type never from the server, CAPTCHA only from a data URL, errors clear on edit, the
+password never appears in the document, values kept across Back, only the current form's fields
+sent),
+`AccountMenu.test.tsx` (JID outside the menu, arrows incl. Up from outside, Esc, Tab out, click
+outside, focus back on the row before acting), `DeleteAccountDialog.test.tsx`
 (two clicks away, button asleep until the JID matches, `deleteCurrent` recorded and Welcome
-shown, failure sentence, Esc), `ChatList.test.tsx` (order, badge, sealed preview),
+shown, failure sentence, not closable while deleting, Esc with focus back on the row), `ChatList.test.tsx` (order, badge, sealed preview),
 `MessageList.test.tsx` (grouping, day labels, retry, undecryptable, links, load older),
 `Composer.test.tsx` (Enter / Shift+Enter, empty disabled, inline error), `Main.test.tsx`
 (empty state, markRead and notification rules, new chat dialog, contacts, sign out through the

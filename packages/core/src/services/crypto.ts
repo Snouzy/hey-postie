@@ -14,6 +14,7 @@ export function createCryptoService(
   return {
     devices: (jid) => deps.crypto.devices(bare(jid)),
     ownDevices: () => deps.crypto.ownDevices(),
+    ownDeviceId: () => deps.crypto.ownDeviceId(),
     verify: (jid, deviceId) => deps.crypto.setTrust(bare(jid), deviceId, 'verified'),
     block: (jid, deviceId) => deps.crypto.setTrust(bare(jid), deviceId, 'blocked'),
     unblock: (jid, deviceId) => deps.crypto.setTrust(bare(jid), deviceId, 'untrusted'),

@@ -55,11 +55,26 @@ describe('DeleteAccountDialog', () => {
     await waitFor(() => expect(button).toBeEnabled());
   });
 
-  it('closes on Esc without deleting anything', async () => {
+  it('ignores Esc and the X while the deletion is in flight', async () => {
+    const { deps, button } = await openDialog();
+    deps.fakes.registration.deleteCurrent = () => new Promise<void>(() => {});
+    fireEvent.change(screen.getByLabelText('Type your address to confirm'), {
+      target: { value: 'alice@x.org' },
+    });
+    fireEvent.click(button);
+    expect(await screen.findByRole('status')).toHaveTextContent('closing your letter box');
+    fireEvent.keyDown(window, { key: 'Escape' });
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Close' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Cancel' })).toBeDisabled();
+  });
+
+  it('closes on Esc without deleting anything, focus back on the account row', async () => {
     const { deps } = await openDialog();
     fireEvent.keyDown(window, { key: 'Escape' });
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     expect(deps.fakes.registration.deleted).toEqual([]);
     expect(screen.getByRole('searchbox', { name: 'Search chats' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'alice' })).toHaveFocus();
   });
 });

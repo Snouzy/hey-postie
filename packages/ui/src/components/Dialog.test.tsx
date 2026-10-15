@@ -5,7 +5,7 @@ import { CoreProvider } from '../core/CoreProvider';
 import { setupCore } from '../test-utils';
 import { Dialog } from './Dialog';
 
-function Harness() {
+function Harness({ closable = true }: { closable?: boolean }) {
   const [open, setOpen] = useState(false);
   return (
     <>
@@ -13,7 +13,7 @@ function Harness() {
         opener
       </button>
       {open && (
-        <Dialog title="A question" onClose={() => setOpen(false)}>
+        <Dialog title="A question" onClose={() => setOpen(false)} closable={closable}>
           <input aria-label="first" />
           <button type="button">last</button>
         </Dialog>
@@ -22,11 +22,11 @@ function Harness() {
   );
 }
 
-function openDialog() {
+function openDialog(closable = true) {
   const { core } = setupCore();
   render(
     <CoreProvider core={core} locale="en">
-      <Harness />
+      <Harness closable={closable} />
     </CoreProvider>,
   );
   const opener = screen.getByRole('button', { name: 'opener' });
@@ -50,6 +50,13 @@ describe('Dialog', () => {
     expect(screen.getByRole('button', { name: 'Close' })).toHaveFocus();
     fireEvent.keyDown(dialog, { key: 'Tab', shiftKey: true });
     expect(last).toHaveFocus();
+  });
+
+  it('ignores Esc and disables the X while not closable', () => {
+    openDialog(false);
+    fireEvent.keyDown(window, { key: 'Escape' });
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Close' })).toBeDisabled();
   });
 
   it('gives the focus back to the opener on Esc', () => {

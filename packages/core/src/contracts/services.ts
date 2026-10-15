@@ -73,6 +73,8 @@ export interface RoomsService {
 export interface CryptoService {
   devices(jid: string): Promise<Device[]>;
   ownDevices(): Promise<Device[]>;
+  /** The id of this device, to mark it in the list. */
+  ownDeviceId(): Promise<number>;
   verify(jid: string, deviceId: number): Promise<void>;
   block(jid: string, deviceId: number): Promise<void>;
   /** Back to the blind-trust state. */

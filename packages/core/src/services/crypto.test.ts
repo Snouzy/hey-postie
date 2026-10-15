@@ -57,6 +57,7 @@ describe('own devices', () => {
       { deviceId: 2, fingerprint: 'b' },
     );
     expect((await core.crypto.ownDevices()).every((d) => d.isOwn)).toBe(true);
+    expect(await core.crypto.ownDeviceId()).toBe(1);
     await core.crypto.removeOwnDevice(2);
     expect((await core.crypto.ownDevices()).map((d) => d.deviceId)).toEqual([1]);
   });
