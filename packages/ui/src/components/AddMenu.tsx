@@ -1,5 +1,5 @@
 import { DoorOpen, MessageSquarePlus, Plus, UserPlus } from 'lucide-react';
-import { type KeyboardEvent, useEffect, useId, useRef, useState } from 'react';
+import { type FocusEvent, type KeyboardEvent, useEffect, useId, useRef, useState } from 'react';
 import { useText } from '../core/CoreProvider';
 import styles from './AddMenu.module.css';
 import { Button } from './Button';
@@ -36,9 +36,15 @@ export function AddMenu({ onNewChat, onJoinRoom, onAddContact }: AddMenuProps) {
     trigger.current?.focus();
   }
 
+  // The "+" takes the focus back first, so the dialog that opens knows it as its opener.
   function pick(action: () => void) {
+    trigger.current?.focus();
     setOpen(false);
     action();
+  }
+
+  function onBlur(event: FocusEvent<HTMLDivElement>) {
+    if (!root.current?.contains(event.relatedTarget as Node | null)) setOpen(false);
   }
 
   // Focus is inside the menu while it is open, so the menu itself hears the keys.
@@ -83,6 +89,7 @@ export function AddMenu({ onNewChat, onJoinRoom, onAddContact }: AddMenuProps) {
           role="menu"
           aria-label={text('main.add')}
           onKeyDown={onKeyDown}
+          onBlur={onBlur}
         >
           {items.map(({ label, icon: Icon, action }) => (
             <button
