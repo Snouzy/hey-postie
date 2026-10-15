@@ -199,6 +199,21 @@ export const fr: Record<MessageKey, string> = {
   'message.checkDevices': 'Vérifier leurs appareils',
   'composer.placeholderSealed': 'Écrire une lettre scellée…',
 
+  'composer.attach': 'Joindre un colis',
+  'composer.emoji': 'Ajouter un emoji',
+  'emoji.title': 'Emojis',
+  'emoji.search': 'Chercher un emoji',
+  'emoji.empty': 'Aucun emoji de ce nom.',
+  'emoji.category.smileys': 'Smileys',
+  'emoji.category.people': 'Personnes',
+  'emoji.category.nature': 'Nature',
+  'emoji.category.food': 'Nourriture',
+  'emoji.category.activity': 'Activités',
+  'emoji.category.travel': 'Voyages',
+  'emoji.category.objects': 'Objets',
+  'emoji.category.symbols': 'Symboles',
+  'emoji.category.flags': 'Drapeaux',
+
   'date.today': 'Aujourd’hui',
   'date.yesterday': 'Hier',
 };

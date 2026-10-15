@@ -219,6 +219,34 @@ shows and asks._
   row whose id is `crypto.ownDeviceId()` wears a "This device" stamp and has no "Remove": a
   device does not retire itself from here (no row is marked until the service has answered).
 
+## Emoji
+
+_Added 2026-10-15. Sources: `scripts/trim-emoji.mjs`, `data/emoji.json`, `data/emoji.ts`,
+`components/Popover.tsx`, `EmojiPicker.tsx`, `composerText.ts`, `EmojiPicker.test.tsx`._
+
+- **Data**: `packages/ui/src/data/emoji.json` (149 kB, 1589 entries) is generated from Converse's
+  `emoji.json` (the one `apps/desktop/public/` serves to the engine) by
+  `node packages/ui/scripts/trim-emoji.mjs`, which keeps `{ category, emoji, shortname, keywords }`
+  (the `emoji` string is built from the `cp` code points; `keywords` are Converse's alternate
+  shortnames) and drops the custom images, the bare skin-tone modifiers and the `_toneN` variants
+  (they would multiply "People" by six). The generated file is committed; the UI never fetches the
+  desktop's copy. `data/emoji.ts` types it, lists the categories in the picker's order and holds
+  `searchEmojis(query)` (shortname or keyword contains the query, spaces read as `_`) and the six
+  `QUICK_EMOJIS` of the reaction row. Nothing new is installed: see
+  [dependencies.md](dependencies.md) for Converse.
+- **Popover** (`Popover`): a `role="dialog"` card with `position: fixed`, placed above its
+  `anchor` (below when there is no room, clamped to the viewport), so neither the message
+  scroller nor the composer clips it. Esc and a click outside call `onClose`; the opener gives the
+  focus back. Decision of 2026-10-15: no portal, no library; a fixed card measured once on mount
+  is enough for a desktop window.
+- **Picker** (`EmojiPicker`): a search field that takes the focus on open, category toggle
+  buttons (`aria-pressed`, hidden while searching), then a grid of `<button>`s whose content is
+  the emoji and whose accessible name is the shortname. Arrows move in the grid by one or by
+  `COLUMNS` (8, matching the stylesheet); Down from the search enters the grid; Esc closes. The
+  smile button of the `Composer` opens it; a pick runs `insertAt` on the textarea's selection,
+  closes the picker and focuses the text with the caret after the emoji (the same
+  `requestAnimationFrame` dance as the nick completion). `:short` autocompletion is not built.
+
 ## Keyboard
 
 Cmd/Ctrl+K focuses the search (listener in `Main`). The "+" of the sidebar opens a menu
@@ -292,4 +320,7 @@ sentence, devices with formatted fingerprints and stamps, Verify / Block / Unblo
 chat switch, an event during the load wins, the wax badge, undecryptable help line and the way
 to the devices twice, no way when no pane can open), `Devices.test.tsx` (My devices with "This
 device", confirm / cancel / remove with the focus following, confirmation dropped when the device
-goes away, failed load with Retry; a hall's devices by member, known members without any key).
+goes away, failed load with Retry; a hall's devices by member, known members without any key),
+`EmojiPicker.test.tsx` (focus on the search, shortname and keyword filtering,
+categories, insertion at the caret with the focus back on the text, arrows in the grid, Esc with
+the focus back on the smile, click outside).

@@ -192,6 +192,21 @@ export const en = {
   'message.checkDevices': 'Check their devices',
   'composer.placeholderSealed': 'Write a sealed letter…',
 
+  'composer.attach': 'Attach a parcel',
+  'composer.emoji': 'Add an emoji',
+  'emoji.title': 'Emojis',
+  'emoji.search': 'Search emojis',
+  'emoji.empty': 'No emoji by that name.',
+  'emoji.category.smileys': 'Smileys',
+  'emoji.category.people': 'People',
+  'emoji.category.nature': 'Nature',
+  'emoji.category.food': 'Food',
+  'emoji.category.activity': 'Activity',
+  'emoji.category.travel': 'Travel',
+  'emoji.category.objects': 'Objects',
+  'emoji.category.symbols': 'Symbols',
+  'emoji.category.flags': 'Flags',
+
   'date.today': 'Today',
   'date.yesterday': 'Yesterday',
 } as const;
