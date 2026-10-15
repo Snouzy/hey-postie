@@ -8,7 +8,7 @@ _Created 2026-10-15. Updated as the code grows; each section names the files it 
 packages/core/     the engine, TypeScript, no React
   src/contracts/   types, errors, events, repository and service interfaces
   src/services/    business rules; depend on repository interfaces only
-  src/repositories/ implementations: converse/ (XMPP, roster, chats, registration), tauri/ (keychain, transport, notifier)
+  src/repositories/ implementations: converse/ (XMPP, roster, chats, OMEMO, registration), tauri/ (keychain, transport, notifier)
   src/fakes/       in-memory repositories for tests and for the UI in development
   src/container.ts createCore(deps): the single place where everything is wired
 packages/ui/       React: theme/, i18n/, illustrations/, screens/, components/
@@ -30,9 +30,10 @@ tasks/             agents' plans and lessons, untracked
 - **Persistence**: `apps/desktop/app/repositories/keychain.ts` calls the Rust `keychain_*` commands;
   `packages/core/src/fakes/keychain.ts` keeps a `Map` in memory for tests.
   `packages/core/src/repositories/converse/` wraps `@converse/headless`: `engine.ts` owns the one
-  Converse instance, `xmpp.ts`, `roster.ts`, `chat.ts` and `registration.ts` (XEP-0077 over a bare
-  Strophe connection, plus account deletion and local wipe) implement the repository contracts,
-  `mappers.ts` turns Converse models into the plain types of `contracts/`. `createConverseRepositories()`
+  Converse instance, `xmpp.ts`, `roster.ts`, `chat.ts`, `crypto.ts` (OMEMO devices and trust over
+  Converse's device lists) and `registration.ts` (XEP-0077 over a bare Strophe connection, plus
+  account deletion and local wipe) implement the repository contracts, `mappers.ts` and
+  `crypto-mappers.ts` turn Converse models into the plain types of `contracts/`. `createConverseRepositories()`
   (exported by `@hey-postie/core`) wires them over one engine; `apps/desktop/app/dependencies.ts`
   calls it. Details and pitfalls: [converse.md](converse.md).
 
