@@ -8,7 +8,7 @@ _Created 2026-10-15. Updated as the code grows; each section names the files it 
 packages/core/     the engine, TypeScript, no React
   src/contracts/   types, errors, events, repository and service interfaces
   src/services/    business rules; depend on repository interfaces only
-  src/repositories/ implementations: converse/ (XMPP, roster, chats, rooms, OMEMO, registration), tauri/ (keychain, transport, notifier)
+  src/repositories/ implementations: converse/ (XMPP, roster, chats, rooms, OMEMO, registration, files), tauri/ (keychain, transport, notifier)
   src/fakes/       in-memory repositories for tests and for the UI in development
   src/container.ts createCore(deps): the single place where everything is wired
 packages/ui/       React: theme/, i18n/, illustrations/, screens/, components/
@@ -30,12 +30,15 @@ tasks/             agents' plans and lessons, untracked
 - **Persistence**: `apps/desktop/app/repositories/keychain.ts` calls the Rust `keychain_*` commands;
   `packages/core/src/fakes/keychain.ts` keeps a `Map` in memory for tests.
   `packages/core/src/repositories/converse/` wraps `@converse/headless`: `engine.ts` owns the one
-  Converse instance, `xmpp.ts`, `roster.ts`, `chat.ts`, `room.ts`, `crypto.ts` + `crypto-lists.ts` (OMEMO devices and trust over
-  Converse's device lists) and `registration.ts` (XEP-0077 over a bare Strophe connection, plus
-  account deletion and local wipe) implement the repository contracts, `mappers.ts` and
-  `crypto-mappers.ts` turn Converse models into the plain types of `contracts/`. `createConverseRepositories()`
-  (exported by `@hey-postie/core`) wires them over one engine; `apps/desktop/app/dependencies.ts`
-  calls it. Details and pitfalls: [converse.md](converse.md).
+  Converse instance; `xmpp.ts`, `roster.ts`, `chat.ts` (with `upload.ts` for XEP-0363 and
+  `reactions.ts` for XEP-0444), `room.ts`, `crypto.ts` (OMEMO devices and trust over Converse's
+  device lists, with `crypto-lists.ts`), `registration.ts` (XEP-0077 over a bare Strophe
+  connection, plus account deletion and local wipe) and `file.ts` (attachment download and
+  `aesgcm` decryption with WebCrypto, no Converse code) implement the repository contracts;
+  `mappers.ts`, `room-mappers.ts` and `crypto-mappers.ts` turn Converse models into the plain
+  types of `contracts/`. `createConverseRepositories()` (exported by `@hey-postie/core`) wires them
+  over one engine; `apps/desktop/app/dependencies.ts` calls it. Details and pitfalls:
+  [converse.md](converse.md).
 
 ## Run and verify
 
@@ -57,7 +60,7 @@ A local Prosody 13 server, bound to `localhost` only, for development and for th
 gated by `XMPP_TEST_SERVER`: see [`tools/xmpp-server/README.md`](../../tools/xmpp-server/README.md)
 (install, start/stop, test accounts `alice@localhost` and `bob@localhost`, ports, certificates).
 
-  src/repositories/ implementations: converse/ (XMPP, roster, chats, rooms, registration), tauri/ (keychain, transport, notifier)
+  src/repositories/ implementations: converse/ (XMPP, roster, chats, rooms, registration, files), tauri/ (keychain, transport, notifier)
 
 ```sh
 tools/xmpp-server/start.sh -d && tools/xmpp-server/users.sh

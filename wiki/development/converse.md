@@ -116,7 +116,8 @@ api.send(stx`<message to="${chat.get('jid')}" type="chat" id="${u.getUniqueId('r
 ```
 
 and advertise the feature: `api.listen.on('addClientFeatures', () => api.disco.own.features.add(Strophe.NS.REACTIONS))`.
-In an OMEMO chat: `api.omemo.send(chat, fallbackBody, [reactionsEl, fallbackEl])`.
+In an OMEMO chat: `api.omemo.send(chat, fallbackBody, [reactionsEl, fallbackEl])`. Built in
+[§15](#15-parcels-and-reactions-what-the-repository-does).
 
 ## 7. HTTP upload (XEP-0363)
 
@@ -127,7 +128,7 @@ body becomes `aesgcm://…#ivkey`, `oob_url` null. **Headless does not download 
 `aesgcm://` on receipt.** That download and decryption is ours to write, planned for milestone 4
 (files); as of 2026-10-15 the chat repository only maps such a body to an `Attachment` with
 `encryption: 'aesgcm'` and the `#ivkey` fragment in `decryptionKey`, never in `url`. There is no
-`api.upload`.
+`api.upload`. The download side is `file.ts`, see [§15](#15-parcels-and-reactions-what-the-repository-does).
 
 ## 8. OMEMO
 
@@ -651,3 +652,90 @@ none, and the engine is one per process: not tested, Converse's own tests cover 
 false: encryption on by default per chat (spec 3.6) is a service/UI decision for later. The identity
 key check runs on the bundle push; a device whose key changed while this client was offline is
 caught on the next `devices()` call (the bundle is re-fetched only when Converse has none cached).
+
+## 16. Parcels and reactions: what the repository does
+
+_Implementation of 2026-10-16, `upload.ts`, `reactions.ts`, `file.ts` and the `sendFile` /
+`maxFileSize` / `react` methods of `chat.ts`; verified by `parcel.test.ts` (mock connection, PUT
+through `test-support/fakeXhr.ts`), `file.test.ts` (WebCrypto fixture, `fetch` stubbed) and
+`parcel.contract.test.ts` against the local Prosody._
+
+- **Upload limit** (`maxFileSize`): `api.disco.features.get(Strophe.NS.HTTPUPLOAD, domain)` returns
+  the entities (server and its disco#items) that advertise upload; the limit is the `max-file-size`
+  field of the data form whose `FORM_TYPE` is the upload namespace (`model-with-messages.js:433-447`
+  does the same). Cached per connection (`disconnected` clears it); `null` when the server has no
+  upload component or announces no limit. Pitfall found in the mock test: Converse only queries the
+  server's disco#items when its disco#info advertises `http://jabber.org/protocol/disco#items`
+  (`plugins/disco/entity.js:242`); a server answer without that feature yields no upload service.
+- **Upload** (`sendFile`): the limit is checked first so that the caller gets `FileTooLarge`
+  (Converse's own check only produces an ephemeral `type: 'error'` message). Then
+  `chat.sendFiles([file])` (`model-with-messages.js:432-495`): Converse creates a placeholder message
+  with `file: true`, `progress` 0..1 (triggered manually as `add` on `chat.messages`), requests the
+  slot, PUTs through `XMLHttpRequest` (`shared/message.js:270-328`; `Content-type` and the slot's
+  `Authorization`/`Expires` headers), saves `upload: 'success'` with `body` = `oob_url` = the GET URL,
+  and `onMessageUploadChanged` sends a *second* message with that body and destroys the placeholder.
+  `upload.ts` listens on the collection: `change:progress` → `onProgress`, `change:upload` success →
+  remembers the URL and resolves with the next added model whose text (`plaintext` or `body`) is that
+  URL; `upload: 'failure'` or an ephemeral error (slot refused, upload unsupported) → `Unknown`;
+  2 minutes → `ServerUnreachable`. Placeholders are never displayable (`isDisplayable` drops
+  `file: true`), so the chat list and `messages()` do not show an empty message while uploading.
+  Converse parses no file size anywhere (no XEP-0447), so the mapper leaves `size: 0` and `sendFile`
+  stamps the size of the uploaded `File` on the returned attachment.
+- **Encrypted upload**: in a chat with `omemo_active`, the `beforeFileUpload` hook encrypts the file
+  (AES-256-GCM, 12-byte IV, `plugins/omemo/utils.js:1206-1215`) and `afterFileUploaded` rewrites the
+  body to `aesgcm://host/path#<hex iv><hex key>` with `oob_url: null`; `getOutgoingMessageAttributes`
+  then moves that body to `plaintext`. The mapper reads `plaintext || body`, so the sent `Message`
+  carries one attachment with `encryption: 'aesgcm'`, `decryptionKey` set and a URL without fragment.
+  **Not exercised end to end** (checked on 2026-10-16): the mock has no OMEMO sessions and bob's
+  hand-written client has no OMEMO; the mapping is unit-tested on a fixture body.
+- **Body of an upload**: a message whose text is only the attachment's URL gets `body: ''`
+  (`mappers.ts` `isOnlyUrl`); a caption with an `oob_url` keeps its text.
+- **Download** (`file.ts`, `ConverseFileRepository`, no Converse code involved): `fetch()` over
+  `https:` only (`aesgcm:` is rewritten to `https:`, plain `http:` is refused), no redirects,
+  `Content-Length` above 200 MB aborts before reading, the bytes are checked again after reading.
+  `aesgcm` attachments are decrypted with WebCrypto: `decryptionKey` is hex(iv) + hex(key) with a
+  32-byte key, so the IV is whatever precedes the last 64 hex characters (12 or 16 bytes; Converse
+  writes 12). The tag sits at the end of the ciphertext, as WebCrypto's `encrypt` leaves it. Blobs
+  are cached by URL (50 entries, oldest dropped). Every failure is `DomainError('Unknown')` with a
+  code-first message and no URL in it.
+- **Reactions** (`react`, `reactions.ts`): the stanza of §6, same as Converse's UI plugin
+  (`src/plugins/reactions-views/utils.js` `sendReaction`, read on GitHub master 2026-10-15): target
+  id = `msgid`, or the room's `stanza_id` in a room (fallback `msgid`), `<store/>` hint, type
+  `chat`/`groupchat`. Sealed chat: `api.omemo.send(chat, fallbackBody, [reactionsEl, fallbackEl])`
+  with the emojis as fallback body (no body when removing). Our own stanza is not echoed back in a
+  direct chat, so the repository saves `{ ...reactions, [ownKey]: emojis }` on the model (key from
+  `u.reactions.getOwnReactionJID(chat)`: bare JID, or occupant id / address in a room), which fires
+  `change:reactions` → `onMessageUpdate`. Incoming reactions are merged by Converse
+  (`plugins/reactions/utils.js` `getUpdatedMessageAttributes`), a stanza with an empty list removes
+  the sender's key. `urn:xmpp:reactions:0` is advertised at `addClientFeatures`. The mapper sorts
+  `Reaction[]` by emoji.
+- **Model typings** (`models.ts`): `ChatModel.sendFiles`, `api.disco.features.get` /
+  `api.disco.own.features.add`, `api.send`, `api.omemo.send` (optional: present once the plugin
+  loaded), `Strophe.NS`, `u.getUniqueId`, `u.reactions.getOwnReactionJID`.
+
+### Contract test (`parcel.contract.test.ts`)
+
+Same preamble as [§12](#contract-test). The engine's `fetch` is the asset stub, so the test keeps
+Node's `fetch` from before `prepareContractEnvironment()` and routes `localhost:5281` URLs to it.
+Four scenarios: `maxFileSize()` is 10 MB (`http_file_share_size_limit`); alice uploads a text file,
+bob receives a message whose `<body>` and `<x xmlns="jabber:x:oob"><url>` are an
+`https://upload.localhost:5281/file_share/...` URL, and `core.files.fetch` downloads the same bytes;
+a file above the limit is refused before any IQ; bob's reaction stanza to alice's message shows up
+through `onMessageUpdate`, and alice's `toggleReaction` reaches bob as a `<reactions>` stanza.
+Observed on 2026-10-16:
+
+- Prosody delivers a bare-JID `chat` message to the resources with the **highest** priority only.
+  Another session signed in as `bob@localhost` (an agent's Converse, resource `v9_9zzoDGlC_`, smacks
+  on) was online at the same time and received alice's messages instead of the test's bob, whose
+  default priority is 0: nothing arrived, no error. The test's bob now sends `<priority>10</priority>`.
+  The shared accounts remain a hazard for every contract suite.
+- The upload scenario needs the server's certificate to cover `upload.localhost`: `mod_http_file_share`
+  hands out `https://upload.localhost:5281/file_share/...` (routing is by `Host`, so the URL cannot be
+  rewritten to `localhost`), and the mkcert certificate had SANs `localhost, 127.0.0.1, ::1` only →
+  `ERR_TLS_CERT_ALTNAME_INVALID` in Node, same in the webview, and Converse's XHR failure surfaced as
+  `Unknown: upload failed`. Fixed the same day by regenerating the certificate with `upload.localhost`
+  and `rooms.localhost` ([tools/xmpp-server](../../tools/xmpp-server/README.md)); all four scenarios
+  pass since. CORS needs nothing: Prosody 13 enables it by default
+  (`http_default_cors_enabled`) and `mod_http_file_share` declares its own.
+- jsdom's `XMLHttpRequest` enforces CORS (preflight for the cross-origin PUT) and reports upload
+  progress; Converse's XHR path runs unchanged under Vitest.

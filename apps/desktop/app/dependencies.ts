@@ -1,16 +1,16 @@
-import { type CoreDependencies, createConverseRepositories, FakeFile } from '@hey-postie/core';
+import { type CoreDependencies, createConverseRepositories } from '@hey-postie/core';
 import { TauriKeychain } from './repositories/keychain';
 import { TauriNotifier } from './repositories/notifier';
 import { TauriTransport } from './repositories/transport';
 
 /**
- * The real repositories of the desktop app. XMPP, roster, chats, rooms, OMEMO and registration
- * come from the Converse engine
+ * The real repositories of the desktop app. XMPP, roster, chats, rooms, OMEMO, registration and
+ * files come from the Converse engine
  * (`packages/core/src/repositories/converse/`); the transport is the Rust relay and the notifier
  * the system's (`./repositories/`).
  */
 export function createTauriDependencies(): CoreDependencies {
-  const { xmpp, roster, chat, room, crypto, registration } = createConverseRepositories();
+  const { xmpp, roster, chat, room, crypto, registration, file } = createConverseRepositories();
   return {
     keychain: new TauriKeychain(),
     transport: new TauriTransport(),
@@ -20,8 +20,7 @@ export function createTauriDependencies(): CoreDependencies {
     room,
     crypto,
     registration,
-    // Milestone 4 replaces the fake with the Converse file repository.
-    file: new FakeFile(),
+    file,
     notifier: new TauriNotifier(),
   };
 }

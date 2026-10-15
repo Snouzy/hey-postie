@@ -117,15 +117,25 @@ describe('toMessage', () => {
     expect(message.attachments).toEqual([]);
   });
 
-  it('groups reactions by emoji', () => {
+  it('groups reactions by emoji, sorted by emoji', () => {
     const reactions = {
       'romeo@example.org': ['👍', '❤️'],
       'juliet@example.org': ['👍'],
     };
     expect(toMessage(model({ ...incoming, reactions }), context).reactions).toEqual([
-      { emoji: '👍', fromJids: ['romeo@example.org', 'juliet@example.org'] },
       { emoji: '❤️', fromJids: ['romeo@example.org'] },
+      { emoji: '👍', fromJids: ['romeo@example.org', 'juliet@example.org'] },
     ]);
+    expect(toMessage(model({ ...incoming, reactions: 'junk' }), context).reactions).toEqual([]);
+  });
+
+  it('empties the body of a message that only carries its attachment', () => {
+    const url = 'https://files.example.org/upload/abc/cat.png';
+    expect(toMessage(model({ ...incoming, body: url, oob_url: url }), context).body).toBe('');
+    const encrypted = 'aesgcm://files.example.org/upload/abc/cat.png#00ff';
+    expect(toMessage(model({ ...incoming, body: encrypted }), context).body).toBe('');
+    const captioned = toMessage(model({ ...incoming, body: 'look', oob_url: url }), context);
+    expect(captioned).toMatchObject({ body: 'look', attachments: [{ url }] });
   });
 
   it('keeps the nick when there is one', () => {
@@ -269,6 +279,7 @@ describe('toChat for a room', () => {
         off: () => undefined,
       },
       sendMessage: async () => undefined,
+      sendFiles: async () => undefined,
       clearUnreadMsgCounter: () => undefined,
       getDisplayName: () => 'The Hall',
     });
