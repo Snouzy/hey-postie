@@ -46,6 +46,8 @@ export interface Attachment {
   mimeType: string;
   thumbnailUrl?: string;
   encryption: 'none' | 'aesgcm';
+  /** The `#iv+key` fragment of an `aesgcm://` URL, kept out of `url` so that the UI never shows it. */
+  decryptionKey?: string;
   progress?: number;
 }
 
@@ -67,6 +69,10 @@ export interface Message {
   attachments: Attachment[];
   reactions: Reaction[];
   isMention: boolean;
+  /** XEP-0424: the sender took the message back; `body` and `attachments` are then empty. */
+  retracted?: boolean;
+  /** XEP-0308: the body is a correction of an earlier version. */
+  edited?: boolean;
 }
 
 export type Trust = 'untrusted' | 'trusted' | 'verified' | 'blocked';

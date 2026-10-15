@@ -16,6 +16,8 @@ export class FakeChat implements ChatRepository {
   private readonly updateHandlers = new Set<MessageHandler>();
   private readonly chatHandlers = new Set<ChatHandler>();
   private counter = 0;
+  /** The chat the user is looking at: like the real one, it does not count unread messages. */
+  private openId: string | null = null;
   readonly sent: Message[] = [];
   readonly markedRead: string[] = [];
 
@@ -46,6 +48,7 @@ export class FakeChat implements ChatRepository {
   }
 
   async open(jid: string): Promise<Chat> {
+    this.openId = jid;
     return this.ensureChat(jid, jid);
   }
 
@@ -60,7 +63,8 @@ export class FakeChat implements ChatRepository {
       this.byChat.set(chatId, [...older, ...current]);
       return older;
     }
-    return [...(this.byChat.get(chatId) ?? [])];
+    const all = this.byChat.get(chatId) ?? [];
+    return options?.limit ? all.slice(-options.limit) : [...all];
   }
 
   async send(chatId: string, body: string): Promise<Message> {
@@ -121,13 +125,16 @@ export class FakeChat implements ChatRepository {
       attachments: [],
       reactions: [],
       isMention: false,
+      retracted: false,
+      edited: false,
       ...input,
     };
   }
 
   private append(chat: Chat, message: Message): void {
     this.byChat.get(chat.id)?.push(message);
-    const unread = message.direction === 'in' ? chat.unreadCount + 1 : chat.unreadCount;
+    const counts = message.direction === 'in' && chat.id !== this.openId;
+    const unread = counts ? chat.unreadCount + 1 : chat.unreadCount;
     this.notifyChat({ ...chat, lastMessage: message, unreadCount: unread });
   }
 

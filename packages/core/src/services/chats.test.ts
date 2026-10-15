@@ -96,8 +96,9 @@ describe('history', () => {
 
 describe('chats.markRead', () => {
   it('asks the repository and the chat goes to zero unread', async () => {
+    // Received while the chat is not open, so that it counts as unread (like the real repository).
+    deps.fakes.chat.receive({ chatId: 'bob@example.org', fromJid: 'bob@example.org', body: 'a' });
     const chat = await core.chats.open('bob@example.org');
-    deps.fakes.chat.receive({ chatId: chat.id, fromJid: 'bob@example.org', body: 'a' });
     const unread: number[] = [];
     core.events.on('chat.updated', (c) => unread.push(c.unreadCount));
     await core.chats.markRead(chat.id);
