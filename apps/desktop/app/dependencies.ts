@@ -1,7 +1,7 @@
 import { type CoreDependencies, FakeChat, FakeRoster } from '@hey-postie/core';
 import { TauriKeychain } from './repositories/keychain';
-import { ConsoleNotifier } from './repositories/notifier';
-import { NotYetTransport } from './repositories/transport';
+import { TauriNotifier } from './repositories/notifier';
+import { TauriTransport } from './repositories/transport';
 import { NotYetXmpp } from './repositories/xmpp';
 
 /**
@@ -11,10 +11,10 @@ import { NotYetXmpp } from './repositories/xmpp';
 export function createTauriDependencies(): CoreDependencies {
   return {
     keychain: new TauriKeychain(),
-    transport: new NotYetTransport(),
+    transport: new TauriTransport(),
     xmpp: new NotYetXmpp(),
     roster: new FakeRoster(),
     chat: new FakeChat(),
-    notifier: new ConsoleNotifier(),
+    notifier: new TauriNotifier(),
   };
 }

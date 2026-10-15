@@ -17,7 +17,8 @@ listed at the end. Checked on 2026-10-15.
 
 | Crate | Version | License | Why |
 |---|---|---|---|
-| `tauri`, `tauri-build`, `tauri-plugin-notification`, `tauri-plugin-store` | 2.x | MIT or Apache-2.0 | Desktop shell. Tauri 3 was alpha on 2026-10-15; not used. |
+| `tauri`, `tauri-build`, `tauri-plugin-notification`, `tauri-plugin-store` | 2.x | MIT or Apache-2.0 | Desktop shell. Tauri 3 was alpha on 2026-10-15; not used. `tauri` with the `tray-icon` feature (pulls `tray-icon`, MIT or Apache-2.0) for the menu bar icon. |
+| `tauri-plugin-deep-link` | 2.6 | MIT or Apache-2.0 | Registers the `xmpp:` scheme and hands the links to the app. Rust side only; its npm package is not used. |
 | `keyring` | 4.x | MIT or Apache-2.0 | OS keychain for passwords. |
 | `serde`, `serde_json` | 1.x | MIT or Apache-2.0 | Command arguments. |
 | `thiserror` | 2.x | MIT or Apache-2.0 | Error types. |
