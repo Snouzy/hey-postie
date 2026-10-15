@@ -3,6 +3,8 @@ import { Info } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useCore, useText } from '../core/CoreProvider';
 import { useCoreEvent } from '../core/useCoreEvent';
+import type { MessageKey } from '../i18n';
+import { errorKey } from '../i18n/errors';
 import { Button } from './Button';
 import { Composer } from './Composer';
 import styles from './Conversation.module.css';
@@ -30,14 +32,15 @@ export function Conversation({
   const text = useText();
   const [messages, setMessages] = useState<Message[]>([]);
   const [hasOlder, setHasOlder] = useState(true);
+  const [error, setError] = useState<MessageKey | null>(null);
 
   useEffect(() => {
     let cancelled = false;
-    setMessages([]);
-    setHasOlder(true);
-    void core.chats.messages(chat.id).then((loaded) => {
-      if (!cancelled) setMessages(loaded);
-    });
+    core.chats
+      .messages(chat.id)
+      // Messages received while loading are already in the list: keep them.
+      .then((loaded) => !cancelled && setMessages((current) => mergeById(loaded, current)))
+      .catch((caught: unknown) => !cancelled && setError(errorKey(caught)));
     return () => {
       cancelled = true;
     };
@@ -45,9 +48,9 @@ export function Conversation({
 
   useCoreEvent('message.received', (message) => {
     if (message.chatId !== chat.id) return;
-    setMessages((current) => [...current, message]);
-    // The reader is looking at this chat: what arrives is read.
-    void core.chats.markRead(chat.id);
+    setMessages((current) => mergeById(current, [message]));
+    // Only a reader who can see the window has read it.
+    if (document.hasFocus()) void core.chats.markRead(chat.id).catch(() => {});
   });
 
   useCoreEvent('message.updated', (message) => {
@@ -55,22 +58,32 @@ export function Conversation({
     setMessages((current) => current.map((m) => (m.id === message.id ? message : m)));
   });
 
-  async function loadOlder() {
-    const older = await core.chats.loadOlder(chat.id);
-    if (older.length === 0) setHasOlder(false);
-    else setMessages((current) => [...older, ...current]);
+  useEffect(() => {
+    const onFocus = () => void core.chats.markRead(chat.id).catch(() => {});
+    window.addEventListener('focus', onFocus);
+    return () => window.removeEventListener('focus', onFocus);
+  }, [core, chat.id]);
+
+  async function loadOlder(): Promise<boolean> {
+    try {
+      const older = await core.chats.loadOlder(chat.id);
+      if (older.length === 0) setHasOlder(false);
+      else setMessages((current) => mergeById(older, current));
+      return older.length > 0;
+    } catch (caught) {
+      setError(errorKey(caught));
+      return false;
+    }
   }
 
   async function send(body: string) {
     const sent = await core.chats.send(chat.id, body);
-    setMessages((current) => [...current, sent]);
+    setMessages((current) => mergeById(current, [sent]));
   }
 
   function retry(failed: Message) {
     setMessages((current) => current.filter((m) => m.id !== failed.id));
-    void send(failed.body).catch(() => {
-      setMessages((current) => [...current, failed]);
-    });
+    send(failed.body).catch(() => setMessages((current) => mergeById(current, [failed])));
   }
 
   return (
@@ -90,14 +103,24 @@ export function Conversation({
         </Button>
       </header>
       <MessageList
-        key={chat.id}
         messages={messages}
         hasOlder={hasOlder}
         onLoadOlder={loadOlder}
         onRetry={retry}
         onOpenLink={onOpenLink}
       />
+      {error && (
+        <p className={styles.error} role="alert">
+          {text(error)}
+        </p>
+      )}
       <Composer onSend={send} />
     </section>
   );
+}
+
+/** `first` then whatever in `second` is not already there, by id. Order within each is kept. */
+export function mergeById(first: Message[], second: Message[]): Message[] {
+  const seen = new Set(first.map((m) => m.id));
+  return [...first, ...second.filter((m) => !seen.has(m.id))];
 }

@@ -27,6 +27,13 @@ describe('Composer', () => {
     await waitFor(() => expect(area).toHaveValue(''));
   });
 
+  it('does not send while an IME is composing', () => {
+    const { onSend, area } = renderComposer();
+    fireEvent.change(area, { target: { value: '日本' } });
+    fireEvent.keyDown(area, { key: 'Enter', isComposing: true });
+    expect(onSend).not.toHaveBeenCalled();
+  });
+
   it('does not send on Shift+Enter', () => {
     const { onSend, area } = renderComposer();
     fireEvent.change(area, { target: { value: 'line one' } });

@@ -28,3 +28,12 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+.error {
+  margin: 0;
+  padding: var(--space-2) var(--space-4);
+  font-family: var(--font-heading);
+  font-variation-settings: 'SOFT' 100;
+  font-size: 14px;
+  color: var(--red);
+}

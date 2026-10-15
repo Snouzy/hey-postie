@@ -36,7 +36,8 @@ export function Composer({ onSend }: ComposerProps) {
   }
 
   function onKeyDown(event: KeyboardEvent<HTMLTextAreaElement>) {
-    if (event.key === 'Enter' && !event.shiftKey) {
+    // While an IME composes (Japanese, Chinese...), Enter confirms the candidate, not the letter.
+    if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) {
       event.preventDefault();
       void send();
     }

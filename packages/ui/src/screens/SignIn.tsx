@@ -1,4 +1,4 @@
-import { type FormEvent, useState } from 'react';
+import { type FormEvent, useRef, useState } from 'react';
 import { Button } from '../components/Button';
 import { Field } from '../components/Field';
 import { useCore, useText } from '../core/CoreProvider';
@@ -25,10 +25,28 @@ export function SignIn({ onBack }: SignInProps) {
   const [error, setError] = useState<MessageKey | null>(null);
   const connecting = account?.state === 'connecting';
 
+  // What the keychain gave us, so that it can be taken back when the address changes.
+  const prefilled = useRef<string | null>(null);
+
   async function prefillPassword() {
-    if (!LOOKS_LIKE_JID.test(jid.trim()) || password) return;
-    const remembered = await core.accounts.rememberedPassword(jid);
-    if (remembered) setPassword(remembered);
+    const trimmed = jid.trim();
+    if (!LOOKS_LIKE_JID.test(trimmed) || password) return;
+    const remembered = await core.accounts.rememberedPassword(trimmed);
+    if (!remembered) return;
+    // Whatever the user typed in the meantime wins.
+    setPassword((current) => {
+      if (current) return current;
+      prefilled.current = remembered;
+      return remembered;
+    });
+  }
+
+  function changeJid(value: string) {
+    setJid(value);
+    if (prefilled.current !== null && password === prefilled.current) {
+      prefilled.current = null;
+      setPassword('');
+    }
   }
 
   async function submit(event: FormEvent) {
@@ -55,7 +73,7 @@ export function SignIn({ onBack }: SignInProps) {
           autoComplete="username"
           placeholder={text('signIn.jidPlaceholder')}
           value={jid}
-          onChange={(e) => setJid(e.target.value)}
+          onChange={(e) => changeJid(e.target.value)}
           onBlur={() => void prefillPassword()}
           disabled={connecting}
           required

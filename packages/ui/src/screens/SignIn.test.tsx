@@ -1,5 +1,5 @@
 import { DomainError } from '@hey-postie/core';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import { App } from '../App';
 import { setupCore } from '../test-utils';
@@ -63,6 +63,24 @@ describe('SignIn', () => {
     fireEvent.change(address, { target: { value: 'alice@example.org' } });
     fireEvent.blur(address);
     await waitFor(() => expect(screen.getByLabelText('Password')).toHaveValue('kept'));
+  });
+
+  it('lets a password typed before the keychain answers win, and drops the prefill on a new JID', async () => {
+    const { deps } = openSignIn();
+    await deps.fakes.keychain.set('alice@example.org', 'kept');
+    const address = screen.getByLabelText('Address');
+    const password = screen.getByLabelText('Password');
+    fireEvent.change(address, { target: { value: ' alice@example.org ' } });
+    fireEvent.blur(address);
+    fireEvent.change(password, { target: { value: 'typed' } });
+    await act(async () => {});
+    expect(password).toHaveValue('typed');
+
+    fireEvent.change(password, { target: { value: '' } });
+    fireEvent.blur(address);
+    await waitFor(() => expect(password).toHaveValue('kept'));
+    fireEvent.change(address, { target: { value: 'alice@other.org' } });
+    expect(password).toHaveValue('');
   });
 
   it('goes back to the welcome screen', () => {

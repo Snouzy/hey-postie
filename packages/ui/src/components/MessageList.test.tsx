@@ -1,9 +1,10 @@
 import { fireEvent, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { message, renderWithCore, setupCore } from '../test-utils';
+import { mergeById } from './Conversation';
 import { groupByDay, MessageList } from './MessageList';
 
-const noop = async () => {};
+const noop = async () => true;
 
 function renderList(
   messages = [message()],
@@ -23,7 +24,7 @@ function renderList(
     />,
     core,
   );
-  return { onRetry, onOpenLink };
+  return { core, onRetry, onOpenLink };
 }
 
 describe('groupByDay', () => {
@@ -72,18 +73,25 @@ describe('MessageList', () => {
     expect(screen.getByText(/sealed for another device/)).toBeInTheDocument();
   });
 
-  it('turns http and xmpp links into anchors routed through onOpenLink, nothing else', () => {
-    const { onOpenLink } = renderList([
-      message({ body: 'see https://example.org/a and xmpp:bob@x.org, not ftp://nope' }),
+  it('turns http and xmpp links into anchors, strips trailing punctuation, ignores the rest', () => {
+    const { core, onOpenLink } = renderList([
+      message({ body: 'see https://example.org/a. and xmpp:bob@x.org, not ftp://nope' }),
     ]);
     const links = screen.getAllByRole('link');
     expect(links.map((a) => a.getAttribute('href'))).toEqual([
       'https://example.org/a',
-      'xmpp:bob@x.org,',
+      'xmpp:bob@x.org',
     ]);
     expect(links[0]).toHaveAttribute('rel', 'noreferrer');
     fireEvent.click(links[0] as HTMLElement);
     expect(onOpenLink).toHaveBeenCalledWith('https://example.org/a');
+
+    // An xmpp: link stays in the app: it asks the core for that chat.
+    const requested = vi.fn();
+    core.events.on('chat.requested', requested);
+    fireEvent.click(links[1] as HTMLElement);
+    expect(requested).toHaveBeenCalledWith({ chatId: 'bob@x.org' });
+    expect(onOpenLink).toHaveBeenCalledTimes(1);
   });
 
   it('shows the status stamp on outgoing messages', () => {
@@ -96,5 +104,13 @@ describe('MessageList', () => {
     renderList([message()], { hasOlder: true, onLoadOlder });
     fireEvent.click(screen.getByRole('button', { name: 'Load older' }));
     expect(onLoadOlder).toHaveBeenCalled();
+  });
+});
+
+describe('mergeById', () => {
+  it('keeps what arrived during the load and never duplicates an id', () => {
+    const loaded = [message({ id: 'a' }), message({ id: 'b' })];
+    const arrived = [message({ id: 'b' }), message({ id: 'c' })];
+    expect(mergeById(loaded, arrived).map((m) => m.id)).toEqual(['a', 'b', 'c']);
   });
 });

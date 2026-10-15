@@ -9,7 +9,8 @@ import styles from './MessageList.module.css';
 interface MessageListProps {
   messages: Message[];
   hasOlder: boolean;
-  onLoadOlder: () => Promise<void>;
+  /** Resolves to true when something was prepended. */
+  onLoadOlder: () => Promise<boolean>;
   onRetry: (message: Message) => void;
   onOpenLink: (url: string) => void;
 }
@@ -67,14 +68,23 @@ export function MessageList({
     heightBeforeOlder.current = scroller.current?.scrollHeight ?? 0;
     setLoading(true);
     try {
-      await onLoadOlder();
+      // Nothing prepended: nothing to compensate, or the next new message would jump.
+      if (!(await onLoadOlder())) heightBeforeOlder.current = null;
     } finally {
       setLoading(false);
     }
   }
 
   return (
-    <div ref={scroller} className={styles.scroller} onScroll={onScroll}>
+    <div
+      ref={scroller}
+      className={styles.scroller}
+      onScroll={onScroll}
+      role="log"
+      aria-label={text('conversation.log')}
+      // biome-ignore lint/a11y/noNoninteractiveTabindex: a scrollable region must be focusable to scroll with the keyboard
+      tabIndex={0}
+    >
       {hasOlder && (
         <Button className={styles.older} onClick={() => void loadOlder()} disabled={loading}>
           {text('message.loadOlder')}
