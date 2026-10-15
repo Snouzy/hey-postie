@@ -10,6 +10,7 @@ export class FakeRoom implements RoomRepository {
   private readonly rooms = new Map<string, Room>();
   private readonly membersByRoom = new Map<string, RoomMember[]>();
   private readonly published = new Map<string, RoomInfo[]>();
+  readonly services = new Map<string, string>();
   private readonly roomHandlers = new Set<RoomHandler>();
   private readonly membersHandlers = new Set<MembersHandler>();
   /** Rooms that refuse to be joined, by JID, with the error code the server would give. */
@@ -75,6 +76,10 @@ export class FakeRoom implements RoomRepository {
   async setBookmarked(jid: string, bookmarked: boolean): Promise<void> {
     const room = this.rooms.get(jid);
     if (room) this.change({ ...room, bookmarked });
+  }
+
+  async roomService(domain: string): Promise<string | null> {
+    return this.services.get(domain) ?? null;
   }
 
   async browse(domain: string): Promise<RoomInfo[]> {

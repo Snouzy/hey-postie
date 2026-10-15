@@ -62,6 +62,8 @@ export interface RoomRepository {
   setBookmarked(jid: string, bookmarked: boolean): Promise<void>;
   /** The rooms a server (or its conference component) lists publicly. */
   browse(domain: string): Promise<RoomInfo[]>;
+  /** The conference service of a domain (disco, e.g. `rooms.example.org`), or null. */
+  roomService(domain: string): Promise<string | null>;
   onChange(handler: (room: Room) => void): () => void;
   onMembersChange(handler: (jid: string, members: RoomMember[]) => void): () => void;
 }
