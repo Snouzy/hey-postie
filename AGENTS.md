@@ -91,8 +91,9 @@ When SOLID and KISS disagree, KISS wins outside the boundaries of section 2.
 - **Dependencies one at a time.** Only one session at a time adds or upgrades dependencies, to avoid
   lockfile conflicts.
 - **Small pull requests**, rebased on `main` often.
-- **Verified before done.** `pnpm verify` (types, lint, tests, build) passes before a task is called
-  finished. Every service has unit tests against fake repositories.
+- **Verified before done.** `pnpm verify` (types, lint, tests, build) passes locally before a task is
+  called finished. Every service has unit tests against fake repositories. There is no CI for now
+  (decision of 2026-10-15: speed first); the local run is the gate.
 - **Docs in the same commit.** A code change updates its wiki page in the same commit.
 - **Commits and pushes**: never on `main`; each commit and each push needs the author's explicit
   go-ahead.

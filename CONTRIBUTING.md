@@ -23,7 +23,7 @@ Needs Node 24+, pnpm 12, Rust stable. Linux: `libwebkit2gtk-4.1-dev libappindica
 - Keep pull requests small and rebased on `main`.
 - A code change updates its wiki page in the same commit.
 - Every service has unit tests against fake repositories (`packages/core/src/fakes/`).
-- Run `pnpm verify` before opening a pull request. CI runs it on Ubuntu and macOS.
+- Run `pnpm verify` before opening a pull request. There is no CI yet: the local run is the gate.
 - Code, comments, commits and pull requests are in English. User-facing texts go in
   `packages/ui/src/i18n/` (French and English).
 

@@ -43,6 +43,11 @@ Sources: [Converse.js v14.0.0](https://newreleases.io/project/github/conversejs/
 
 When the protocol behavior is unclear, look at how [Gajim](https://github.com/gajim/gajim) does it.
 
+## Process
+
+- Decision of 2026-10-15: no CI for now. `pnpm verify` runs locally before every commit; CI comes
+  when a second contributor or a release needs it. Speed of iteration first.
+
 ## Points to check
 
 - Licenses: OMEMO relies on libsignal (GPL-3.0). Combined with app-store distribution, this is a

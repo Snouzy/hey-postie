@@ -247,8 +247,8 @@ from the start; dictionaries in `packages/ui/src/i18n/{fr,en}.ts`; the language 
 | End to end | Playwright, later | On the web build, against the Docker Prosody. |
 
 `pnpm verify` runs: types, Biome (lint and format), unit tests, `cargo fmt --check`, `cargo clippy`,
-`cargo test`, the Vite build. CI (GitHub Actions) runs it on every pull request on Ubuntu and
-macOS. Nothing is "done" without it.
+`cargo test`, the Vite build. Nothing is "done" without it. No CI for now (decision of
+2026-10-15: iterate fast; CI comes when a second contributor or a release needs it).
 
 ## 6. Licensing and distribution
 
