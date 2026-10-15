@@ -255,6 +255,8 @@ installed package and by `repositories.test.ts`, which drives the real headless 
 - `mappers.ts`: pure functions, unit-tested with plain `{ get }` objects. Attachments: an http(s)
   `oob_url`, or a body that is only an `aesgcm://` URL (its `#ivkey` goes to `decryptionKey`); a bare
   link in a body is just a link. A file name whose percent-escapes are malformed is kept raw.
+- `room.ts` (with `room-join.ts`, `room-browse.ts`, `room-notify.ts`, `room-mappers.ts`): rooms,
+  see §13.
 
 ### Contract test
 
@@ -263,7 +265,11 @@ installed package and by `repositories.test.ts`, which drives the real headless 
 `alice@localhost` through a real `wss://` WebSocket to the local Prosody 13
 ([tools/xmpp-server](../../tools/xmpp-server/README.md)); `bob@localhost` is a hand-written
 XMPP-over-WebSocket client (`test-support/bobClient.ts`: `<open/>`, SASL PLAIN, bind, raw stanzas)
-so that the two sides are independent. Six scenarios in order, all passing on 2026-10-15: wrong
+so that the two sides are independent. The shared preamble (asset `fetch` stub, Node's `Event`
+class, §11) is `test-support/contractEnv.ts`; `contract-rooms.test.ts` (§13) is the second file.
+Vitest runs files in parallel workers, each with its own Converse signing in as alice: the script
+passes `--no-file-parallelism`, otherwise the two suites trample each other on the server.
+Six scenarios in order, all passing on 2026-10-15: wrong
 password → `InvalidCredentials` then sign-in → `online`; `roster.add` → bob accepts and subscribes
 back → `subscription: 'both'`, bob's presence → `online`; bob's message → `onMessage`, `unreadCount`
 1, `markRead` → 0; `send` → bob receives it with `<request/>`, his receipt → `delivered`; three
@@ -311,3 +317,99 @@ sign-out and sign-in again. Observed along the way:
   directory when no `<script src>` mentions converse (`dist/converse-headless.js:46599-46616`), so
   `curve25519_compiled.wasm` (84 kB) and `emoji.json` (264 kB) sit in `apps/desktop/public/`.
   Checked on the 2026-10-15 build output; the OMEMO load itself is not exercised yet.
+
+## 13. Rooms (MUC)
+
+_Implementation of 2026-10-15, `room.ts`, `room-join.ts`, `room-browse.ts`, `room-notify.ts`,
+`room-mappers.ts`, plus the room paths of `chat.ts`. Verified by `room.test.ts` (MockConnection)
+and `contract-rooms.test.ts` (Prosody, `rooms.localhost`), both green on 2026-10-15._
+
+### What Converse gives
+
+- Models: a room is a chatbox with `type === 'chatroom'` (`CHATROOMS_TYPE`, `shared/constants.js:67`),
+  class `MUC` (`plugins/muc/muc.js`). Attributes: `jid`, `nick`, `name` (from disco, else `''`;
+  `getDisplayName()` then returns the JID, which the mappers turn into the local part), `subject`
+  (`{ author, text }`), `bookmarked`, `hidden`, `num_unread` = messages that mention us,
+  `num_unread_general` = every unread message (`muc.js:85-94`). The join state is on a separate
+  `chat.session` model: `connection_status` with the values of `converse.ROOMSTATUS`
+  (`plugins/muc/constants.js:70`: CONNECTED 0, CONNECTING 1, NICKNAME_REQUIRED 2,
+  PASSWORD_REQUIRED 3, DISCONNECTED 4, ENTERED 5, DESTROYED 6, BANNED 7, CLOSING 8); `isEntered()`.
+  `chat.session` only exists once `setup()` restored it; `chat.initialized` resolves after that.
+  Occupants: `chat.occupants` (`nick`, `jid` in non-anonymous rooms, `role`, `affiliation`,
+  `presence` `online|offline`, `occupant_id`); members fetched from the affiliation lists are
+  there too with `presence: 'offline'`, so `members()` keeps the present ones only.
+- API: `api.rooms.get(jid, { nick, password, hidden }, create)` creates the model, whose `setup()`
+  joins by itself (`muc.js:134-137`); `createChatBox` awaits `initialized`, so the join presence
+  is already sent when the call returns and a refusal can arrive before it. An existing model is
+  asked with `chat.join(nick, password)`. `chat.close()` leaves (unavailable presence, not
+  awaited: `muc.js:977`), destroys the model (`chatboxes` fires `remove`) and triggers `leaveRoom`,
+  which the bookmarks plugin turns into `autojoin: false` on the bookmark. `muc_clear_messages_on_leave`
+  is true by default: the history goes with the model. `api.chats.get(jid)` answers `null` for a
+  room (`plugins/chat/api.js:137`): `chat.ts` reads `state.chatboxes.get(jid)` instead.
+- Messages: parsed by `plugins/muc/parsers.js`: `from` = `room@service/nick`, `nick`,
+  `from_real_jid` (only when the occupant's JID is known), `occupant_id`, `references`
+  (XEP-0372), `sender` `'me'` when the occupant id, real JID or nick is ours. Own messages are
+  not `is_carbon`, so `chat.ts` keeps not emitting them as `message.received`. A MAM stanza id in a
+  room is `stanza_id <room jid>`. Mentions: Converse's `isUserMentioned` uses the references, else a
+  **case-sensitive** `\bnick\b` regex; the repository replaces it per model with
+  `mappers.isMention` (case-insensitive, nick escaped) so that `mentionsCount` agrees with
+  `Message.isMention`. Unread counting needs the room hidden, like direct chats (§12).
+- Errors (`muc.js` `onErrorPresence`): `not-authorized` → PASSWORD_REQUIRED, `conflict` →
+  NICKNAME_REQUIRED (with `muc_nickname_from_jid` off), `auth`/`forbidden` → BANNED, `gone` →
+  DESTROYED, everything else (`item-not-found`, `registration-required`, `not-allowed`,
+  `service-unavailable`...) → DISCONNECTED with a localized `disconnection_message`. The condition
+  is therefore read by `room-join.ts` itself, through a Strophe `addHandler` on
+  `presence type="error"` from the room's bare JID, registered **before** the model is created.
+  Converse's own handler runs first and saves the status before ours sees the stanza, so a failed
+  status waits 100 ms for the error presence (which settles the join itself) before concluding
+  without it: with a zero delay the mock test failed one run in three. Mapping:
+  `not-authorized` → `RoomPasswordRequired`, `item-not-found` → `RoomNotFound`, `forbidden` →
+  `RoomBanned`, `conflict` → `NickTaken`, else `Unknown`; no answer in 20 s → `ServerUnreachable`.
+  The model of a refused join is closed: left in `chatboxes`, Converse would rejoin it at the next
+  sign-in (`restoreFromCache` → `join`).
+- Bookmarks (`plugins/bookmarks/`): the collection `_converse.state.bookmarks` exists only after
+  `connected` when the server has PEP with `publish-options` (`plugin.js:138`); `bookmarksInitialized`
+  then fires with it and is recreated at every sign-in. Without PEP the promise never resolves:
+  `setBookmarked` waits 10 s then fails with `Unknown`. `enteredNewRoom` fires on **every** entered
+  room and the plugin bookmarks it with `autojoin: true`: on Prosody a joined room is always
+  bookmarked. Adding a bookmark (`add` event) runs `openBookmarkedRoom` → `api.rooms.create` +
+  `maybeShow()`, which saves `hidden: false` in overlayed mode; `chat.ts` re-asserts its hidden
+  policy on `change:hidden`. Unhiding a room clears its counters and rejoins it when DISCONNECTED
+  (`onHiddenChange`). Removing a bookmark through the collection closes the room (`leaveRoom`), so
+  `setBookmarked(jid, false)` removes the model silently and calls `sendRemoveBookmarkStanza`.
+- Browsing: `api.disco.items(jid)` and `api.disco.info(jid)` send raw IQs (`plugins/disco/api.js`);
+  `api.disco.getIdentity('conference', 'text', jid)` goes through the entity cache and tells a MUC
+  service from a user domain. `room-browse.ts` (`findRoomService`, behind `roomService()`) looks
+  for the service among the domain's items when the domain is not one, then `browse` lists its
+  items with one disco#info per room for
+  `muc#roominfo_occupants` and `_description` when there are at most 20 rooms.
+- Per-room notification rule: `localStorage` key `hey-postie:<account bare JID>:room-notify:<room JID>`
+  (`room-notify.ts`), a preference, not a secret; a model attribute would die with `close()`.
+
+### Pitfalls found
+
+- MockConnection: a room's `join()` awaits a disco#info on the room (30 s timeout) and Converse's
+  member-list IQs after entering; `room.test.ts` answers every IQ to the service for the whole file.
+  While those IQs are pending, `onRoomEntered` has not called `fetchMessages()` yet and
+  `queueMessage` dereferences `messages.fetched` (`model-with-messages.js:269`): a message arriving
+  in that window is dropped with a TypeError. Narrow in production (a server answers at once), but
+  the reason the mock test must answer the affiliation IQs.
+- Prosody: a room created by a plain join is **locked** until its owner accepts the configuration;
+  other users get `item-not-found` meanwhile (XEP-0045 §10.1.1). Converse does this itself
+  (`muc_instant_rooms`, status code 201); `bobClient.joinRoom` does it by hand. New rooms are also
+  hidden from the service's disco#items (`publicroom` off by default): `contract-rooms.test.ts`
+  browses a room that bob configured public.
+- The own occupant's JID comes from the self-presence `<item jid=…>`; without it `getOwnOccupant()`
+  finds nothing and `fetchMembers()` returns early.
+- Unhandled rejections kill the Vitest worker (exit code 7, §11). Stale `autojoin` bookmarks left by
+  an aborted run made Converse rejoin dead rooms at the next sign-in and crashed `contract.test.ts`
+  that way; the rooms suite now removes its bookmark in `afterAll`. Purging alice's
+  `urn:xmpp:bookmarks:1` node by hand fixed the server state.
+
+### Points to check
+
+- `contract.test.ts` cases 4 and 5 (send to bob, MAM catch-up) fail on the current test server
+  state, on this branch **and** on `feat/m2-contracts` (checked on 2026-10-15 from a throwaway
+  worktree; case 4 times out, the worker sometimes exits with code 7). The rooms suite passes.
+  Likely server-side accumulation across runs (every run publishes a new OMEMO device to PEP);
+  not investigated further here.

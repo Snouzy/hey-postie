@@ -17,6 +17,8 @@ export interface MessageContext {
   authenticated: boolean;
   /** The chat's `num_unread`: 0 means every incoming message was seen. */
   unread: number;
+  /** Our nick in the room the message belongs to; absent for direct chats. */
+  ownNick?: string;
 }
 
 export function toMessage(model: MessageModel, context: MessageContext): Message {
@@ -25,10 +27,12 @@ export function toMessage(model: MessageModel, context: MessageContext): Message
   const retracted = Boolean(model.get('retracted'));
   const body =
     undecryptable || retracted ? '' : string(model.get('plaintext')) || string(model.get('body'));
+  const nick = string(model.get('nick'));
   const message: Message = {
     id: string(model.get('id')),
     chatId: context.chatId,
-    fromJid: bareJid(string(model.get('from'))),
+    // In a room `from` is `room@service/nick`; the real JID is only known in non-anonymous rooms.
+    fromJid: bareJid(string(model.get('from_real_jid')) || string(model.get('from'))),
     body,
     sentAt: new Date(string(model.get('time'))),
     direction,
@@ -36,25 +40,50 @@ export function toMessage(model: MessageModel, context: MessageContext): Message
     encryption: undecryptable ? 'undecryptable' : model.get('is_encrypted') ? 'omemo' : 'none',
     attachments: retracted ? [] : attachments(string(model.get('oob_url')), body),
     reactions: reactions(model.get('reactions')),
-    isMention: false,
+    isMention:
+      direction === 'in' && Boolean(context.ownNick) && isMention(model, context.ownNick ?? ''),
     retracted,
     edited: Boolean(model.get('edited')),
   };
-  const nick = model.get('nick');
-  return typeof nick === 'string' && nick ? { ...message, fromNick: nick } : message;
+  return nick ? { ...message, fromNick: nick } : message;
 }
 
+/** `CHATROOMS_TYPE` (`shared/constants.js:67`): a room counts every message in `num_unread_general`. */
 export function toChat(model: ChatModel, lastMessage?: Message): Chat {
   const jid = string(model.get('jid'));
+  const room = isRoom(model);
   const chat: Chat = {
     id: jid,
-    kind: 'direct',
+    kind: room ? 'room' : 'direct',
     peerJid: jid,
     title: displayName(model.getDisplayName(), jid),
-    unreadCount: number(model.get('num_unread')),
+    unreadCount: number(model.get(room ? 'num_unread_general' : 'num_unread')),
     encrypted: Boolean(model.get('omemo_active')),
   };
   return lastMessage ? { ...chat, lastMessage } : chat;
+}
+
+export function isRoom(model: ModelLike): boolean {
+  return model.get('type') === 'chatroom';
+}
+
+/**
+ * Converse's own rule (`plugins/muc/muc.js` `isUserMentioned`): a XEP-0372 mention reference
+ * to our nick, or the nick as a whole word in the body. Ours ignores case.
+ */
+export function isMention(model: ModelLike, ownNick: string): boolean {
+  if (!ownNick) return false;
+  const references = model.get('references');
+  if (Array.isArray(references) && references.length > 0) {
+    return references.some(
+      (reference: { type?: unknown; value?: unknown }) =>
+        reference.type === 'mention' && reference.value === ownNick,
+    );
+  }
+  const escaped = ownNick.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return new RegExp(`(^|[^\\p{L}\\p{N}_])${escaped}(?![\\p{L}\\p{N}_])`, 'iu').test(
+    string(model.get('body')),
+  );
 }
 
 export function toContact(model: ContactModel): Contact {
@@ -162,14 +191,14 @@ export function bareJid(jid: string): string {
 }
 
 /** `getDisplayName()` falls back to the JID itself when there is no nickname and no vCard. */
-function displayName(name: string | null | undefined, jid: string): string {
+export function displayName(name: string | null | undefined, jid: string): string {
   return name && name !== jid ? name : jid.split('@')[0] || jid;
 }
 
-function string(value: unknown): string {
+export function string(value: unknown): string {
   return typeof value === 'string' ? value : '';
 }
 
-function number(value: unknown): number {
+export function number(value: unknown): number {
   return typeof value === 'number' && Number.isFinite(value) ? value : 0;
 }

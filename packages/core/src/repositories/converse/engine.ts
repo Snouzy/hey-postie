@@ -1,4 +1,11 @@
-import type { ConverseApi, ConverseEnv, ConverseHeadless, ConverseState, Handler } from './models';
+import type {
+  ConverseApi,
+  ConverseEnv,
+  ConverseHeadless,
+  ConverseState,
+  Handler,
+  RoomStatus,
+} from './models';
 
 export type PersistentStore = 'IndexedDB' | 'localStorage';
 
@@ -15,6 +22,7 @@ export interface Loaded {
   api: ConverseApi;
   state: ConverseState;
   env: ConverseEnv;
+  roomStatus: RoomStatus;
   MAMPlaceholderMessage: ConverseHeadless['MAMPlaceholderMessage'];
 }
 
@@ -74,7 +82,13 @@ export class ConverseEngine {
     const { converse, api, _converse, MAMPlaceholderMessage } = headless;
     silenceAlerts(api);
     await converse.initialize(this.settings());
-    const loaded = { api, state: _converse.state, env: converse.env, MAMPlaceholderMessage };
+    const loaded = {
+      api,
+      state: _converse.state,
+      env: converse.env,
+      roomStatus: converse.ROOMSTATUS,
+      MAMPlaceholderMessage,
+    };
     for (const [name, handler] of this.listeners) api.listen.on(name, handler);
     this.loaded = loaded;
     for (const handler of this.readyHandlers) handler(loaded);

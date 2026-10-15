@@ -2,7 +2,7 @@ import { DomainError } from '../../contracts/errors';
 import type { ChatRepository } from '../../contracts/repositories';
 import type { Chat, Message } from '../../contracts/types';
 import type { ConverseEngine, Loaded } from './engine';
-import { toChat, toMessage } from './mappers';
+import { isRoom, toChat, toMessage } from './mappers';
 import type { ChatModel, MessageModel } from './models';
 
 type MessageHandler = (message: Message) => void;
@@ -17,7 +17,10 @@ const UPDATE_EVENTS = [
   'change:body',
 ];
 
-/** Direct chats over `_converse.state.chatboxes` (wiki/development/converse.md §4-5). */
+/**
+ * Direct chats and rooms over `_converse.state.chatboxes` (wiki/development/converse.md §4-5 and
+ * "Rooms (MUC)"): a room's messages flow here too, with `chatId` = the room's bare JID.
+ */
 export class ConverseChatRepository implements ChatRepository {
   private readonly messageHandlers = new Set<MessageHandler>();
   private readonly updateHandlers = new Set<MessageHandler>();
@@ -34,17 +37,21 @@ export class ConverseChatRepository implements ChatRepository {
   async list(): Promise<Chat[]> {
     const { api, state } = await this.engine.ready();
     await api.waitUntil('chatBoxesFetched');
-    return (state.chatboxes?.models ?? []).filter(isDirect).map((chat) => this.chat(chat));
+    return (state.chatboxes?.models ?? []).filter(isChat).map((chat) => this.chat(chat));
   }
 
-  /** Opens the chat and hides the other ones: `num_unread` only counts for hidden chats (§4). */
+  /**
+   * Opens the chat and hides the other ones: `num_unread` only counts for hidden chats (§4).
+   * A room is never created here: it must have been joined through `RoomRepository.join`.
+   */
   async open(jid: string): Promise<Chat> {
     const { api, state } = await this.engine.ready();
     this.openJid = jid;
-    const chat = await api.chats.open(jid);
+    const existing = state.chatboxes?.get(jid.toLowerCase());
+    const chat = existing && isRoom(existing) ? existing : await api.chats.open(jid);
     if (!chat) throw new DomainError('Unknown', 'Unknown: the chat could not be opened');
     for (const other of state.chatboxes?.models ?? []) {
-      if (other !== chat && isDirect(other)) this.hideUnlessOpen(other);
+      if (other !== chat && isChat(other)) this.hideUnlessOpen(other);
     }
     this.hideUnlessOpen(chat);
     return this.chat(chat);
@@ -91,10 +98,14 @@ export class ConverseChatRepository implements ChatRepository {
     return () => this.chatHandlers.delete(handler);
   }
 
-  /** One MAM page before a message, through its stanza id (§5); the archived models, oldest first. */
+  /**
+   * One MAM page before a message, through its stanza id (§5); the archived models, oldest first.
+   * The id is stamped by the archive: our own account for a direct chat, the room for a room.
+   */
   private async olderThan(chat: ChatModel, before: string, limit: number): Promise<Message[]> {
     const { env, state } = await this.engine.ready();
-    const stanzaId = chat.messages.get(before)?.get(`stanza_id ${state.session?.get('bare_jid')}`);
+    const archive = isRoom(chat) ? chat.get('jid') : state.session?.get('bare_jid');
+    const stanzaId = chat.messages.get(before)?.get(`stanza_id ${String(archive)}`);
     if (typeof stanzaId !== 'string') return [];
     const added: MessageModel[] = [];
     const collect = (model: unknown) => added.push(model as MessageModel);
@@ -112,10 +123,12 @@ export class ConverseChatRepository implements ChatRepository {
       .map((model) => this.message(model, chat));
   }
 
+  /** Straight from the collection: `api.chats.get` only answers for direct chats. */
   private async find(chatId: string): Promise<ChatModel> {
-    const { api } = await this.engine.ready();
-    const chat = await api.chats.get(chatId);
-    if (!chat) throw new DomainError('Unknown', 'Unknown: no such chat');
+    const { api, state } = await this.engine.ready();
+    await api.waitUntil('chatBoxesFetched');
+    const chat = state.chatboxes?.get(chatId.toLowerCase());
+    if (!chat || !isChat(chat)) throw new DomainError('Unknown', 'Unknown: no such chat');
     return chat;
   }
 
@@ -125,17 +138,25 @@ export class ConverseChatRepository implements ChatRepository {
     if (!chatboxes) return;
     for (const chat of chatboxes.models) this.bindChat(chat);
     chatboxes.on('add', (chat) => this.bindChat(chat as ChatModel));
-    for (const event of ['change:num_unread', 'change:omemo_active', 'change:hidden']) {
+    const events = [
+      'change:num_unread',
+      'change:num_unread_general',
+      'change:omemo_active',
+      'change:hidden',
+    ];
+    for (const event of events) {
       chatboxes.on(event, (chat) => this.emitChat(chat as ChatModel));
     }
   }
 
   private bindChat(chat: ChatModel): void {
-    if (!isDirect(chat) || this.bound.has(chat)) return;
+    if (!isChat(chat) || this.bound.has(chat)) return;
     this.bound.add(chat);
     // In overlayed mode a new chat is born visible (`plugins/chat/model.js:30`): hide it unless
-    // it is the open one, otherwise its unread messages would never be counted.
+    // it is the open one, otherwise its unread messages would never be counted. Converse also
+    // unhides a room by itself when its bookmark is created (`openBookmarkedRoom` → `maybeShow`).
     this.hideUnlessOpen(chat);
+    chat.on('change:hidden', () => this.hideUnlessOpen(chat));
     chat.messages.on('add', (model) => this.onAdded(chat, model as MessageModel));
     for (const event of UPDATE_EVENTS) {
       chat.messages.on(event, (model) => {
@@ -165,7 +186,7 @@ export class ConverseChatRepository implements ChatRepository {
   }
 
   private emitChat(chat: ChatModel): void {
-    if (!isDirect(chat)) return;
+    if (!isChat(chat)) return;
     const mapped = this.chat(chat);
     for (const handler of this.chatHandlers) handler(mapped);
   }
@@ -177,8 +198,12 @@ export class ConverseChatRepository implements ChatRepository {
 
   private message(model: MessageModel, chat: ChatModel): Message {
     const authenticated = this.loaded?.api.connection.authenticated() === true;
-    const unread = Number(chat.get('num_unread')) || 0;
-    return toMessage(model, { chatId: String(chat.get('jid')), authenticated, unread });
+    const unread = Number(chat.get(isRoom(chat) ? 'num_unread_general' : 'num_unread')) || 0;
+    const context = { chatId: String(chat.get('jid')), authenticated, unread };
+    return toMessage(
+      model,
+      isRoom(chat) ? { ...context, ownNick: String(chat.get('nick')) } : context,
+    );
   }
 
   private displayable(models: MessageModel[]): MessageModel[] {
@@ -205,7 +230,7 @@ function byTime(a: MessageModel, b: MessageModel): number {
   return String(a.get('time')).localeCompare(String(b.get('time')));
 }
 
-/** `PRIVATE_CHAT_TYPE` (`shared/constants.js:66`); rooms are `chatroom`, feeds `headline`. */
-function isDirect(chat: ChatModel): boolean {
-  return chat.get('type') === 'chatbox';
+/** `PRIVATE_CHAT_TYPE` and `CHATROOMS_TYPE` (`shared/constants.js:66-67`); feeds (`headline`) are not chats. */
+function isChat(chat: ChatModel): boolean {
+  return chat.get('type') === 'chatbox' || isRoom(chat);
 }
