@@ -19,6 +19,11 @@ export interface MessageContext {
   unread: number;
   /** Our nick in the room the message belongs to; absent for direct chats. */
   ownNick?: string;
+  /**
+   * The key of our own reactions on this chat's messages (`u.reactions.getOwnReactionJID`): our bare
+   * JID in a direct chat, our occupant id or `room@service/nick` in a room. Unknown → nothing is `mine`.
+   */
+  ownReactionJid?: string;
 }
 
 export function toMessage(model: MessageModel, context: MessageContext): Message {
@@ -40,7 +45,7 @@ export function toMessage(model: MessageModel, context: MessageContext): Message
     status: status(model, direction, context),
     encryption: undecryptable ? 'undecryptable' : model.get('is_encrypted') ? 'omemo' : 'none',
     attachments: files,
-    reactions: reactions(model.get('reactions')),
+    reactions: reactions(model.get('reactions'), context.ownReactionJid),
     isMention:
       direction === 'in' && Boolean(context.ownNick) && isMention(model, context.ownNick ?? ''),
     retracted,
@@ -138,7 +143,7 @@ function attachment(url: string): Attachment {
   const encrypted = url.toLowerCase().startsWith('aesgcm://');
   const [location = '', fragment] = url.split('#', 2);
   const path = location.replace(/^[a-z]+:\/\//i, '').split('?')[0] ?? '';
-  const name = decodeName(path.split('/').pop() || 'file');
+  const name = safeName(decodeName(path.split('/').pop() ?? ''));
   const base: Attachment = {
     url: encrypted ? location : url,
     name,
@@ -147,6 +152,22 @@ function attachment(url: string): Attachment {
     encryption: encrypted ? 'aesgcm' : 'none',
   };
   return encrypted && fragment ? { ...base, decryptionKey: fragment } : base;
+}
+
+const NAME_MAX_LENGTH = 120;
+
+/**
+ * The name comes from a URL someone else chose: it is shown and used as a download file name, so
+ * path separators, control characters and leading dots go, and it stays short.
+ */
+function safeName(raw: string): string {
+  const cleaned = raw
+    // biome-ignore lint/suspicious/noControlCharactersInRegex: that is the point
+    .replace(/[\u0000-\u001F\u007F/\\]/g, '')
+    .replace(/^\.+/, '')
+    .trim()
+    .slice(0, NAME_MAX_LENGTH);
+  return cleaned || 'file';
 }
 
 /** A malformed escape (`%E0`) must not take the whole chat list down with it. */
@@ -164,7 +185,6 @@ const MIME_BY_EXTENSION: Record<string, string> = {
   png: 'image/png',
   gif: 'image/gif',
   webp: 'image/webp',
-  svg: 'image/svg+xml',
   mp4: 'video/mp4',
   webm: 'video/webm',
   mp3: 'audio/mpeg',
@@ -184,7 +204,7 @@ function mimeType(name: string): string {
  * occupant id or address in a room); the contract groups by emoji, sorted so that two updates
  * of the same message compare equal.
  */
-function reactions(value: unknown): Reaction[] {
+function reactions(value: unknown, ownKey: string | undefined): Reaction[] {
   if (!value || typeof value !== 'object') return [];
   const byEmoji = new Map<string, string[]>();
   for (const [jid, emojis] of Object.entries(value as Record<string, unknown>)) {
@@ -196,12 +216,13 @@ function reactions(value: unknown): Reaction[] {
       byEmoji.set(emoji, jids);
     }
   }
-  return (
-    [...byEmoji]
-      // `mine` is settled by the chat repository, which knows the own reaction JID of the chat.
-      .map(([emoji, fromJids]) => ({ emoji, fromJids, mine: false }))
-      .sort((a, b) => a.emoji.localeCompare(b.emoji))
-  );
+  return [...byEmoji]
+    .map(([emoji, fromJids]) => ({
+      emoji,
+      fromJids,
+      mine: ownKey !== undefined && fromJids.includes(ownKey),
+    }))
+    .sort((a, b) => a.emoji.localeCompare(b.emoji));
 }
 
 function presence(status: string): Presence {

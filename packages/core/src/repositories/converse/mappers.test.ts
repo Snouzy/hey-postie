@@ -88,6 +88,15 @@ describe('toMessage', () => {
     expect(attachment?.name).toBe('bad%E0name.png');
   });
 
+  it('sanitizes the attachment name taken from the URL', () => {
+    const name = (url: string) =>
+      toMessage(model({ ...incoming, oob_url: url }), context).attachments[0]?.name;
+    expect(name('https://x.org/up/..%2F..%5Cetc%00passwd.png')).toBe('etcpasswd.png');
+    expect(name('https://x.org/up/%2E%2Ehidden')).toBe('hidden');
+    expect(name('https://x.org/up/')).toBe('file');
+    expect(name(`https://x.org/up/${'a'.repeat(300)}.png`)?.length).toBe(120);
+  });
+
   it('marks aesgcm bodies as encrypted attachments and keeps the key out of the URL', () => {
     const url = 'aesgcm://files.example.org/upload/abc/report.bin#0123abcd';
     const [attachment] = toMessage(model({ ...incoming, body: url }), context).attachments;
@@ -222,6 +231,22 @@ describe('toMessage in a room', () => {
         room,
       ).fromJid,
     ).toBe('hall@rooms.example.org/romeo');
+  });
+
+  it('flags our reactions through the occupant address, not the nick', () => {
+    const reactions = {
+      'hall@rooms.example.org/romeo': ['🎉'],
+      'hall@rooms.example.org/juliet': ['🎉', '👍'],
+    };
+    const own = { ...room, ownReactionJid: 'hall@rooms.example.org/romeo' };
+    expect(toMessage(model({ ...groupchat, reactions }), own).reactions).toEqual([
+      {
+        emoji: '🎉',
+        fromJids: ['hall@rooms.example.org/romeo', 'hall@rooms.example.org/juliet'],
+        mine: true,
+      },
+      { emoji: '👍', fromJids: ['hall@rooms.example.org/juliet'], mine: false },
+    ]);
   });
 
   it('prefers the real JID when the room reveals it', () => {

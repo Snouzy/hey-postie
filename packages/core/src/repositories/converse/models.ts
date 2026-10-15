@@ -20,7 +20,10 @@ export interface CollectionLike<M> {
   off(event: string, handler: Handler): unknown;
 }
 
-export type MessageModel = ModelLike;
+export interface MessageModel extends ModelLike {
+  /** Upload placeholders only: the PUT, run by the model itself on `change:put` (`shared/message.js:45`). */
+  uploadFile?: () => void;
+}
 
 export interface ChatModel extends ModelLike {
   messages: CollectionLike<MessageModel> & { fetched?: Promise<unknown> };
@@ -232,7 +235,7 @@ export interface ConverseEnv {
   u: {
     getUniqueId(suffix?: string): string;
     /** The key under which our own reactions sit in `message.reactions` (`plugins/reactions/utils.js`). */
-    reactions: { getOwnReactionJID(chat: ChatModel): string };
+    reactions?: { getOwnReactionJID(chat: ChatModel): string };
     mam: {
       fetchArchivedMessages(
         chat: ChatModel,

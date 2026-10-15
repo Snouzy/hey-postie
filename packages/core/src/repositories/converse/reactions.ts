@@ -21,10 +21,10 @@ export async function sendReactions(
   const { stx, Strophe, u } = env;
   const chatJid = string(chat.get('jid'));
   const room = isRoom(chat);
+  // The id on the wire, never the local uuid: a peer could not match that to anything.
   const targetId =
-    (room && string(message.get(`stanza_id ${chatJid}`))) ||
-    string(message.get('msgid')) ||
-    string(message.get('id'));
+    (room && string(message.get(`stanza_id ${chatJid}`))) || string(message.get('msgid'));
+  if (!targetId) throw new DomainError('Unknown', 'Unknown: the message has no id on the wire');
   const reactions = stx`<reactions xmlns="${REACTIONS_NS}" id="${targetId}">${emojis.map(
     (emoji) => stx`<reaction>${emoji}</reaction>`,
   )}</reactions>`;
@@ -54,7 +54,7 @@ export async function sendReactions(
   }
 
   // Our own stanza is not echoed back in a direct chat: record it, which raises `change:reactions`.
-  const own = u.reactions.getOwnReactionJID(chat);
+  const own = u.reactions?.getOwnReactionJID(chat) ?? string(loaded.state.session?.get('bare_jid'));
   const current = message.get('reactions');
   const next: Record<string, unknown> =
     current && typeof current === 'object' ? { ...(current as Record<string, unknown>) } : {};

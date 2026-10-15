@@ -5,7 +5,12 @@ import type { ConverseEngine, Loaded } from './engine';
 import { isRoom, toChat, toMessage } from './mappers';
 import type { ChatModel, MessageModel } from './models';
 import { REACTIONS_NS, sendReactions } from './reactions';
-import { discoverUploadService, type UploadService, uploadFile } from './upload';
+import {
+  AESGCM_OVERHEAD_BYTES,
+  discoverUploadService,
+  type UploadService,
+  uploadFile,
+} from './upload';
 
 type MessageHandler = (message: Message) => void;
 type ChatHandler = (chat: Chat) => void;
@@ -33,6 +38,8 @@ export class ConverseChatRepository implements ChatRepository {
   private openJid: string | null = null;
   /** The upload component of the session's server, discovered once per connection. */
   private uploadService: Promise<UploadService | null> | null = null;
+  /** One upload at a time per chat: `uploadFile` identifies its placeholder by order of arrival. */
+  private readonly uploads = new Map<string, Promise<unknown>>();
 
   constructor(private readonly engine: ConverseEngine) {
     engine.onReady((loaded) => this.bindCollection(loaded));
@@ -106,8 +113,9 @@ export class ConverseChatRepository implements ChatRepository {
 
   /**
    * Converse checks the limit itself but answers with an ephemeral notice: the check runs here
-   * first so that the caller gets `FileTooLarge`. Converse knows no file size on a message, so the
-   * sent attachment takes the size of the file we uploaded.
+   * first so that the caller gets `FileTooLarge`; in a sealed chat the encrypted upload carries the
+   * AES-GCM tag on top of the file. Converse knows no file size on a message, so the sent
+   * attachment takes the size of the file we uploaded.
    */
   async sendFile(
     chatId: string,
@@ -116,11 +124,17 @@ export class ConverseChatRepository implements ChatRepository {
   ): Promise<Message> {
     const chat = await this.find(chatId);
     const limit = await this.maxFileSize();
-    if (limit !== null && file.size > limit) {
+    const uploaded = chat.get('omemo_active') ? file.size + AESGCM_OVERHEAD_BYTES : file.size;
+    if (limit !== null && uploaded > limit) {
       throw new DomainError('FileTooLarge', `FileTooLarge: limit ${limit} bytes`);
     }
-    const model = await uploadFile(chat, file, onProgress);
-    const message = this.mapMessage(model, chat);
+    const previous = this.uploads.get(chatId) ?? Promise.resolve();
+    const run = previous.then(() => uploadFile(chat, file, onProgress));
+    this.uploads.set(
+      chatId,
+      run.catch(() => undefined),
+    );
+    const message = this.mapMessage(await run, chat);
     return {
       ...message,
       attachments: message.attachments.map((attachment) => ({ ...attachment, size: file.size })),
@@ -130,9 +144,9 @@ export class ConverseChatRepository implements ChatRepository {
   async maxFileSize(): Promise<number | null> {
     const loaded = await this.engine.ready();
     if (!this.uploadService) {
-      this.uploadService = discoverUploadService(loaded).catch((error: unknown) => {
+      this.uploadService = discoverUploadService(loaded).catch((cause: unknown) => {
         this.uploadService = null;
-        throw error;
+        throw new DomainError('Unknown', 'Unknown: upload service discovery failed', cause);
       });
     }
     return (await this.uploadService)?.maxFileSize ?? null;
@@ -277,7 +291,13 @@ export class ConverseChatRepository implements ChatRepository {
   private mapMessage(model: MessageModel, chat: ChatModel): Message {
     const authenticated = this.loaded?.api.connection.authenticated() === true;
     const unread = Number(chat.get(isRoom(chat) ? 'num_unread_general' : 'num_unread')) || 0;
-    const context = { chatId: String(chat.get('jid')), authenticated, unread };
+    const ownReactionJid = this.loaded?.env.u.reactions?.getOwnReactionJID(chat);
+    const context = {
+      chatId: String(chat.get('jid')),
+      authenticated,
+      unread,
+      ...(ownReactionJid ? { ownReactionJid } : {}),
+    };
     return toMessage(
       model,
       isRoom(chat) ? { ...context, ownNick: String(chat.get('nick')) } : context,
