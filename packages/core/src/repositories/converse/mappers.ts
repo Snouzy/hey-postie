@@ -31,8 +31,7 @@ export function toMessage(model: MessageModel, context: MessageContext): Message
   const message: Message = {
     id: string(model.get('id')),
     chatId: context.chatId,
-    // In a room `from` is `room@service/nick`; the real JID is only known in non-anonymous rooms.
-    fromJid: bareJid(string(model.get('from_real_jid')) || string(model.get('from'))),
+    fromJid: fromJid(model, context),
     body,
     sentAt: new Date(string(model.get('time'))),
     direction,
@@ -46,6 +45,18 @@ export function toMessage(model: MessageModel, context: MessageContext): Message
     edited: Boolean(model.get('edited')),
   };
   return nick ? { ...message, fromNick: nick } : message;
+}
+
+/**
+ * In a room `from` is `room@service/nick` and the real JID is only known when the room reveals it
+ * (`from_real_jid`): the full occupant address is kept otherwise, so that two occupants never
+ * share a `fromJid` (contracts/types.ts).
+ */
+function fromJid(model: MessageModel, context: MessageContext): string {
+  const real = string(model.get('from_real_jid'));
+  if (real) return bareJid(real);
+  const from = string(model.get('from'));
+  return context.ownNick === undefined ? bareJid(from) : from;
 }
 
 /** `CHATROOMS_TYPE` (`shared/constants.js:67`): a room counts every message in `num_unread_general`. */
@@ -68,8 +79,9 @@ export function isRoom(model: ModelLike): boolean {
 }
 
 /**
- * Converse's own rule (`plugins/muc/muc.js` `isUserMentioned`): a XEP-0372 mention reference
- * to our nick, or the nick as a whole word in the body. Ours ignores case.
+ * Converse's own rule (`plugins/muc/muc.js` `isUserMentioned`), made case-insensitive: when the
+ * message carries XEP-0372 references, one of them must be a mention of our nick; otherwise the
+ * nick must appear as a whole word in the body.
  */
 export function isMention(model: ModelLike, ownNick: string): boolean {
   if (!ownNick) return false;
@@ -77,7 +89,9 @@ export function isMention(model: ModelLike, ownNick: string): boolean {
   if (Array.isArray(references) && references.length > 0) {
     return references.some(
       (reference: { type?: unknown; value?: unknown }) =>
-        reference.type === 'mention' && reference.value === ownNick,
+        reference.type === 'mention' &&
+        typeof reference.value === 'string' &&
+        reference.value.toLowerCase() === ownNick.toLowerCase(),
     );
   }
   const escaped = ownNick.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');

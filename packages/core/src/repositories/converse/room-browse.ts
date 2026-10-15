@@ -5,6 +5,7 @@ import { toRoomInfo } from './room-mappers';
 
 /** Above this many rooms the per-room disco#info (occupant count, description) is skipped. */
 const INFO_LIMIT = 20;
+const INFO_TIMEOUT_MS = 5_000;
 
 /**
  * XEP-0045 §6.3-6.4: the rooms of a conference service are its disco#items. A user's domain is
@@ -41,6 +42,7 @@ async function isConferenceService(api: ConverseApi, jid: string): Promise<boole
   }
 }
 
+/** An error answer (no such service, forbidden) is an empty list; `sendIQ` rejects with null on timeout. */
 async function itemsOf(api: ConverseApi, jid: string): Promise<Element[]> {
   try {
     const result = await api.disco.items(jid);
@@ -48,17 +50,16 @@ async function itemsOf(api: ConverseApi, jid: string): Promise<Element[]> {
       item.getAttribute('jid'),
     );
   } catch (error) {
-    throw new DomainError(
-      'ServerUnreachable',
-      'ServerUnreachable: the room list did not answer',
-      error,
-    );
+    if (error === null) {
+      throw new DomainError('ServerUnreachable', 'ServerUnreachable: the room list did not answer');
+    }
+    return [];
   }
 }
 
 async function infoOf(api: ConverseApi, item: Element): Promise<Element | null> {
   try {
-    return await api.disco.info(item.getAttribute('jid') ?? '');
+    return await api.disco.info(item.getAttribute('jid') ?? '', null, { timeout: INFO_TIMEOUT_MS });
   } catch {
     return null;
   }

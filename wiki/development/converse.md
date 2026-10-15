@@ -444,10 +444,18 @@ and `contract-rooms.test.ts` (Prosody, `rooms.localhost`), both green on 2026-10
   Occupants: `chat.occupants` (`nick`, `jid` in non-anonymous rooms, `role`, `affiliation`,
   `presence` `online|offline`, `occupant_id`); members fetched from the affiliation lists are
   there too with `presence: 'offline'`, so `members()` keeps the present ones only.
-- API: `api.rooms.get(jid, { nick, password, hidden }, create)` creates the model, whose `setup()`
+- API: `api.rooms.get(jid, { nick, hidden }, create)` creates the model, whose `setup()`
   joins by itself (`muc.js:134-137`); `createChatBox` awaits `initialized`, so the join presence
   is already sent when the call returns and a refusal can arrive before it. An existing model is
-  asked with `chat.join(nick, password)`. `chat.close()` leaves (unavailable presence, not
+  asked with `chat.join(nick, password)`. **The password is never a model attribute**: it would be
+  persisted with the chatbox and published to PEP with the bookmark (`enteredNewRoom` copies
+  `attributes.password`). A new room therefore joins without it first and, on
+  `RoomPasswordRequired`, is asked again with `chat.join(nick, password)` (`room-join.ts`
+  `enterNewRoom`); after a restart Converse rejoins without it and the room shows `joined: false`
+  until the user joins again with the password. `chat.open(jid)` for a JID that has no model but a
+  bookmark, or whose domain is a known conference service (`api.disco.entities.get(domain)` and its
+  cached `identities`, not `getIdentity()` which waits for the entity's items), throws
+  `RoomNotFound` instead of creating a direct chat with the room's JID. `chat.close()` leaves (unavailable presence, not
   awaited: `muc.js:977`), destroys the model (`chatboxes` fires `remove`) and triggers `leaveRoom`,
   which the bookmarks plugin turns into `autojoin: false` on the bookmark. `muc_clear_messages_on_leave`
   is true by default: the history goes with the model. `api.chats.get(jid)` answers `null` for a
@@ -472,7 +480,8 @@ and `contract-rooms.test.ts` (Prosody, `rooms.localhost`), both green on 2026-10
   `not-authorized` → `RoomPasswordRequired`, `item-not-found` → `RoomNotFound`, `forbidden` →
   `RoomBanned`, `conflict` → `NickTaken`, else `Unknown`; no answer in 20 s → `ServerUnreachable`.
   The model of a refused join is closed: left in `chatboxes`, Converse would rejoin it at the next
-  sign-in (`restoreFromCache` → `join`).
+  sign-in (`restoreFromCache` → `join`). An unreachable room (timeout) keeps its model, hence its
+  bookmark's autojoin: it is listed `joined: false` and retried by Converse on reconnection.
 - Bookmarks (`plugins/bookmarks/`): the collection `_converse.state.bookmarks` exists only after
   `connected` when the server has PEP with `publish-options` (`plugin.js:138`); `bookmarksInitialized`
   then fires with it and is recreated at every sign-in. Without PEP the promise never resolves:
@@ -482,7 +491,9 @@ and `contract-rooms.test.ts` (Prosody, `rooms.localhost`), both green on 2026-10
   `maybeShow()`, which saves `hidden: false` in overlayed mode; `chat.ts` re-asserts its hidden
   policy on `change:hidden`. Unhiding a room clears its counters and rejoins it when DISCONNECTED
   (`onHiddenChange`). Removing a bookmark through the collection closes the room (`leaveRoom`), so
-  `setBookmarked(jid, false)` removes the model silently and calls `sendRemoveBookmarkStanza`.
+  `setBookmarked(jid, false)` removes the model silently and calls `sendRemoveBookmarkStanza`,
+  putting the model back (silently) when the server refuses; without a collection (no PEP) there
+  is nothing to remove and it returns at once. The bookmarks fetch IQ carries no `to` attribute.
 - Browsing: `api.disco.items(jid)` and `api.disco.info(jid)` send raw IQs (`plugins/disco/api.js`);
   `api.disco.getIdentity('conference', 'text', jid)` goes through the entity cache and tells a MUC
   service from a user domain. `room-browse.ts` (`findRoomService`, behind `roomService()`) looks
@@ -507,6 +518,9 @@ and `contract-rooms.test.ts` (Prosody, `rooms.localhost`), both green on 2026-10
   browses a room that bob configured public.
 - The own occupant's JID comes from the self-presence `<item jid=…>`; without it `getOwnOccupant()`
   finds nothing and `fetchMembers()` returns early.
+- A MUC's `clearUnreadMsgCounter()` is async (it sends a marker first): `markRead` awaits it.
+- Advertising PEP in the mock wakes OMEMO, which loads libomemo's wasm: `MockHarness` serves the
+  package assets through `fetch` like the contract environment does (`contractEnv.ts`).
 - Unhandled rejections kill the Vitest worker (exit code 7, §11). Stale `autojoin` bookmarks left by
   an aborted run made Converse rejoin dead rooms at the next sign-in and crashed `contract.test.ts`
   that way; the rooms suite now removes its bookmark in `afterAll`. Purging alice's

@@ -1,4 +1,5 @@
 import type { ConverseRepositories } from '../index';
+import { headlessAssetServer } from './contractEnv';
 
 /**
  * Converse's own test hook (wiki/development/converse.md §11): a `MockConnection` that never
@@ -14,6 +15,9 @@ export interface Mock {
       once(name: string, handler: (...args: never[]) => void): void;
     };
     user: { logout(): Promise<void>; settings: { clear(): Promise<unknown> } };
+    bookmarks: {
+      set(attributes: { jid: string; autojoin?: boolean; nick?: string }): Promise<unknown>;
+    };
     waitUntil(name: string): Promise<unknown> | null;
   };
   _converse: {
@@ -65,9 +69,9 @@ export class MockHarness {
   static async create(repositories: ConverseRepositories): Promise<MockHarness> {
     // Same module instance as the engine's lazy import: the singleton is shared.
     const mock = (await import('@converse/headless')) as unknown as Mock;
-    // Converse fetches `emoji.json` on the first message parse and logs the refusal once (an empty
-    // table instead would break its parser and silently drop every later message).
-    window.fetch = () => Promise.reject(new Error('no network in tests'));
+    // Converse fetches `emoji.json` on the first message parse and libomemo its wasm once the
+    // mock advertises PEP: both come from the package's `dist/` (contractEnv.ts, §11).
+    window.fetch = await headlessAssetServer();
     // `converse.initialize` drops every listener: initialize (a no-op sign-out) before hooking events.
     await repositories.xmpp.disconnect();
     // Test-env only: `isTestEnv()` makes every disconnect clear the cache, and the logout cascade

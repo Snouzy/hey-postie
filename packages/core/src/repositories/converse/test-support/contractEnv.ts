@@ -28,7 +28,7 @@ export async function prepareContractEnvironment(): Promise<{
  * page here, so they come from the package's `dist/`. Anything else is refused. The wasm must load:
  * libomemo's emscripten glue, seeing Node, rethrows every unhandled rejection and kills the worker.
  */
-async function headlessAssetServer(): Promise<typeof fetch> {
+export async function headlessAssetServer(): Promise<typeof fetch> {
   const fs = await nodeModule<{
     existsSync(path: string): boolean;
     readFileSync(path: string): BufferSource;

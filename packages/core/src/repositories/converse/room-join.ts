@@ -62,6 +62,8 @@ export class JoinWatch {
         timeoutMs,
       );
       this.settle = (error) => {
+        // The error presence, the status change and the timer may each try to conclude.
+        this.settle = null;
         clearTimeout(timer);
         session?.off('change:connection_status', onStatus);
         this.release();
@@ -112,4 +114,50 @@ function unexplained(status: number, loaded: Loaded): DomainError {
   if (status === NICKNAME_REQUIRED) return new DomainError('NickTaken', 'NickTaken: nick refused');
   if (status === DESTROYED) return new DomainError('RoomNotFound', 'RoomNotFound: room destroyed');
   return new DomainError('Unknown', `Unknown: the join ended in room status ${String(status)}`);
+}
+
+/**
+ * Creates the model, which joins by itself without a password (a model attribute would be
+ * persisted and published with the bookmark, `enteredNewRoom`), and asks again with the
+ * password when the room wants one.
+ */
+export async function enterNewRoom(
+  loaded: Loaded,
+  jid: string,
+  input: { nick: string; password?: string },
+  timeoutMs: number,
+): Promise<RoomModel> {
+  const watch = new JoinWatch(loaded, jid);
+  let chat: RoomModel | null | undefined;
+  try {
+    chat = await loaded.api.rooms.get(jid, { nick: input.nick, hidden: true }, true);
+    if (!chat) throw new DomainError('Unknown', 'Unknown: the room could not be created');
+    await watch.outcome(chat, timeoutMs);
+    return chat;
+  } catch (error) {
+    const wantsPassword = error instanceof DomainError && error.code === 'RoomPasswordRequired';
+    if (!chat || !wantsPassword || !input.password) throw error;
+    watch.release();
+    const retry = chat;
+    return attemptJoin(loaded, retry, timeoutMs, () => retry.join(input.nick, input.password));
+  } finally {
+    watch.release();
+  }
+}
+
+/** One join attempt on an existing model, watched from before its presence goes out. */
+export async function attemptJoin(
+  loaded: Loaded,
+  chat: RoomModel,
+  timeoutMs: number,
+  start: () => Promise<void>,
+): Promise<RoomModel> {
+  const watch = new JoinWatch(loaded, String(chat.get('jid')));
+  try {
+    await start();
+    await watch.outcome(chat, timeoutMs);
+    return chat;
+  } finally {
+    watch.release();
+  }
 }
