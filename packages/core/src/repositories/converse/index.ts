@@ -40,6 +40,6 @@ export function createConverseRepositories(
     room: new ConverseRoomRepository(engine, options.joinTimeoutMs),
     crypto: new ConverseCryptoRepository(engine),
     registration: new ConverseRegistrationRepository(engine, options.connectTimeoutMs),
-    file: new ConverseFileRepository(),
+    file: new ConverseFileRepository(engine),
   };
 }
