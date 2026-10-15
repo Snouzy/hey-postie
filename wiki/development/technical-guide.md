@@ -46,6 +46,12 @@ tasks/             agents' plans and lessons, untracked
 | `pnpm rust` | `cargo fmt --check`, `cargo clippy -D warnings`, `cargo test` in `apps/desktop/src-tauri`. |
 | `pnpm verify` | All of the above, then the Vite build. Must be green before a pull request. |
 
+## Test server
+
+A local Prosody 13 server, bound to `localhost` only, for development and for the contract tests
+gated by `XMPP_TEST_SERVER`: see [`tools/xmpp-server/README.md`](../../tools/xmpp-server/README.md)
+(install, start/stop, test accounts `alice@localhost` and `bob@localhost`, ports, certificates).
+
 ## Add a service
 
 1. Write its interface in `contracts/services.ts` and the repository interfaces it needs in

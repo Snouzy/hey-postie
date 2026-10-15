@@ -5,6 +5,12 @@ apps/desktop/src-tauri/target/
 apps/desktop/src-tauri/gen/schemas/
 apps/desktop/dist-smoke/
 
+# Local XMPP test server: built binaries, Lua rocks, certificates and server data.
+tools/xmpp-server/prosody/
+tools/xmpp-server/rocks/
+tools/xmpp-server/certs/
+tools/xmpp-server/data/
+
 # Agent notes and per-machine Claude Code state: never published.
 tasks/
 .claude/worktrees/
