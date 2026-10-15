@@ -1,12 +1,12 @@
 import type { Account, Chat, Contact } from '@hey-postie/core';
-import { LogOut, Plus, Search, UserPlus } from 'lucide-react';
+import { Plus, Search, UserPlus } from 'lucide-react';
 import { type RefObject, useState } from 'react';
 import { useText } from '../core/CoreProvider';
 import type { MessageKey } from '../i18n';
+import { AccountMenu } from './AccountMenu';
 import { Button } from './Button';
 import { ChatList } from './ChatList';
 import { ContactList } from './ContactList';
-import { PresenceDot } from './PresenceDot';
 import styles from './Sidebar.module.css';
 
 export type SidebarTab = 'chats' | 'contacts';
@@ -24,6 +24,7 @@ interface SidebarProps {
   onNewChat: () => void;
   onAddContact: () => void;
   onSignOut: () => void;
+  onDeleteAccount: () => void;
   onSignInAgain: () => void;
 }
 
@@ -39,16 +40,15 @@ export function Sidebar(props: SidebarProps) {
   const contacts = needle
     ? props.contacts.filter((contact) => contact.name.toLowerCase().includes(needle))
     : props.contacts;
-  const online = props.account.state === 'online';
 
   return (
     <nav className={styles.sidebar}>
       <header className={styles.account}>
-        <PresenceDot presence={online ? 'online' : 'offline'} />
-        <span className={styles.accountName}>{props.account.displayName}</span>
-        <Button variant="ghost" onClick={props.onSignOut} aria-label={text('main.signOut')}>
-          <LogOut size={18} aria-hidden />
-        </Button>
+        <AccountMenu
+          account={props.account}
+          onSignOut={props.onSignOut}
+          onDeleteAccount={props.onDeleteAccount}
+        />
       </header>
 
       {props.account.state === 'connecting' && (

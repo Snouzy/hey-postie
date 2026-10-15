@@ -2,6 +2,7 @@ import type { Account, Chat, Contact } from '@hey-postie/core';
 import { useEffect, useRef, useState } from 'react';
 import { AddContact } from '../components/AddContact';
 import { Conversation } from '../components/Conversation';
+import { DeleteAccountDialog } from '../components/DeleteAccountDialog';
 import { Details } from '../components/Details';
 import { NewChat } from '../components/NewChat';
 import { Sidebar } from '../components/Sidebar';
@@ -21,7 +22,7 @@ interface MainProps {
   onLeave: (door: 'welcome' | 'signIn') => void;
 }
 
-type OpenDialog = 'newChat' | 'addContact' | null;
+type OpenDialog = 'newChat' | 'addContact' | 'deleteAccount' | null;
 
 /** The three columns. Owns the selection and tells the notifications service what is on screen. */
 export function Main({ account, onOpenLink, onLeave }: MainProps) {
@@ -112,6 +113,7 @@ export function Main({ account, onOpenLink, onLeave }: MainProps) {
         onNewChat={() => setDialog('newChat')}
         onAddContact={() => setDialog('addContact')}
         onSignOut={() => void leave('welcome')}
+        onDeleteAccount={() => setDialog('deleteAccount')}
         onSignInAgain={() => void leave('signIn')}
       />
       {chat ? (
@@ -142,6 +144,13 @@ export function Main({ account, onOpenLink, onLeave }: MainProps) {
         />
       )}
       {dialog === 'addContact' && <AddContact onClose={() => setDialog(null)} />}
+      {dialog === 'deleteAccount' && (
+        <DeleteAccountDialog
+          jid={account.jid}
+          onClose={() => setDialog(null)}
+          onDeleted={() => onLeave('welcome')}
+        />
+      )}
     </div>
   );
 }
