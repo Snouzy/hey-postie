@@ -21,11 +21,37 @@ function openMenu() {
 }
 
 describe('AccountMenu', () => {
-  it('opens on the account row, shows the JID and focuses the first item', () => {
+  it('opens on the account row, shows the JID beside the menu and focuses the first item', () => {
     const { trigger } = openMenu();
     expect(trigger).toHaveAttribute('aria-expanded', 'true');
-    expect(screen.getByRole('menu')).toHaveTextContent('alice@x.org');
+    expect(screen.getByText('alice@x.org')).toBeInTheDocument();
+    expect(screen.getByRole('menu')).not.toHaveTextContent('alice@x.org');
     expect(screen.getByRole('menuitem', { name: 'Sign out' })).toHaveFocus();
+  });
+
+  it('goes to the last item on ArrowUp from outside the items', () => {
+    openMenu();
+    const menu = screen.getByRole('menu');
+    menu.focus();
+    (document.activeElement as HTMLElement | null)?.blur();
+    fireEvent.keyDown(menu, { key: 'ArrowUp' });
+    expect(screen.getByRole('menuitem', { name: 'Delete my account…' })).toHaveFocus();
+  });
+
+  it('closes when the focus leaves it with Tab', () => {
+    openMenu();
+    fireEvent.focusOut(screen.getByRole('menuitem', { name: 'Sign out' }), {
+      relatedTarget: document.body,
+    });
+    expect(screen.queryByRole('menu')).not.toBeInTheDocument();
+  });
+
+  it('puts the focus back on the row before acting, so a dialog returns there', () => {
+    const { trigger, onDeleteAccount } = openMenu();
+    onDeleteAccount.mockImplementation(() => expect(trigger).toHaveFocus());
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Delete my account…' }));
+    expect(onDeleteAccount).toHaveBeenCalledOnce();
+    expect(trigger).toHaveFocus();
   });
 
   it('moves between items with the arrows and wraps around', () => {

@@ -71,10 +71,12 @@ lose nothing (the domain is kept too); "Back" from "Where?" goes to Welcome.
 ## Account menu
 
 The account row of the sidebar (`components/AccountMenu.tsx`) is a button
-(`aria-haspopup="menu"`) that opens a small `role="menu"`: the JID, "Sign out" and
-"Delete my account…". The first item takes the focus, arrows move and wrap, Esc or a click
-outside closes it and the focus returns to the row. Deleting the account is therefore two clicks
-away, as App Store rule 5.1.1(v) asks.
+(`aria-haspopup="menu"`) that opens a small card: the JID (outside the menu, it is not an item)
+and a `role="menu"` with "Sign out" and "Delete my account…". The first item takes the focus,
+arrows move and wrap (from outside the items, Down goes first and Up goes last), Esc, Tab out or a
+click outside closes it and the focus returns to the row. Picking an item puts the focus back on
+the row **before** acting, so the dialog it opens gives the focus back to the row when it closes.
+Deleting the account is therefore two clicks away, as App Store rule 5.1.1(v) asks.
 
 "Delete my account…" opens `components/DeleteAccountDialog.tsx` from `Main`: a plain sentence
 (no joke; it is permanent on the server), a field where the user types their own JID
@@ -209,7 +211,8 @@ conflict focuses the username, success sends `extra` and lands in Main, back lin
 field type never from the server, CAPTCHA only from a data URL, errors clear on edit, the
 password never appears in the document, values kept across Back, only the current form's fields
 sent),
-`AccountMenu.test.tsx` (JID, arrows, Esc, click outside, actions), `DeleteAccountDialog.test.tsx`
+`AccountMenu.test.tsx` (JID outside the menu, arrows incl. Up from outside, Esc, Tab out, click
+outside, focus back on the row before acting), `DeleteAccountDialog.test.tsx`
 (two clicks away, button asleep until the JID matches, `deleteCurrent` recorded and Welcome
 shown, failure sentence, Esc), `ChatList.test.tsx` (order, badge, sealed preview),
 `MessageList.test.tsx` (grouping, day labels, retry, undecryptable, links, load older),

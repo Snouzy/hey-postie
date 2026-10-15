@@ -55,11 +55,12 @@ describe('DeleteAccountDialog', () => {
     await waitFor(() => expect(button).toBeEnabled());
   });
 
-  it('closes on Esc without deleting anything', async () => {
+  it('closes on Esc without deleting anything, focus back on the account row', async () => {
     const { deps } = await openDialog();
     fireEvent.keyDown(window, { key: 'Escape' });
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     expect(deps.fakes.registration.deleted).toEqual([]);
     expect(screen.getByRole('searchbox', { name: 'Search chats' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'alice' })).toHaveFocus();
   });
 });
