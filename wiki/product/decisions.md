@@ -55,6 +55,19 @@ When the protocol behavior is unclear, look at how [Gajim](https://github.com/ga
 - Reconnection uses Converse's loop; MAM catch-up does not notify (see the spec, 3.7).
 - Local test server: Prosody built from source into `tools/xmpp-server/` (Homebrew has no formula).
 
+## Night of 2026-10-16 (author's decisions before sleeping)
+
+- Messages from people outside the roster: a contact request comes first, like Signal. Their
+  messages are held behind a "message request" screen (accept / block / ignore); nothing of theirs
+  is auto-loaded or notified until accepted.
+- Settings become a Gajim-like window with sections (General, Account, Appearance, Notifications,
+  Privacy and encryption, Advanced) instead of one dialog.
+- Presence status (available / away / do not disturb + a sentence), avatars, typing indicator:
+  in. Empty states and first-launch screens with Postie: in.
+- Leaving a room must be reachable from the room row as well as from its details pane.
+- Encryption on by default when the contact has a key (spec 3.6, unchanged).
+- Big item for the night: the marketing site skeleton (hey-postie.com), after the product items.
+
 ## Points to check
 
 - Licenses: OMEMO relies on libsignal (GPL-3.0). Combined with app-store distribution, this is a
