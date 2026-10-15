@@ -1,0 +1,56 @@
+[
+  {
+    "name": "@converse/headless",
+    "version": "14.0.0",
+    "license": "MPL-2.0",
+    "repository": "https://github.com/conversejs/converse.js"
+  },
+  {
+    "name": "libomemo.js",
+    "version": "0.3.0",
+    "license": "GPL-3.0",
+    "repository": "https://github.com/conversejs/libsignal-protocol-javascript"
+  },
+  {
+    "name": "strophe.js",
+    "version": "3.1.0",
+    "license": "MIT",
+    "repository": "https://github.com/strophe/strophejs"
+  },
+  {
+    "name": "react",
+    "version": "19.3.1",
+    "license": "MIT",
+    "repository": "https://github.com/facebook/react"
+  },
+  {
+    "name": "react-dom",
+    "version": "19.3.1",
+    "license": "MIT",
+    "repository": "https://github.com/facebook/react"
+  },
+  {
+    "name": "lucide-react",
+    "version": "1.57.0",
+    "license": "ISC",
+    "repository": "https://github.com/lucide-icons/lucide"
+  },
+  {
+    "name": "Fraunces",
+    "version": "1.0",
+    "license": "OFL-1.1",
+    "repository": "https://github.com/undercasetype/Fraunces"
+  },
+  {
+    "name": "Figtree",
+    "version": "1.0",
+    "license": "OFL-1.1",
+    "repository": "https://github.com/erikdkennedy/figtree"
+  },
+  {
+    "name": "Tauri",
+    "version": "2.x",
+    "license": "MIT OR Apache-2.0",
+    "repository": "https://github.com/tauri-apps/tauri"
+  }
+]
