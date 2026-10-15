@@ -1,7 +1,16 @@
 import type { Core } from '@hey-postie/core';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { CoreProvider } from './core/CoreProvider';
+import { SettingsProvider } from './core/SettingsProvider';
+import {
+  type LocaleChoice,
+  readLocaleChoice,
+  readShowPreview,
+  writeLocaleChoice,
+  writeShowPreview,
+} from './core/settings';
 import { useAccount } from './core/useAccount';
+import { useTheme } from './core/useTheme';
 import type { Locale } from './i18n';
 import { CreateAccount } from './screens/CreateAccount';
 import { Main } from './screens/Main';
@@ -10,15 +19,53 @@ import { Welcome } from './screens/Welcome';
 
 interface AppProps {
   core: Core;
+  /** The system's language; the user may pick another one in Settings. */
   locale: Locale;
   /** Where links in messages go. The desktop app routes them to the system browser. */
   onOpenLink?: (url: string) => void;
+  /** Shown in Settings > About; "dev" when the host did not say. */
+  version?: string;
 }
 
-export function App({ core, locale, onOpenLink }: AppProps) {
+/**
+ * Owns the per-viewer choices (theme, language, notification preview): read from `localStorage`
+ * on the first render, applied at once, and handed to the Settings dialog through
+ * `SettingsProvider`. A language change swaps the dictionary and the whole tree re-renders.
+ */
+export function App({ core, locale, onOpenLink, version }: AppProps) {
+  const [theme, setTheme] = useTheme();
+  const [localeChoice, setLocaleChoice] = useState<LocaleChoice>(readLocaleChoice);
+  const [showPreview, setShowPreviewState] = useState<boolean>(readShowPreview);
+
+  useEffect(() => {
+    core.notifications.setShowPreview(showPreview);
+  }, [core, showPreview]);
+
+  function setLocale(choice: LocaleChoice) {
+    writeLocaleChoice(choice);
+    setLocaleChoice(choice);
+  }
+
+  function setShowPreview(value: boolean) {
+    writeShowPreview(value);
+    setShowPreviewState(value);
+  }
+
   return (
-    <CoreProvider core={core} locale={locale}>
-      <Screens onOpenLink={onOpenLink ?? openInNewWindow} />
+    <CoreProvider core={core} locale={localeChoice === 'system' ? locale : localeChoice}>
+      <SettingsProvider
+        value={{
+          theme,
+          setTheme,
+          locale: localeChoice,
+          setLocale,
+          showPreview,
+          setShowPreview,
+          version: version ?? 'dev',
+        }}
+      >
+        <Screens onOpenLink={onOpenLink ?? openInNewWindow} />
+      </SettingsProvider>
     </CoreProvider>
   );
 }

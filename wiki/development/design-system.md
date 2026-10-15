@@ -7,6 +7,8 @@ _Created 2026-10-15. Source: `packages/ui/src/theme/tokens.css`, `fonts.css`, `p
 Defined on `:root` in `tokens.css`. The dark values apply under `prefers-color-scheme: dark`
 unless `data-theme="light"` is set on `<html>`, and always under `data-theme="dark"`. The theme is
 therefore right on first paint, with no JavaScript (spec 4.2; Review Focus 5 of the milestone 0 plan).
+The user's choice (Settings > Appearance) sets or removes that attribute (`core/useTheme.ts`, see
+[ui.md](ui.md#settings)).
 
 | Token | Light | Dark | Use |
 |---|---|---|---|
@@ -71,7 +73,9 @@ tokens only, no hard-coded color._ Motion goes only through `var(--motion)` / `v
 | `DetailsPane` | Picks `Details` for a direct chat or `RoomDetails` for a hall with a record, keyed by the chat; nothing otherwise. |
 | `RetryNotice` | A failed load: Postie's sentence in the heading font and `--red`, with a small "Retry" pill beside it. Never confused with an empty state. |
 | `Details` | Right pane, 280px: the peer's JID in monospace, the Encryption section, and the destructive action in `danger`. |
-| `AccountMenu` | The account row of the sidebar: presence dot, display name, chevron; a button with `aria-haspopup="menu"`. Opens a raised card with the JID in monospace above a `role="menu"` of three `menuitem`s, "Sign out", "My devices…" (lucide `key-round`) and "Delete my account…" in `--red`. Focus on the first item, arrows wrap, Esc, Tab out and a click outside close it and the focus returns to the row. |
+| `AccountMenu` | The account row of the sidebar: presence dot, display name, chevron; a button with `aria-haspopup="menu"`. Opens a raised card with the JID in monospace above a `role="menu"` of four `menuitem`s, "Sign out", "My devices…" (lucide `key-round`), "Settings…" (lucide `settings`) and "Delete my account…" in `--red`. Focus on the first item, arrows wrap, Esc, Tab out and a click outside close it and the focus returns to the row. |
+| `Settings` | A `Dialog` of four sections under the same uppercase muted heading as `RoomDetails`: Appearance and Language as `fieldset` radios with `accent-color: var(--navy)`, Notifications as a `role="switch"` checkbox with a muted hint under it, About with the version in `--font-mono` muted, the "Source code" link in `--navy` and a `secondary` "Licenses" pill. No "Save": every change applies at once. |
+| `Licenses` | A `Dialog`: a muted intro sentence, a `Field` search, then a 320px scrollable list of groups (license as the uppercase heading, names as `--navy` links or plain text, versions in `--font-mono` muted). Nothing found: Postie's sentence in the heading font. |
 | `DeleteAccountDialog` | A `Dialog` for the one irreversible action: a plain sentence (no joke), a field where the user types their own JID, a `danger` button disabled until it matches, Postie's sentence below while deleting or on failure. |
 | `RoomDetails` | The right pane of a hall: topic, JID, members under role headings (same uppercase heading as `ContactList`) with the affiliation in `--kraft`, the Encryption section (members' devices, grouped by nick), the notify rule as radios with `accent-color: var(--navy)`, "Leave the hall" in `danger` confirmed through `Dialog`. Empty members: Postie's sentence in the heading font. |
 | `AddMenu` | The "+" of the sidebar: a `role="menu"` card on `--paper-raised` with three items (New chat, Join a room, Add contact), icon then label. |

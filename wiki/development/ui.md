@@ -5,7 +5,7 @@ _Created 2026-10-15. Sources: `packages/ui/src/App.tsx`, `packages/ui/src/core/`
 
 The UI is React 19, TypeScript, CSS Modules, no router, no UI library. It reaches the core only
 through `useCore()` (services) and `core.events`; it never imports Converse, Tauri or storage
-(AGENTS.md, section 2). The desktop app renders `<App core locale onOpenLink? />`.
+(AGENTS.md, section 2). The desktop app renders `<App core locale onOpenLink? version? />`.
 
 ## Screens and the state machine
 
@@ -72,8 +72,8 @@ lose nothing (the domain is kept too); "Back" from "Where?" goes to Welcome.
 
 The account row of the sidebar (`components/AccountMenu.tsx`) is a button
 (`aria-haspopup="menu"`) that opens a small card: the JID (outside the menu, it is not an item)
-and a `role="menu"` with "Sign out", "My devices…" (see Encryption) and "Delete my
-account…". The first item takes the focus,
+and a `role="menu"` with "Sign out", "My devices…" (see Encryption), "Settings…" (see
+[Settings](#settings)) and "Delete my account…". The first item takes the focus,
 arrows move and wrap (from outside the items, Down goes first and Up goes last), Esc, Tab out or a
 click outside closes it and the focus returns to the row. Picking an item puts the focus back on
 the row **before** acting, so the dialog it opens gives the focus back to the row when it closes.
@@ -86,6 +86,50 @@ stays disabled until it matches. Submit calls `accounts.deleteAccount()`; while 
 is not closable (`Dialog closable={false}`: Esc and the X are ignored, Cancel disabled); on
 success `Main` leaves to Welcome (`onLeave('welcome')`), on failure the sentence shows and the
 dialog stays.
+
+## Settings
+
+_Added 2026-10-15. Sources: `components/Settings.tsx`, `components/Licenses.tsx`,
+`core/settings.ts`, `core/useTheme.ts`, `core/SettingsProvider.tsx`, `data/licenses.json`,
+`components/Settings.test.tsx`, `components/Licenses.test.tsx`._
+
+"Settings…" in the `AccountMenu` opens `Settings`, a `Dialog` with four sections and no "Save":
+every change applies at once.
+
+| Section | Control | Where the value lives |
+|---|---|---|
+| Appearance | Radios "Follow the system" / "Light" / "Dark" (`fieldset` + `legend`) | `data-theme` on `<html>` (`'light'` / `'dark'`, removed for "system": the tokens then follow `prefers-color-scheme`), remembered in `localStorage` `hey-postie:theme`. |
+| Notifications | A `role="switch"` checkbox "Show the letter in notifications" | `core.notifications.setShowPreview(value)`; remembered in `localStorage` `hey-postie:notify-preview` (`off`, or absent). |
+| Language | Radios "System language" / "English" / "Français" (each language named in itself, whatever the current one) | The locale handed to `CoreProvider`; remembered in `localStorage` `hey-postie:locale`. |
+| About | "Hey Postie <version>", a "Source code" link, a "Licenses" button | `version` prop of `App` ("dev" when absent). The link goes through `onOpenLink`. |
+
+**Two kinds of state.** The theme and the language are *per-viewer conveniences*: they belong to
+this window, not to the account, carry nothing secret, and the core has no say in them. They are
+the only things the UI keeps in `localStorage` (`core/settings.ts`: every read and write is
+wrapped in `try/catch`, so a browser that refuses storage still gets the defaults; an unknown
+stored value reads as the default). The notification preview is different: *whether the body
+of a letter reaches the notification center* is a rule, so the switch itself lives in the core
+(`NotificationsService.setShowPreview` / `getShowPreview`, `packages/core/src/services/notifications.ts`:
+off, the body is the fixed `HIDDEN_PREVIEW` sentence). The UI only remembers the user's choice
+in `localStorage`, under the same rules, and tells the core at startup. The core never reads
+`localStorage`.
+
+**Startup, no flash.** `App` reads the three values synchronously in `useState` initializers.
+`useTheme` applies the theme in a `useLayoutEffect`, before the browser paints, so the first frame
+already has the right `data-theme` (the tokens handle the system theme without JavaScript, see
+[design-system.md](design-system.md)). The locale given by the desktop (`pickLocale`) is the
+"system" language; a stored choice wins over it, and a change swaps the dictionary through
+`CoreProvider`, so the whole tree re-renders in the new language without a reload. The values
+and their setters reach the dialog through `SettingsProvider` / `useSettings()` (a context, like
+`CoreProvider`), so `Main` only mounts the dialog.
+
+**Licenses.** The "Licenses" button closes Settings and opens `Licenses` in its place (no nested
+dialogs: Esc has one card to close); closing it comes back to Settings. It reads
+`data/licenses.json`, a `{ name, version, license, repository? }[]`: today a hand-written list of
+the known runtime components (placeholder versions), to be replaced by a list the desktop build
+generates, of the same shape. Entries are grouped by license (alphabetical, names sorted inside),
+a search field filters by name or license, and a name with a `repository` is a link routed through
+`onOpenLink`. Importing the JSON needs `resolveJsonModule` in `packages/ui/tsconfig.json`.
 
 ## How the UI subscribes to the core
 
@@ -273,7 +317,13 @@ field type never from the server, CAPTCHA only from a data URL, errors clear on 
 password never appears in the document, values kept across Back, only the current form's fields
 sent),
 `AccountMenu.test.tsx` (JID outside the menu, arrows incl. Up from outside, Esc, Tab out, click
-outside, focus back on the row before acting), `DeleteAccountDialog.test.tsx`
+outside, focus back on the row before acting), `Settings.test.tsx` (theme radios set `data-theme`
+and persist, stored theme applied on the first render, unknown value ignored, storage refusing,
+preview switch hides the body through the fake notifier and persists, stored choice applied at
+startup, language switch re-renders at once with own-language labels, stored language at
+startup, version or "dev", repository link through `onOpenLink`, Licenses in place of Settings and
+back), `Licenses.test.tsx` (every entry under its license, filter by name or license with the
+empty sentence, link through `onOpenLink`, grouping and sorting), `DeleteAccountDialog.test.tsx`
 (two clicks away, button asleep until the JID matches, `deleteCurrent` recorded and Welcome
 shown, failure sentence, not closable while deleting, Esc with focus back on the row), `ChatList.test.tsx` (order, badge, sealed preview),
 `MessageList.test.tsx` (grouping, day labels, retry, undecryptable, links, load older),

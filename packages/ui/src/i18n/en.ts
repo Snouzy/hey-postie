@@ -45,6 +45,7 @@ export const en = {
 
   'accountMenu.open': 'Account menu',
   'accountMenu.devices': 'My devices…',
+  'accountMenu.settings': 'Settings…',
   'accountMenu.delete': 'Delete my account…',
   'deleteAccount.title': 'Delete my account',
   'deleteAccount.explain':
@@ -191,6 +192,24 @@ export const en = {
   'message.undecryptableHelp': 'Ask them to send it again, or check their devices.',
   'message.checkDevices': 'Check their devices',
   'composer.placeholderSealed': 'Write a sealed letter…',
+
+  'settings.title': 'Settings',
+  'settings.appearance': 'Appearance',
+  'settings.theme.system': 'Follow the system',
+  'settings.theme.light': 'Light',
+  'settings.theme.dark': 'Dark',
+  'settings.notifications': 'Notifications',
+  'settings.showPreview': 'Show the letter in notifications',
+  'settings.showPreviewHint': 'Off, I only say that a letter came.',
+  'settings.language': 'Language',
+  'settings.language.system': 'System language',
+  'settings.about': 'About',
+  'settings.repository': 'Source code',
+  'settings.licenses': 'Licenses',
+  'licenses.title': 'Licenses',
+  'licenses.intro': 'The parts I am made of, and the terms they come with.',
+  'licenses.search': 'Search by name or license',
+  'licenses.empty': 'Nothing in my satchel by that name.',
 
   'date.today': 'Today',
   'date.yesterday': 'Yesterday',

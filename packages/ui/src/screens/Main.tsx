@@ -5,8 +5,10 @@ import { Conversation } from '../components/Conversation';
 import { DeleteAccountDialog } from '../components/DeleteAccountDialog';
 import { DetailsPane } from '../components/DetailsPane';
 import { JoinRoom } from '../components/JoinRoom';
+import { Licenses } from '../components/Licenses';
 import { MyDevices } from '../components/MyDevices';
 import { NewChat } from '../components/NewChat';
+import { Settings } from '../components/Settings';
 import { Sidebar } from '../components/Sidebar';
 import { useCore, useText } from '../core/CoreProvider';
 import { useChats } from '../core/useChats';
@@ -25,7 +27,15 @@ interface MainProps {
   onLeave: (door: 'welcome' | 'signIn') => void;
 }
 
-type OpenDialog = 'newChat' | 'joinRoom' | 'addContact' | 'myDevices' | 'deleteAccount' | null;
+type OpenDialog =
+  | 'newChat'
+  | 'joinRoom'
+  | 'addContact'
+  | 'myDevices'
+  | 'settings'
+  | 'licenses'
+  | 'deleteAccount'
+  | null;
 
 /** The three columns. Owns the selection and tells the notifications service what is on screen. */
 export function Main({ account, onOpenLink, onLeave }: MainProps) {
@@ -133,6 +143,7 @@ export function Main({ account, onOpenLink, onLeave }: MainProps) {
         onJoinRoom={() => setDialog('joinRoom')}
         onAddContact={() => setDialog('addContact')}
         onMyDevices={() => setDialog('myDevices')}
+        onSettings={() => setDialog('settings')}
         onSignOut={() => void leave('welcome')}
         onDeleteAccount={() => setDialog('deleteAccount')}
         onSignInAgain={() => void leave('signIn')}
@@ -183,6 +194,16 @@ export function Main({ account, onOpenLink, onLeave }: MainProps) {
       )}
       {dialog === 'addContact' && <AddContact onClose={closeDialog} />}
       {dialog === 'myDevices' && <MyDevices onClose={closeDialog} />}
+      {dialog === 'settings' && (
+        <Settings
+          onClose={closeDialog}
+          onLicenses={() => setDialog('licenses')}
+          onOpenLink={onOpenLink}
+        />
+      )}
+      {dialog === 'licenses' && (
+        <Licenses onClose={() => setDialog('settings')} onOpenLink={onOpenLink} />
+      )}
       {dialog === 'deleteAccount' && (
         <DeleteAccountDialog
           jid={account.jid}

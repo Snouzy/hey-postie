@@ -13,6 +13,7 @@ function openMenu() {
       account={{ jid: 'alice@x.org', displayName: 'alice', state: 'online' }}
       onSignOut={onSignOut}
       onMyDevices={onMyDevices}
+      onSettings={() => {}}
       onDeleteAccount={onDeleteAccount}
     />,
     core,
@@ -61,6 +62,8 @@ describe('AccountMenu', () => {
     const menu = screen.getByRole('menu');
     fireEvent.keyDown(menu, { key: 'ArrowDown' });
     expect(screen.getByRole('menuitem', { name: 'My devices…' })).toHaveFocus();
+    fireEvent.keyDown(menu, { key: 'ArrowDown' });
+    expect(screen.getByRole('menuitem', { name: 'Settings…' })).toHaveFocus();
     fireEvent.keyDown(menu, { key: 'ArrowDown' });
     expect(screen.getByRole('menuitem', { name: 'Delete my account…' })).toHaveFocus();
     fireEvent.keyDown(menu, { key: 'ArrowDown' });

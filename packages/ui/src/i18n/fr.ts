@@ -48,6 +48,7 @@ export const fr: Record<MessageKey, string> = {
 
   'accountMenu.open': 'Menu du compte',
   'accountMenu.devices': 'Mes appareils…',
+  'accountMenu.settings': 'Réglages…',
   'accountMenu.delete': 'Supprimer mon compte…',
   'deleteAccount.title': 'Supprimer mon compte',
   'deleteAccount.explain':
@@ -198,6 +199,24 @@ export const fr: Record<MessageKey, string> = {
   'message.undecryptableHelp': 'Demandez-leur de la renvoyer, ou vérifiez leurs appareils.',
   'message.checkDevices': 'Vérifier leurs appareils',
   'composer.placeholderSealed': 'Écrire une lettre scellée…',
+
+  'settings.title': 'Réglages',
+  'settings.appearance': 'Apparence',
+  'settings.theme.system': 'Suivre le système',
+  'settings.theme.light': 'Clair',
+  'settings.theme.dark': 'Sombre',
+  'settings.notifications': 'Notifications',
+  'settings.showPreview': 'Montrer la lettre dans les notifications',
+  'settings.showPreviewHint': 'Désactivé, je dis seulement qu’une lettre est arrivée.',
+  'settings.language': 'Langue',
+  'settings.language.system': 'Langue du système',
+  'settings.about': 'À propos',
+  'settings.repository': 'Code source',
+  'settings.licenses': 'Licences',
+  'licenses.title': 'Licences',
+  'licenses.intro': 'Les pièces dont je suis fait, et leurs conditions.',
+  'licenses.search': 'Chercher par nom ou licence',
+  'licenses.empty': 'Rien de ce nom dans ma sacoche.',
 
   'date.today': 'Aujourd’hui',
   'date.yesterday': 'Hier',

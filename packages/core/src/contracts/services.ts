@@ -100,10 +100,16 @@ export interface FilesService {
   isInlineImage(attachment: Attachment): boolean;
 }
 
-/** Decides when a system notification is shown. The UI tells it what the user is looking at. */
+/**
+ * Decides when a system notification is shown, and what it says. The UI tells it what the user
+ * is looking at, and whether the notification may carry the letter's text.
+ */
 export interface NotificationsService {
   setWindowFocused(focused: boolean): void;
   setOpenChat(chatId: string | null): void;
+  /** Off: the body is a fixed sentence, never the message. On by default. */
+  setShowPreview(value: boolean): void;
+  getShowPreview(): boolean;
 }
 
 export interface Core {
