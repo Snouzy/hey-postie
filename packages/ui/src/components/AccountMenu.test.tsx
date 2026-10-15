@@ -6,18 +6,20 @@ import { AccountMenu } from './AccountMenu';
 function openMenu() {
   const { core } = setupCore();
   const onSignOut = vi.fn();
+  const onMyDevices = vi.fn();
   const onDeleteAccount = vi.fn();
   renderWithCore(
     <AccountMenu
       account={{ jid: 'alice@x.org', displayName: 'alice', state: 'online' }}
       onSignOut={onSignOut}
+      onMyDevices={onMyDevices}
       onDeleteAccount={onDeleteAccount}
     />,
     core,
   );
   const trigger = screen.getByRole('button', { name: 'alice' });
   fireEvent.click(trigger);
-  return { trigger, onSignOut, onDeleteAccount };
+  return { trigger, onSignOut, onMyDevices, onDeleteAccount };
 }
 
 describe('AccountMenu', () => {
@@ -58,6 +60,8 @@ describe('AccountMenu', () => {
     openMenu();
     const menu = screen.getByRole('menu');
     fireEvent.keyDown(menu, { key: 'ArrowDown' });
+    expect(screen.getByRole('menuitem', { name: 'My devices…' })).toHaveFocus();
+    fireEvent.keyDown(menu, { key: 'ArrowDown' });
     expect(screen.getByRole('menuitem', { name: 'Delete my account…' })).toHaveFocus();
     fireEvent.keyDown(menu, { key: 'ArrowDown' });
     expect(screen.getByRole('menuitem', { name: 'Sign out' })).toHaveFocus();
@@ -78,8 +82,12 @@ describe('AccountMenu', () => {
     expect(screen.queryByRole('menu')).not.toBeInTheDocument();
   });
 
-  it('hands the two actions to its owner and closes', () => {
-    const { onSignOut, onDeleteAccount } = openMenu();
+  it('hands the three actions to its owner and closes', () => {
+    const { onSignOut, onMyDevices, onDeleteAccount } = openMenu();
+    fireEvent.click(screen.getByRole('menuitem', { name: 'My devices…' }));
+    expect(onMyDevices).toHaveBeenCalledOnce();
+    expect(screen.queryByRole('menu')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'alice' }));
     fireEvent.click(screen.getByRole('menuitem', { name: 'Delete my account…' }));
     expect(onDeleteAccount).toHaveBeenCalledOnce();
     expect(screen.queryByRole('menu')).not.toBeInTheDocument();

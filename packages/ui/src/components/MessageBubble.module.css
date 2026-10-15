@@ -57,6 +57,34 @@
   flex-shrink: 0;
 }
 
+/* A sealed letter that left here: a drop of wax at the corner of the bubble. */
+.wax {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--red);
+  border: 2px solid var(--paper);
+}
+
+/* What to do with a letter I cannot open: plain text, and a way to the sender's devices. */
+.help {
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: 13px;
+  color: var(--ink-muted);
+}
+
+.helpAction {
+  padding: 2px var(--space-3);
+  font-size: 13px;
+}
+
 .meta {
   display: flex;
   align-items: center;

@@ -3,10 +3,10 @@ import { useEffect, useRef, useState } from 'react';
 import { AddContact } from '../components/AddContact';
 import { Conversation } from '../components/Conversation';
 import { DeleteAccountDialog } from '../components/DeleteAccountDialog';
-import { Details } from '../components/Details';
+import { DetailsPane } from '../components/DetailsPane';
 import { JoinRoom } from '../components/JoinRoom';
+import { MyDevices } from '../components/MyDevices';
 import { NewChat } from '../components/NewChat';
-import { RoomDetails } from '../components/RoomDetails';
 import { Sidebar } from '../components/Sidebar';
 import { useCore, useText } from '../core/CoreProvider';
 import { useChats } from '../core/useChats';
@@ -25,7 +25,7 @@ interface MainProps {
   onLeave: (door: 'welcome' | 'signIn') => void;
 }
 
-type OpenDialog = 'newChat' | 'joinRoom' | 'addContact' | 'deleteAccount' | null;
+type OpenDialog = 'newChat' | 'joinRoom' | 'addContact' | 'myDevices' | 'deleteAccount' | null;
 
 /** The three columns. Owns the selection and tells the notifications service what is on screen. */
 export function Main({ account, onOpenLink, onLeave }: MainProps) {
@@ -37,6 +37,7 @@ export function Main({ account, onOpenLink, onLeave }: MainProps) {
   const [selected, setSelected] = useState<Chat | null>(null);
   const [dialog, setDialog] = useState<OpenDialog>(null);
   const [detailsOpen, setDetailsOpen] = useState(false);
+  const [encryptionFocus, setEncryptionFocus] = useState(0); // "Check their devices" requests
   const [error, setError] = useState<MessageKey | null>(null);
   const searchRef = useRef<HTMLInputElement>(null);
 
@@ -96,6 +97,12 @@ export function Main({ account, onOpenLink, onLeave }: MainProps) {
     }
   }
 
+  /** The header button toggles the pane; a sealed letter opens it on its Encryption section. */
+  function showDetails(toEncryption: boolean) {
+    setEncryptionFocus(toEncryption ? (count) => count + 1 : 0);
+    setDetailsOpen(toEncryption || !detailsOpen);
+  }
+
   function closeDialog() {
     setDialog(null);
     setError(null);
@@ -125,6 +132,7 @@ export function Main({ account, onOpenLink, onLeave }: MainProps) {
         onNewChat={() => setDialog('newChat')}
         onJoinRoom={() => setDialog('joinRoom')}
         onAddContact={() => setDialog('addContact')}
+        onMyDevices={() => setDialog('myDevices')}
         onSignOut={() => void leave('welcome')}
         onDeleteAccount={() => setDialog('deleteAccount')}
         onSignInAgain={() => void leave('signIn')}
@@ -137,7 +145,8 @@ export function Main({ account, onOpenLink, onLeave }: MainProps) {
           contact={contact}
           room={room}
           detailsOpen={detailsOpen}
-          onToggleDetails={() => setDetailsOpen((open) => !open)}
+          onToggleDetails={() => showDetails(false)}
+          onOpenEncryption={() => showDetails(true)}
           onOpenLink={onOpenLink}
         />
       ) : (
@@ -146,15 +155,13 @@ export function Main({ account, onOpenLink, onLeave }: MainProps) {
           <p className={styles.emptyText}>{text('main.empty')}</p>
         </section>
       )}
-      {chat?.kind === 'direct' && detailsOpen && (
-        <Details chat={chat} onClose={() => setDetailsOpen(false)} />
-      )}
-      {room && detailsOpen && (
-        <RoomDetails
-          key={room.jid}
+      {chat && detailsOpen && (
+        <DetailsPane
+          chat={chat}
           room={room}
-          onChanged={refreshRooms}
+          focusRequest={encryptionFocus}
           onClose={() => setDetailsOpen(false)}
+          onRoomsChanged={refreshRooms}
           onLeft={() => {
             setSelected(null);
             setDetailsOpen(false);
@@ -175,6 +182,7 @@ export function Main({ account, onOpenLink, onLeave }: MainProps) {
         />
       )}
       {dialog === 'addContact' && <AddContact onClose={closeDialog} />}
+      {dialog === 'myDevices' && <MyDevices onClose={closeDialog} />}
       {dialog === 'deleteAccount' && (
         <DeleteAccountDialog
           jid={account.jid}

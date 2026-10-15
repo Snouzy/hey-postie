@@ -1,0 +1,47 @@
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.section:focus-visible {
+  outline-offset: var(--space-1);
+}
+
+.heading {
+  margin: 0;
+  font-family: var(--font-text);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ink-muted);
+}
+
+.member {
+  margin: var(--space-2) 0 var(--space-1);
+  font-size: 13px;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.hint {
+  margin: 0;
+  font-size: 13px;
+  color: var(--ink-muted);
+}
+
+/* Postie's words: no key to show, in his voice. */
+.empty {
+  margin: 0;
+  font-family: var(--font-heading);
+  font-variation-settings: 'SOFT' 100;
+  color: var(--ink-muted);
+}
+
+.error {
+  margin: 0;
+  font-family: var(--font-heading);
+  font-variation-settings: 'SOFT' 100;
+  color: var(--red);
+}

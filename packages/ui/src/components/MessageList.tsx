@@ -15,6 +15,8 @@ interface MessageListProps {
   onOpenLink: (url: string) => void;
   /** In a hall: the sender's nick above each run of incoming messages. */
   showSenders?: boolean;
+  /** From a letter sealed for another device: opens the sender's devices. */
+  onShowDevices?: (() => void) | undefined;
 }
 
 interface Run {
@@ -40,6 +42,7 @@ export function MessageList({
   onRetry,
   onOpenLink,
   showSenders = false,
+  onShowDevices,
 }: MessageListProps) {
   const text = useText();
   const locale = useLocale();
@@ -108,6 +111,7 @@ export function MessageList({
                   last={index === run.messages.length - 1}
                   onRetry={onRetry}
                   onOpenLink={onOpenLink}
+                  onShowDevices={onShowDevices}
                 />
               ))}
             </div>

@@ -6,6 +6,7 @@
   padding: var(--space-4);
   border-left: 1px solid var(--line);
   background: var(--paper);
+  overflow-y: auto;
 }
 
 .header {

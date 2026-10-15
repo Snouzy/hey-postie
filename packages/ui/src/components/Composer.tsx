@@ -12,14 +12,17 @@ interface ComposerProps {
   nicks?: string[];
   /** Nothing can be written (a hall the user is not in). */
   disabled?: boolean;
+  /** The letters of this chat leave sealed: the hint says so. */
+  sealed?: boolean;
 }
 
 /**
  * Enter sends, Shift+Enter breaks the line. The textarea grows with the text. In a hall, Tab
  * completes the word before the caret into a member's nick.
  */
-export function Composer({ onSend, nicks = [], disabled = false }: ComposerProps) {
+export function Composer({ onSend, nicks = [], disabled = false, sealed = false }: ComposerProps) {
   const text = useText();
+  const placeholder = text(sealed ? 'composer.placeholderSealed' : 'composer.placeholder');
   const [body, setBody] = useState('');
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<MessageKey | null>(null);
@@ -74,8 +77,8 @@ export function Composer({ onSend, nicks = [], disabled = false }: ComposerProps
           className={styles.area}
           rows={1}
           value={body}
-          placeholder={text('composer.placeholder')}
-          aria-label={text('composer.placeholder')}
+          placeholder={placeholder}
+          aria-label={placeholder}
           onChange={(event) => {
             setBody(event.target.value);
             grow(event.target);

@@ -1,5 +1,5 @@
 import type { Account } from '@hey-postie/core';
-import { ChevronDown, LogOut, UserX } from 'lucide-react';
+import { ChevronDown, KeyRound, LogOut, UserX } from 'lucide-react';
 import { type FocusEvent, type KeyboardEvent, useEffect, useId, useRef, useState } from 'react';
 import { useText } from '../core/CoreProvider';
 import styles from './AccountMenu.module.css';
@@ -8,16 +8,23 @@ import { PresenceDot } from './PresenceDot';
 interface AccountMenuProps {
   account: Account;
   onSignOut: () => void;
+  /** Opens the "My devices" dialog (own OMEMO keys). */
+  onMyDevices: () => void;
   onDeleteAccount: () => void;
 }
 
 /**
- * The account row of the sidebar, which opens a small card: the JID, then a menu with "Sign out"
- * and "Delete my account…". Arrows move between items, Esc, Tab out or a click outside closes it
+ * The account row of the sidebar, which opens a small card: the JID, then a menu with "Sign out",
+ * "My devices…" and "Delete my account…". Arrows move between items, Esc, Tab out or a click outside closes it
  * and the focus goes back to the row. Deleting the account must stay two clicks away (App Store
  * rule 5.1.1(v)).
  */
-export function AccountMenu({ account, onSignOut, onDeleteAccount }: AccountMenuProps) {
+export function AccountMenu({
+  account,
+  onSignOut,
+  onMyDevices,
+  onDeleteAccount,
+}: AccountMenuProps) {
   const text = useText();
   const menuId = useId();
   const root = useRef<HTMLDivElement>(null);
@@ -112,6 +119,15 @@ export function AccountMenu({ account, onSignOut, onDeleteAccount }: AccountMenu
             >
               <LogOut size={16} aria-hidden />
               {text('main.signOut')}
+            </button>
+            <button
+              type="button"
+              role="menuitem"
+              className={styles.item}
+              onClick={() => pick(onMyDevices)}
+            >
+              <KeyRound size={16} aria-hidden />
+              {text('accountMenu.devices')}
             </button>
             <button
               type="button"

@@ -27,6 +27,8 @@ interface SidebarProps {
   onNewChat: () => void;
   onJoinRoom: () => void;
   onAddContact: () => void;
+  /** Opens the "My devices" dialog (own OMEMO keys). */
+  onMyDevices: () => void;
   onSignOut: () => void;
   onDeleteAccount: () => void;
   onSignInAgain: () => void;
@@ -51,6 +53,7 @@ export function Sidebar(props: SidebarProps) {
         <AccountMenu
           account={props.account}
           onSignOut={props.onSignOut}
+          onMyDevices={props.onMyDevices}
           onDeleteAccount={props.onDeleteAccount}
         />
       </header>

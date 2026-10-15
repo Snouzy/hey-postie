@@ -44,6 +44,7 @@ export const en = {
   'createAccount.back': 'Back',
 
   'accountMenu.open': 'Account menu',
+  'accountMenu.devices': 'My devices…',
   'accountMenu.delete': 'Delete my account…',
   'deleteAccount.title': 'Delete my account',
   'deleteAccount.explain':
@@ -166,6 +167,30 @@ export const en = {
   'room.confirmLeave': 'Leave this hall? I will forget its bookmark too.',
   'room.confirm': 'Leave',
   'message.mention': 'Mentions you',
+
+  'crypto.seal': 'Seal letters',
+  'crypto.unavailable': 'I cannot seal this letter: no key on the other side.',
+  'crypto.section': 'Encryption',
+  'crypto.compare':
+    'Compare the fingerprints in person, or over a call, before marking a device verified.',
+  'crypto.empty': 'No key on the other side yet.',
+  'crypto.roomEmpty': 'No key I can check in this hall yet.',
+  'crypto.trust.untrusted': 'Untrusted',
+  'crypto.trust.trusted': 'Trusted',
+  'crypto.trust.verified': 'Verified',
+  'crypto.trust.blocked': 'Blocked',
+  'crypto.verify': 'Verify',
+  'crypto.block': 'Block',
+  'crypto.unblock': 'Unblock',
+  'crypto.remove': 'Remove',
+  'crypto.myDevices': 'My devices',
+  'crypto.myDevicesHint': 'The keys that open your letters, one per device.',
+  'crypto.thisDevice': 'This device',
+  'crypto.myDevicesEmpty': 'No key of mine yet.',
+  'crypto.confirmRemove': 'Remove this device? It will no longer open the letters sealed for you.',
+  'message.undecryptableHelp': 'Ask them to send it again, or check their devices.',
+  'message.checkDevices': 'Check their devices',
+  'composer.placeholderSealed': 'Write a sealed letter…',
 
   'date.today': 'Today',
   'date.yesterday': 'Yesterday',

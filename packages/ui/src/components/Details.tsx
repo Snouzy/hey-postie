@@ -7,14 +7,17 @@ import { errorKey } from '../i18n/errors';
 import { Button } from './Button';
 import styles from './Details.module.css';
 import { Dialog } from './Dialog';
+import { EncryptionSection } from './EncryptionSection';
 
 interface DetailsProps {
   chat: Chat;
   onClose: () => void;
+  /** Counts the "Check their devices" requests; each new one focuses the Encryption section. */
+  focusRequest?: number;
 }
 
-/** The right pane: who the peer is, and the one destructive action. Rooms will add more. */
-export function Details({ chat, onClose }: DetailsProps) {
+/** The right pane: who the peer is, their devices, and the one destructive action. */
+export function Details({ chat, onClose, focusRequest = 0 }: DetailsProps) {
   const core = useCore();
   const text = useText();
   const [confirming, setConfirming] = useState(false);
@@ -42,6 +45,7 @@ export function Details({ chat, onClose }: DetailsProps) {
         <dt>{text('details.jid')}</dt>
         <dd className={styles.jid}>{chat.peerJid}</dd>
       </dl>
+      <EncryptionSection jid={chat.peerJid} focusRequest={focusRequest} />
       <Button variant="danger" onClick={() => setConfirming(true)}>
         {text('details.removeContact')}
       </Button>
