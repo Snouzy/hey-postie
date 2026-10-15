@@ -676,11 +676,20 @@ through `test-support/fakeXhr.ts`), `file.test.ts` (WebCrypto fixture, `fetch` s
   and `onMessageUploadChanged` sends a *second* message with that body and destroys the placeholder.
   `upload.ts` listens on the collection: `change:progress` → `onProgress`, `change:upload` success →
   remembers the URL and resolves with the next added model whose text (`plaintext` or `body`) is that
-  URL; `upload: 'failure'` or an ephemeral error (slot refused, upload unsupported) → `Unknown`;
-  2 minutes → `ServerUnreachable`. Placeholders are never displayable (`isDisplayable` drops
-  `file: true`), so the chat list and `messages()` do not show an empty message while uploading.
-  Converse parses no file size anywhere (no XEP-0447), so the mapper leaves `size: 0` and `sendFile`
-  stamps the size of the uploaded `File` on the returned attachment.
+  URL; `upload: 'failure'` or an ephemeral error (slot refused, upload unsupported) → `Unknown`.
+  An idle timer (60 s, re-armed by the placeholder, the slot, every progress event and the upload
+  result) ends a stalled upload with `ServerUnreachable`, or with `Unknown: upload did not start`
+  when no placeholder ever appeared: a `beforeFileUpload` hook that throws (OMEMO's `encryptFile`)
+  is an unhandled rejection inside `sendFiles`' per-file callback, invisible to us. Uploads of one
+  chat run in turn (`sendFile` chains them) because the observer identifies its placeholder by order
+  of arrival. A slot whose `put` or `get` is not `https:` is refused before any PUT: `change:put`
+  runs the model's own `uploadFile` before any collection listener (`shared/message.js:45`), so the
+  observer replaces that method on the placeholder and turns the placeholder into Converse's own
+  failure shape (ephemeral error, `upload: 'failure'`). Placeholders are never displayable
+  (`isDisplayable` drops `file: true`), so the chat list and `messages()` do not show an empty
+  message while uploading. Converse parses no file size anywhere (no XEP-0447), so the mapper
+  leaves `size: 0` and `sendFile` stamps the size of the uploaded `File` on the returned attachment.
+  In a sealed chat the limit is checked against `file.size + 16` (the AES-GCM tag).
 - **Encrypted upload**: in a chat with `omemo_active`, the `beforeFileUpload` hook encrypts the file
   (AES-256-GCM, 12-byte IV, `plugins/omemo/utils.js:1206-1215`) and `afterFileUploaded` rewrites the
   body to `aesgcm://host/path#<hex iv><hex key>` with `oob_url: null`; `getOutgoingMessageAttributes`
@@ -689,23 +698,32 @@ through `test-support/fakeXhr.ts`), `file.test.ts` (WebCrypto fixture, `fetch` s
   **Not exercised end to end** (checked on 2026-10-16): the mock has no OMEMO sessions and bob's
   hand-written client has no OMEMO; the mapping is unit-tested on a fixture body.
 - **Body of an upload**: a message whose text is only the attachment's URL gets `body: ''`
-  (`mappers.ts` `isOnlyUrl`); a caption with an `oob_url` keeps its text.
-- **Download** (`file.ts`, `ConverseFileRepository`, no Converse code involved): `fetch()` over
-  `https:` only (`aesgcm:` is rewritten to `https:`, plain `http:` is refused), no redirects,
-  `Content-Length` above 200 MB aborts before reading, the bytes are checked again after reading.
+  (`mappers.ts` `isOnlyUrl`); a caption with an `oob_url` keeps its text. The attachment name is the
+  URL's last segment, percent-decoded, then sanitized (`safeName`: no control characters, no `/`
+  or `\`, no leading dots, 120 characters at most, `file` when nothing is left).
+- **Download** (`file.ts`, `ConverseFileRepository`; the engine is only used to clear the cache at
+  `logout`/`disconnected`): `fetch()` over `https:` only (`aesgcm:` is rewritten to `https:`, plain
+  `http:` is refused), no redirects, `Content-Length` above 200 MB refuses before reading, then the
+  body is streamed through `getReader()` and cancelled as soon as the bytes read pass the cap
+  (the header is a hint, not the gate).
   `aesgcm` attachments are decrypted with WebCrypto: `decryptionKey` is hex(iv) + hex(key) with a
   32-byte key, so the IV is whatever precedes the last 64 hex characters (12 or 16 bytes; Converse
-  writes 12). The tag sits at the end of the ciphertext, as WebCrypto's `encrypt` leaves it. Blobs
-  are cached by URL (50 entries, oldest dropped). Every failure is `DomainError('Unknown')` with a
-  code-first message and no URL in it.
+  writes 12). The tag sits at the end of the ciphertext, as WebCrypto's `encrypt` leaves it. The
+  Blob is typed only for png/jpeg/gif/webp, `application/octet-stream` otherwise (an svg or html
+  blob URL would execute in the webview; `svg` is not in the mapper's extension map either). Blobs
+  are cached by `url + decryptionKey`, bounded to 100 MB, oldest out first. Every failure is
+  `DomainError('Unknown')` with a code-first message and no URL in it.
 - **Reactions** (`react`, `reactions.ts`): the stanza of §6, same as Converse's UI plugin
   (`src/plugins/reactions-views/utils.js` `sendReaction`, read on GitHub master 2026-10-15): target
-  id = `msgid`, or the room's `stanza_id` in a room (fallback `msgid`), `<store/>` hint, type
+  id = `msgid`, or the room's `stanza_id` in a room (fallback `msgid`); a message without either
+  (no id on the wire) is refused with `Unknown`, never the local uuid. `<store/>` hint, type
   `chat`/`groupchat`. Sealed chat: `api.omemo.send(chat, fallbackBody, [reactionsEl, fallbackEl])`
   with the emojis as fallback body (no body when removing). Our own stanza is not echoed back in a
   direct chat, so the repository saves `{ ...reactions, [ownKey]: emojis }` on the model (key from
   `u.reactions.getOwnReactionJID(chat)`: bare JID, or occupant id / address in a room), which fires
-  `change:reactions` → `onMessageUpdate`. Incoming reactions are merged by Converse
+  `change:reactions` → `onMessageUpdate`. The mapper sets `Reaction.mine` from that same key
+  (`MessageContext.ownReactionJid`): our bare JID in a direct chat, our occupant address in a room.
+  Incoming reactions are merged by Converse
   (`plugins/reactions/utils.js` `getUpdatedMessageAttributes`), a stanza with an empty list removes
   the sender's key. `urn:xmpp:reactions:0` is advertised at `addClientFeatures`. The mapper sorts
   `Reaction[]` by emoji.
