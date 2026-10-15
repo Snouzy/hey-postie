@@ -124,7 +124,10 @@ In an OMEMO chat: `api.omemo.send(chat, fallbackBody, [reactionsEl, fallbackEl])
 ephemeral error message), per file a placeholder message with `progress` 0..1, then a message
 with `body` = URL and `oob_url`. With OMEMO, `beforeFileUpload` encrypts (AES-256-GCM) and the
 body becomes `aesgcm://…#ivkey`, `oob_url` null. **Headless does not download or decrypt
-`aesgcm://` on receipt: the repository does.** There is no `api.upload`.
+`aesgcm://` on receipt.** That download and decryption is ours to write, planned for milestone 4
+(files); as of 2026-10-15 the chat repository only maps such a body to an `Attachment` with
+`encryption: 'aesgcm'` and the `#ivkey` fragment in `decryptionKey`, never in `url`. There is no
+`api.upload`.
 
 ## 8. OMEMO
 
@@ -155,8 +158,10 @@ in. It relies on Strophe private members (`_connect_cb`, `_proto._connect_cb`, `
 ## 10. Logging
 
 `log.setLogLevel('fatal')` is the quietest. At `debug`, every stanza is logged in full (bodies
-and SASL included); at `warn`, stanzas with bodies are still logged on parse errors and when
-sending while disconnected. Our wrapper keeps `warn` in production and never forwards stanzas.
+and SASL included); at `warn` and `error`, stanzas with bodies are still logged on parse errors
+(`log.error(stanza)`) and when sending while disconnected. The engine therefore runs at `fatal` in
+production and only switches to `debug` when `createConverseRepositories({ debug: true })` is asked
+for explicitly (`engine.ts`). Strophe's own level follows (`shared/connection/utils.js:13-25`).
 
 ## 11. Webview and test hazards
 
@@ -186,9 +191,14 @@ installed package and by `repositories.test.ts`, which drives the real headless 
   so we never do. Settings of §1 plus `keepalive: false` and `reuse_scram_keys: false` (SCRAM keys
   in IndexedDB would be a stored credential; the password lives in the keychain). `api.alert` and
   `window.alert` are replaced by a `console.warn` with no content.
-- `xmpp.ts`: `connect` sets `websocket_url` per call, turns `auto_reconnect` off until `connected`
+- `xmpp.ts`: `connect` and `disconnect` run through one promise chain (a second sign-in with the
+  same account while online is a no-op; with another account it signs out first). `connect` sets
+  `websocket_url` per call, turns `auto_reconnect` off until `connected`
   (otherwise a failed first attempt loops through `reconnect`, `shared/connection/index.js:333`),
-  resolves after `connected` + `rosterContactsFetched` + `chatBoxesFetched`, rejects with
+  resolves after this attempt's `connected` + `rosterContactsFetched` + `chatBoxesFetched` events
+  (not `api.waitUntil`: only `logout` renews those promises, after a drop they are still resolved
+  from the previous session), emits `online` only then (and `error` when the attempt fails after
+  `connected`), rejects with
   `InvalidCredentials` on AUTHFAIL, `ServerUnreachable` on CONNFAIL/DISCONNECTED/timeout (30 s),
   `CertificateInvalid` when the WebSocket close reason says so. The close reason is read by wrapping
   `connection._proto._onClose` at `connectionInitialized`: Strophe discards `event.reason` and does
@@ -196,7 +206,9 @@ installed package and by `repositories.test.ts`, which drives the real headless 
   so the wrapper also turns that case into a CONNFAIL. `onStateChange`: `connected`/`reconnected`
   → `online`, `will-reconnect` → `connecting`, `disconnected` → `offline` (with the last
   AUTHFAIL/CONNFAIL as error), only after having been online: a failed sign-in and the logout
-  cascade below also fire `disconnected`.
+  cascade below also fire `disconnected`. A constructor-level `connfeedback` listener keeps the last
+  AUTHFAIL/CONNFAIL so that a drop after being online carries `InvalidCredentials` or
+  `ServerUnreachable`.
 - `roster.ts`: `rosterInitialized` fires at every login with a new collection (`plugins/roster/utils.js:14-19`):
   the repository re-binds `add`/`change`/`remove` each time; `contactPresenceChanged` and
   `contactRequest` come from `api.listen`. `remove` on the collection is reported with
@@ -204,12 +216,19 @@ installed package and by `repositories.test.ts`, which drives the real headless 
 - `chat.ts`: the `chatboxes` collection is created once at `pluginsInitialized` and only emptied on
   logout, so it is bound once (`engine.onReady`). `onMessage` fires for live stanzas only: not for
   `is_archived` (MAM) results, which would notify a chat's whole history on first open, and not for
-  our own messages unless they are carbons. Archived messages reach the UI through `messages()`,
-  `chat.updated` and the unread counter. `open(jid)` hides the other direct chats: `num_unread` is
-  only counted while a chat `isHidden()` (§4). `messages({ before })` pages with
-  `u.mam.fetchArchivedMessages(chat, { rsm: { before: <stanza_id>, max } }, false)` and returns the
-  models added meanwhile; a message without `stanza_id <bare_jid>` yields `[]`.
-- `mappers.ts`: pure functions, unit-tested with plain `{ get }` objects.
+  our own messages unless they are carbons (own messages still raise `chat.updated`). Archived
+  messages reach the UI through `messages()`, `chat.updated` and the unread counter. In overlayed
+  mode a chat is born with `hidden: false` (`plugins/chat/model.js:30`) and `num_unread` is only
+  counted while a chat `isHidden()` (§4): the repository remembers the open JID and saves
+  `hidden: jid !== openJid` on every chat it binds and in `open(jid)`. `messages({ before })` pages
+  with `u.mam.fetchArchivedMessages(chat, { rsm: { before: <stanza_id>, max } }, false)`, then waits
+  for `chat.msg_chain` (`handleMAMResult` queues the results without awaiting them) and returns the
+  `is_archived` models added meanwhile; a message without `stanza_id <bare_jid>` yields `[]`.
+  Retracted messages come out with an empty body and no attachment (`retracted: true`); dangling
+  retractions and reactions are dropped.
+- `mappers.ts`: pure functions, unit-tested with plain `{ get }` objects. Attachments: an http(s)
+  `oob_url`, or a body that is only an `aesgcm://` URL (its `#ivkey` goes to `decryptionKey`); a bare
+  link in a body is just a link. A file name whose percent-escapes are malformed is kept raw.
 
 ### Corrections to the map above
 
