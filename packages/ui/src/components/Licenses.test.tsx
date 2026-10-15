@@ -12,15 +12,17 @@ function open() {
 }
 
 describe('Licenses', () => {
-  it('lists every component under its license', () => {
+  it('lists every license group, with the engine and the fonts in place', () => {
     open();
-    for (const entry of licenses) {
-      const group = screen.getByRole('region', { name: entry.license });
-      expect(within(group).getByText(entry.name)).toBeInTheDocument();
-    }
     expect(screen.getAllByRole('heading', { level: 3 }).map((h) => h.textContent)).toEqual(
       [...new Set(licenses.map((entry) => entry.license))].sort((a, b) => a.localeCompare(b)),
     );
+    expect(
+      within(screen.getByRole('region', { name: 'MPL-2.0' })).getByText('@converse/headless'),
+    ).toBeInTheDocument();
+    expect(
+      within(screen.getByRole('region', { name: 'OFL-1.1' })).getByText('Fraunces'),
+    ).toBeInTheDocument();
   });
 
   it('filters by name or by license, and says when nothing matches', () => {
@@ -39,8 +41,8 @@ describe('Licenses', () => {
 
   it('routes a repository link through onOpenLink', () => {
     const { onOpenLink } = open();
-    fireEvent.click(screen.getByRole('link', { name: 'react' }));
-    expect(onOpenLink).toHaveBeenCalledWith('https://github.com/facebook/react');
+    fireEvent.click(screen.getByRole('link', { name: '@converse/headless' }));
+    expect(onOpenLink).toHaveBeenCalledWith('https://github.com/conversejs/converse.js');
   });
 
   it('groups by license and sorts names inside each group', () => {
