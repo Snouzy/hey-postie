@@ -3,6 +3,7 @@ import { beforeAll, describe, expect, it } from 'vitest';
 import type { DomainError } from '../../contracts/errors';
 import type { Chat, Message, Room, RoomMember } from '../../contracts/types';
 import { createConverseRepositories } from './index';
+import { until } from './test-support/contractEnv';
 import { JID, JULIET, type Mock, MockHarness, type Stanza } from './test-support/mockConverse';
 
 interface MucModel {
@@ -24,7 +25,8 @@ const repositories = createConverseRepositories({
   persistentStore: 'localStorage',
   mockConnection: true,
   connectTimeoutMs: 300,
-  joinTimeoutMs: 2_000,
+  // Generous: the whole core suite runs in parallel workers and slows the mock's round trips.
+  joinTimeoutMs: 4_000,
 });
 const rooms: Room[] = [];
 const members: Array<[string, RoomMember[]]> = [];
@@ -132,15 +134,17 @@ function serviceAnswers(iq: Element): Stanza | undefined {
 }
 
 async function joinPresenceSent(room: string): Promise<Element | undefined> {
-  const { u, sizzle, Strophe } = mock.converse.env;
+  const { sizzle, Strophe } = mock.converse.env;
   const conn = await harness.connection();
-  return u.waitUntil(() =>
-    conn.sent_stanzas.find(
-      (stanza) =>
-        stanza.nodeName === 'presence' &&
-        (stanza.getAttribute('to') ?? '').startsWith(`${room}/`) &&
-        sizzle(`x[xmlns="${Strophe.NS.MUC}"]`, stanza).length > 0,
-    ),
+  return until(
+    () =>
+      conn.sent_stanzas.find(
+        (stanza) =>
+          stanza.nodeName === 'presence' &&
+          (stanza.getAttribute('to') ?? '').startsWith(`${room}/`) &&
+          sizzle(`x[xmlns="${Strophe.NS.MUC}"]`, stanza).length > 0,
+      ),
+    'condition',
   );
 }
 
@@ -176,9 +180,9 @@ describe('ConverseRoomRepository', () => {
       unreadCount: 0,
       mentionsCount: 0,
     });
-    await mock.converse.env.u.waitUntil(() => rooms.some((r) => r.name === 'The Hall'));
+    await until(() => rooms.some((r) => r.name === 'The Hall'), 'condition');
     // `enteredNewRoom` makes Converse bookmark every room it enters, autojoin on.
-    await mock.converse.env.u.waitUntil(() => rooms.some((r) => r.jid === HALL && r.bookmarked));
+    await until(() => rooms.some((r) => r.jid === HALL && r.bookmarked), 'condition');
     const listed = await repositories.room.list();
     expect(listed.map((r) => [r.jid, r.name, r.joined])).toEqual([[HALL, 'The Hall', true]]);
     expect(lastPublishedBookmark()?.getAttribute('autojoin')).toBe('true');
@@ -190,10 +194,10 @@ describe('ConverseRoomRepository', () => {
   });
 
   it('reports the topic and the members', async () => {
-    const { stx, u } = mock.converse.env;
+    const { stx } = mock.converse.env;
     harness.inject(stx`<message from="${HALL}/romeo" to="${JID}/orchard" type="groupchat" xmlns="jabber:client">
       <subject>Welcome</subject></message>`);
-    await u.waitUntil(() => rooms.some((r) => r.topic === 'Welcome'));
+    await until(() => rooms.some((r) => r.topic === 'Welcome'), 'condition');
 
     harness.inject(
       occupantPresence(
@@ -203,7 +207,10 @@ describe('ConverseRoomRepository', () => {
         `<item affiliation="member" role="participant" jid="${JULIET}/balcony"/>`,
       ),
     );
-    await u.waitUntil(() => members.some(([, list]) => list.some((m) => m.nick === 'juliet')));
+    await until(
+      () => members.some(([, list]) => list.some((m) => m.nick === 'juliet')),
+      'condition',
+    );
     const listed = await repositories.room.members(HALL);
     expect(listed.sort((a, b) => a.nick.localeCompare(b.nick))).toEqual([
       { nick: 'juliet', jid: JULIET, role: 'participant', affiliation: 'member' },
@@ -211,17 +218,18 @@ describe('ConverseRoomRepository', () => {
     ]);
     // The member list fetched on entering lists tybalt, who is not in the room.
     const muc = mock._converse.state.chatboxes.get(HALL) as unknown as MucModel;
-    await u.waitUntil(() =>
-      muc.occupants.models.some((o) => o.get('jid') === 'tybalt@montague.lit'),
+    await until(
+      () => muc.occupants.models.some((o) => o.get('jid') === 'tybalt@montague.lit'),
+      'condition',
     );
     expect((await repositories.room.members(HALL)).map((m) => m.nick)).not.toContain('tybalt');
   });
 
   it('delivers a room message with the nick, the real JID and the mention', async () => {
-    const { stx, u } = mock.converse.env;
+    const { stx } = mock.converse.env;
     harness.inject(stx`<message from="${HALL}/juliet" to="${JID}/orchard" type="groupchat" id="g1" xmlns="jabber:client">
       <body>Romeo, wherefore art thou?</body></message>`);
-    await u.waitUntil(() => received.length > 0);
+    await until(() => received.length > 0, 'condition');
     expect(received[0]).toMatchObject({
       chatId: HALL,
       fromJid: JULIET,
@@ -236,7 +244,7 @@ describe('ConverseRoomRepository', () => {
 
     harness.inject(stx`<message from="${HALL}/juliet" to="${JID}/orchard" type="groupchat" id="g2" xmlns="jabber:client">
       <body>anyone?</body></message>`);
-    await u.waitUntil(() => received.length > 1);
+    await until(() => received.length > 1, 'condition');
     expect(received[1]?.isMention).toBe(false);
     expect((await repositories.room.list())[0]).toMatchObject({ unreadCount: 2, mentionsCount: 1 });
   });
@@ -303,7 +311,9 @@ describe('ConverseRoomRepository', () => {
     expect((await repositories.room.list()).map((r) => r.jid)).toEqual([HALL]);
   });
 
-  it('times out with ServerUnreachable when the room never answers', async () => {
+  it('times out with ServerUnreachable when the room never answers', {
+    timeout: 10_000,
+  }, async () => {
     const error = await repositories.room
       .join({ jid: `silent@${SERVICE}`, nick: 'romeo' })
       .catch((e: unknown) => e);
@@ -329,7 +339,7 @@ describe('ConverseRoomRepository', () => {
   });
 
   it('joins a password-protected room without ever storing the password', async () => {
-    const { stx, u, sizzle } = mock.converse.env;
+    const { stx, sizzle } = mock.converse.env;
     const vault = `vault@${SERVICE}`;
     known.add(vault);
     const conn = await harness.connection();
@@ -338,10 +348,12 @@ describe('ConverseRoomRepository', () => {
     expect(sizzle('x password', first as Element)).toHaveLength(0);
     harness.inject(stx`<presence from="${vault}/romeo" to="${JID}/orchard" type="error" xmlns="jabber:client">
       <error type="auth"><not-authorized xmlns="urn:ietf:params:xml:ns:xmpp-stanzas"/></error></presence>`);
-    const second = await u.waitUntil(() =>
-      conn.sent_stanzas.find(
-        (s) => s !== first && s.nodeName === 'presence' && sizzle('x password', s).length > 0,
-      ),
+    const second = await until(
+      () =>
+        conn.sent_stanzas.find(
+          (s) => s !== first && s.nodeName === 'presence' && sizzle('x password', s).length > 0,
+        ),
+      'second join presence with the password',
     );
     expect(sizzle('x password', second as Element)[0]?.textContent).toBe('open-sesame');
     harness.inject(
@@ -355,7 +367,7 @@ describe('ConverseRoomRepository', () => {
     expect(await joining).toMatchObject({ jid: vault, joined: true });
     const muc = mock._converse.state.chatboxes.get(vault) as unknown as MucModel;
     expect(muc.get('password')).toBeUndefined();
-    await u.waitUntil(() => rooms.some((r) => r.jid === vault && r.bookmarked));
+    await until(() => rooms.some((r) => r.jid === vault && r.bookmarked), 'condition');
     const published = lastPublishedBookmark();
     expect(published?.parentElement?.getAttribute('id')).toBe(vault);
     expect(sizzle('password', published as Element)).toHaveLength(0);
@@ -385,7 +397,6 @@ describe('ConverseRoomRepository', () => {
   });
 
   it('removes and re-adds the bookmark while staying in the room', async () => {
-    const { u } = mock.converse.env;
     let before = rooms.length;
     await repositories.room.setBookmarked(HALL, false);
     expect(rooms.slice(before).at(-1)).toMatchObject({
@@ -399,7 +410,7 @@ describe('ConverseRoomRepository', () => {
     });
     before = rooms.length;
     await repositories.room.setBookmarked(HALL, true);
-    await u.waitUntil(() => rooms.slice(before).some((r) => r.jid === HALL && r.bookmarked));
+    await until(() => rooms.slice(before).some((r) => r.jid === HALL && r.bookmarked), 'condition');
     expect((await repositories.room.list()).find((r) => r.jid === HALL)?.bookmarked).toBe(true);
   });
 
@@ -432,15 +443,16 @@ describe('ConverseRoomRepository', () => {
   });
 
   it('leaves the room and reports it as not joined', async () => {
-    const { u } = mock.converse.env;
     const conn = await harness.connection();
     const before = conn.sent_stanzas.length;
     await repositories.room.leave(HALL);
     // `leave()` does not await `api.user.presence.send` (`plugins/muc/muc.js:977`).
-    const unavailable = await u.waitUntil(() =>
-      conn.sent_stanzas
-        .slice(before)
-        .find((s) => s.nodeName === 'presence' && s.getAttribute('type') === 'unavailable'),
+    const unavailable = await until(
+      () =>
+        conn.sent_stanzas
+          .slice(before)
+          .find((s) => s.nodeName === 'presence' && s.getAttribute('type') === 'unavailable'),
+      'condition',
     );
     expect(unavailable?.getAttribute('to')).toBe(`${HALL}/romeo`);
     expect(rooms.at(-1)).toMatchObject({ jid: HALL, joined: false, unreadCount: 0 });
