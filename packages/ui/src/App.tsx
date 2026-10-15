@@ -1,6 +1,8 @@
 import type { Core } from '@hey-postie/core';
 import { useState } from 'react';
+import type { SaveFile } from './components/Attachments';
 import { CoreProvider } from './core/CoreProvider';
+import { downloadBlob } from './core/download';
 import { useAccount } from './core/useAccount';
 import type { Locale } from './i18n';
 import { CreateAccount } from './screens/CreateAccount';
@@ -13,12 +15,14 @@ interface AppProps {
   locale: Locale;
   /** Where links in messages go. The desktop app routes them to the system browser. */
   onOpenLink?: (url: string) => void;
+  /** Where a saved parcel goes. Default: a browser download; the desktop app opens a file dialog. */
+  onSaveFile?: SaveFile;
 }
 
-export function App({ core, locale, onOpenLink }: AppProps) {
+export function App({ core, locale, onOpenLink, onSaveFile }: AppProps) {
   return (
     <CoreProvider core={core} locale={locale}>
-      <Screens onOpenLink={onOpenLink ?? openInNewWindow} />
+      <Screens onOpenLink={onOpenLink ?? openInNewWindow} onSaveFile={onSaveFile ?? downloadBlob} />
     </CoreProvider>
   );
 }
@@ -32,7 +36,13 @@ type Door = 'welcome' | 'signIn' | 'createAccount';
  * Main stays mounted through reconnections and drops (it shows a banner); only a sign out, from
  * Main itself, leaves it.
  */
-function Screens({ onOpenLink }: { onOpenLink: (url: string) => void }) {
+function Screens({
+  onOpenLink,
+  onSaveFile,
+}: {
+  onOpenLink: (url: string) => void;
+  onSaveFile: SaveFile;
+}) {
   const account = useAccount();
   const [door, setDoor] = useState<Door>('welcome');
   const [inside, setInside] = useState(false);
@@ -47,6 +57,7 @@ function Screens({ onOpenLink }: { onOpenLink: (url: string) => void }) {
       <Main
         account={account}
         onOpenLink={onOpenLink}
+        onSaveFile={onSaveFile}
         onLeave={(next) => {
           setInside(false);
           setDoor(next);

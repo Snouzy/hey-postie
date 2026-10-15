@@ -2,16 +2,23 @@ import type { Message, MessageStatus } from '@hey-postie/core';
 import { AlertCircle, Check, CheckCheck, Clock, Stamp } from 'lucide-react';
 import { useLocale, useText } from '../core/CoreProvider';
 import { formatTime } from '../i18n/dates';
+import { Attachments, type SaveFile } from './Attachments';
 import { Button } from './Button';
 import { Linkify } from './Linkify';
 import styles from './MessageBubble.module.css';
+import { ReactionBar } from './ReactionBar';
+import { Reactions } from './Reactions';
 
 interface MessageBubbleProps {
   message: Message;
   /** The last bubble of a run always shows its time; the others only on hover. */
   last: boolean;
+  /** The account's bare JID, to tell my reactions apart. */
+  myJid: string | null;
   onRetry: (message: Message) => void;
   onOpenLink: (url: string) => void;
+  onReact: (message: Message, emoji: string) => void;
+  onSaveFile: SaveFile;
   /** From a letter sealed for another device: opens the sender's devices in the details pane. */
   onShowDevices?: (() => void) | undefined;
 }
@@ -19,8 +26,11 @@ interface MessageBubbleProps {
 export function MessageBubble({
   message,
   last,
+  myJid,
   onRetry,
   onOpenLink,
+  onReact,
+  onSaveFile,
   onShowDevices,
 }: MessageBubbleProps) {
   const text = useText();
@@ -28,6 +38,8 @@ export function MessageBubble({
   const sealed = message.encryption === 'undecryptable';
   const wax = message.direction === 'out' && message.encryption === 'omemo';
   const mention = message.isMention && message.direction === 'in';
+  // A parcel alone travels with an empty body: no empty line above the card.
+  const hasBody = sealed || message.body.length > 0 || message.attachments.length === 0;
   const classes = [
     styles.bubble,
     styles[message.direction],
@@ -43,16 +55,23 @@ export function MessageBubble({
           <span className={styles.srOnly}>{text('message.encrypted')}</span>
         </span>
       )}
-      <p className={sealed ? styles.sealed : styles.body}>
-        {sealed ? (
-          <>
-            <Stamp size={16} className={styles.seal} aria-hidden />
-            {text('message.undecryptable')}
-          </>
-        ) : (
-          <Linkify text={message.body} onOpenLink={onOpenLink} />
-        )}
-      </p>
+      {message.status !== 'pending' && (
+        <div className={styles.tools}>
+          <ReactionBar onReact={(emoji) => onReact(message, emoji)} />
+        </div>
+      )}
+      {hasBody && (
+        <p className={sealed ? styles.sealed : styles.body}>
+          {sealed ? (
+            <>
+              <Stamp size={16} className={styles.seal} aria-hidden />
+              {text('message.undecryptable')}
+            </>
+          ) : (
+            <Linkify text={message.body} onOpenLink={onOpenLink} />
+          )}
+        </p>
+      )}
       {sealed && (
         <p className={styles.help}>
           {text('message.undecryptableHelp')}
@@ -63,6 +82,12 @@ export function MessageBubble({
           )}
         </p>
       )}
+      <Attachments attachments={message.attachments} onSaveFile={onSaveFile} />
+      <Reactions
+        reactions={message.reactions}
+        myJid={myJid}
+        onToggle={(emoji) => onReact(message, emoji)}
+      />
       <span className={styles.meta}>
         <time dateTime={message.sentAt.toISOString()}>{formatTime(locale, message.sentAt)}</time>
         {message.direction === 'out' && (
