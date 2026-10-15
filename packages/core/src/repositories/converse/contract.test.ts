@@ -4,6 +4,7 @@ import { DomainError } from '../../contracts/errors';
 import type { AccountState, Chat, Contact, Message } from '../../contracts/types';
 import { createConverseRepositories } from './index';
 import {
+  AVAILABLE,
   type BobClient,
   connectBob,
   isChatMessageFrom,
@@ -27,6 +28,7 @@ const RUN = Date.now().toString(36);
 
 const repositories = createConverseRepositories({
   persistentStore: 'localStorage',
+  priority: 10,
   connectTimeoutMs: 8_000,
 });
 const states: AccountState[] = [];
@@ -105,7 +107,7 @@ describe.skipIf(!SERVER)('Converse repositories against the XMPP test server', (
         subscription: 'both',
       });
 
-      bob.send('<presence/>');
+      bob.send(AVAILABLE);
       await until(
         () => contacts.some((c) => c.jid === BOB && c.presence === 'online'),
         'bob online',
