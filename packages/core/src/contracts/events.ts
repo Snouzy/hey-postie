@@ -6,6 +6,8 @@ export interface CoreEvents {
   'message.updated': Message;
   'chat.updated': Chat;
   'contact.updated': Contact;
+  /** The UI asks to show a chat (a click on a notification, an `xmpp:` link). */
+  'chat.requested': { chatId: string };
 }
 
 export interface EventBus {

@@ -8,7 +8,7 @@ _Created 2026-10-15. Updated as the code grows; each section names the files it 
 packages/core/     the engine, TypeScript, no React
   src/contracts/   types, errors, events, repository and service interfaces
   src/services/    business rules; depend on repository interfaces only
-  src/repositories/ implementations: converse/ (XMPP), tauri/ (keychain, transport, notifier)
+  src/repositories/ implementations: converse/ (XMPP, roster, chats), tauri/ (keychain, transport, notifier)
   src/fakes/       in-memory repositories for tests and for the UI in development
   src/container.ts createCore(deps): the single place where everything is wired
 packages/ui/       React: theme/, i18n/, illustrations/, screens/, components/
@@ -23,7 +23,9 @@ tasks/             agents' plans and lessons, untracked
   core through `useCore()` and never imports Converse, Tauri or storage.
 - **Service**: `packages/core/src/services/accounts.ts` validates the JID, decides whether to keep
   the password, asks the transport for a URL and the XMPP repository to connect, and translates
-  failures into `DomainError`s.
+  failures into `DomainError`s. `chats.ts` trims and sanitizes message bodies and keeps the paging
+  cursor for older history; `contacts.ts` sorts the roster; `notifications.ts` decides when a
+  system notification is shown (window not focused, or another chat open).
 - **Persistence**: `apps/desktop/app/repositories/keychain.ts` calls the Rust `keychain_*` commands;
   `packages/core/src/fakes/keychain.ts` keeps a `Map` in memory for tests.
 

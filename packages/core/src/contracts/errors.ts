@@ -7,6 +7,7 @@ export type ErrorCode =
   | 'AccountConflict'
   | 'KeychainUnavailable'
   | 'FileTooLarge'
+  | 'EmptyMessage'
   | 'EncryptionUnavailable'
   | 'Unknown';
 
