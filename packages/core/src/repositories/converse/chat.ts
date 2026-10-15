@@ -40,6 +40,8 @@ export class ConverseChatRepository implements ChatRepository {
   private uploadService: Promise<UploadService | null> | null = null;
   /** One upload at a time per chat: `uploadFile` identifies its placeholder by order of arrival. */
   private readonly uploads = new Map<string, Promise<unknown>>();
+  /** The chats that were already there when a connection came up: they need a MAM catch-up. */
+  private survivors = new Set<ChatModel>();
 
   constructor(private readonly engine: ConverseEngine) {
     engine.onReady((loaded) => this.bindCollection(loaded));
@@ -47,6 +49,27 @@ export class ConverseChatRepository implements ChatRepository {
     engine.on('disconnected', () => {
       this.uploadService = null;
     });
+    engine.on('connected', () => {
+      const models = engine.current?.state.chatboxes?.models ?? [];
+      this.survivors = new Set(models.filter(isChat));
+    });
+    engine.on('chatBoxesFetched', () => this.catchUp());
+  }
+
+  /**
+   * Sign-out then sign-in keeps the chat models (`onClearSession` only clears an untrusted cache),
+   * and Converse re-fetches archives only for chats it creates or on an automatic reconnection
+   * (`reconnected` → `onReconnection`): a chat that survived would never learn what arrived while
+   * signed out. Its own reconnection path is run instead: `chatReconnected` → `fetchNewestMessages`
+   * (`plugins/mam/plugin.js:61`), and a room rejoins first. Found by the contract test on 2026-10-16.
+   */
+  private catchUp(): void {
+    const chatboxes = this.engine.current?.state.chatboxes;
+    for (const chat of this.survivors) {
+      if (chatboxes?.get(String(chat.get('jid'))) !== chat) continue;
+      chat.onReconnection().catch(() => console.warn('converse: catch-up failed', chat.get('jid')));
+    }
+    this.survivors.clear();
   }
 
   async list(): Promise<Chat[]> {

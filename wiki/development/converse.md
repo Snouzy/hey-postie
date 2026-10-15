@@ -260,7 +260,14 @@ installed package and by `repositories.test.ts`, which drives the real headless 
   Retracted messages come out with an empty body and no attachment (`retracted: true`); dangling
   retractions and reactions are dropped. Both read paths sort by `time` themselves: the collection
   sorts at insertion only, and one contract run (fixtures colliding with an older run's archived
-  copies) returned it out of order.
+  copies) returned it out of order. Sign-out then sign-in keeps the chat models (`onClearSession`,
+  `plugins/chatboxes/utils.js:10-19`, only clears an untrusted cache) and `chatboxes.fetch({ add })`
+  does not re-initialize them, so Converse never re-fetches their archive: nothing received while
+  signed out would show (contract scenario 5, found on 2026-10-16). The repository snapshots the
+  chats present at `connected` and, at `chatBoxesFetched`, runs `chat.onReconnection()` on each one
+  still in the collection: `chatReconnected` → `fetchNewestMessages` (`plugins/mam/plugin.js:61`); a
+  room rejoins first (`plugins/muc/muc.js:425`). Mock-tested with the test hook's cache clearing
+  stubbed out (`parcel.test.ts`).
 - `mappers.ts`: pure functions, unit-tested with plain `{ get }` objects. Attachments: an http(s)
   `oob_url`, or a body that is only an `aesgcm://` URL (its `#ivkey` goes to `decryptionKey`); a bare
   link in a body is just a link. A file name whose percent-escapes are malformed is kept raw.

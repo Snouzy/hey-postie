@@ -30,6 +30,8 @@ export interface ChatModel extends ModelLike {
   /** The queue through which parsed messages become models (`model-with-messages.js:268-272`). */
   msg_chain?: Promise<unknown>;
   sendMessage(attributes: { body: string }): Promise<MessageModel | undefined>;
+  /** Fires `chatReconnected`, which the MAM plugin answers with `fetchNewestMessages` (`shared/chatbox.js:122`). */
+  onReconnection(): Promise<void>;
   /** XEP-0363 upload, one placeholder message per file (`shared/model-with-messages.js:432`). */
   sendFiles(files: File[]): Promise<void>;
   /** Synchronous on a direct chat, async on a room (`plugins/muc/muc.js` sends a marker first). */

@@ -56,6 +56,10 @@ function answerUploadDiscovery(iq: Element): Stanza | undefined {
             <field var="max-file-size"><value>${limit}</value></field>
           </x></query></iq>`;
     }
+    if (to === JID) {
+      return stx`<iq type="result" xmlns="jabber:client"><query xmlns="http://jabber.org/protocol/disco#info">
+          <identity category="account" type="registered"/><feature var="urn:xmpp:mam:2"/></query></iq>`;
+    }
     // Items are only queried when the entity advertises disco#items (`plugins/disco/entity.js:242`).
     return stx`<iq type="result" xmlns="jabber:client"><query xmlns="http://jabber.org/protocol/disco#info">
         <identity category="server" type="im"/><feature var="http://jabber.org/protocol/disco#items"/></query></iq>`;
@@ -286,5 +290,31 @@ describe('react', () => {
 
   it('advertises the reactions feature', async () => {
     expect(await harness.ownFeatures()).toContain(REACTIONS);
+  });
+});
+
+describe('sign out and sign in again', () => {
+  it('runs a MAM catch-up for the chats that survived the sign-out', async () => {
+    const { sizzle, u } = mock.converse.env;
+    // The test hook clears every chat on sign-out (`isTestEnv`); a trusted config keeps them, which
+    // is the case this guards against: keep them here too.
+    const chatboxes = mock._converse.state.chatboxes as unknown as {
+      clearStore(options?: unknown, filter?: unknown): unknown;
+      models: ChatModel[];
+    };
+    const keep = async () => undefined;
+    chatboxes.clearStore = keep;
+    for (const chat of chatboxes.models) {
+      (chat.messages as unknown as { clearStore: () => unknown }).clearStore = keep;
+    }
+    const before = julietModel();
+    await repositories.xmpp.disconnect();
+    await harness.connectAndLoadRoster();
+    expect(julietModel()).toBe(before);
+    const conn = await harness.connection();
+    const query = await u.waitUntil(() =>
+      conn.IQ_stanzas.find((iq) => sizzle('query[xmlns="urn:xmpp:mam:2"]', iq).length > 0),
+    );
+    expect(sizzle('field[var="with"] value', query as Element)[0]?.textContent).toBe(JULIET);
   });
 });

@@ -27,6 +27,11 @@ export class FakeXmlHttpRequest {
     this.readyState = 1;
   }
 
+  /** Strophe's BOSH mock aborts its pending requests on disconnect. */
+  abort(): void {
+    this.readyState = 0;
+  }
+
   setRequestHeader(name: string, value: string): void {
     this.request.headers[name] = value;
   }
