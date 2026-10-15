@@ -91,6 +91,7 @@ describe('A hall', () => {
     act(() => {
       deps.fakes.chat.receive({
         chatId: HALL,
+        kind: 'room',
         fromJid: `${HALL}/bob`,
         fromNick: 'bob',
         body: 'hi',
