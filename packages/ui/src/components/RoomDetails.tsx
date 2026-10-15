@@ -8,6 +8,7 @@ import { errorKey } from '../i18n/errors';
 import { Button } from './Button';
 import { Dialog } from './Dialog';
 import styles from './RoomDetails.module.css';
+import { RoomEncryption } from './RoomEncryption';
 
 interface RoomDetailsProps {
   room: Room;
@@ -16,13 +17,21 @@ interface RoomDetailsProps {
   onChanged: () => Promise<void>;
   /** After leaving: Main drops the selection. */
   onLeft: () => void;
+  /** Opened from a sealed letter: the Encryption section takes the focus. */
+  focusEncryption?: boolean;
 }
 
 const ROLES: readonly RoomMember['role'][] = ['moderator', 'participant', 'visitor'];
 const RULES: readonly RoomNotify[] = ['all', 'mentions', 'none'];
 
 /** The right pane of a hall: topic, who is there, when to ring the bell, and the way out. */
-export function RoomDetails({ room, onClose, onChanged, onLeft }: RoomDetailsProps) {
+export function RoomDetails({
+  room,
+  onClose,
+  onChanged,
+  onLeft,
+  focusEncryption = false,
+}: RoomDetailsProps) {
   const core = useCore();
   const text = useText();
   const members = useRoomMembers(room.jid);
@@ -83,6 +92,8 @@ export function RoomDetails({ room, onClose, onChanged, onLeft }: RoomDetailsPro
           );
         })}
       </section>
+
+      <RoomEncryption members={members} focus={focusEncryption} />
 
       <fieldset className={styles.notify}>
         <legend className={styles.heading}>{text('room.notify')}</legend>

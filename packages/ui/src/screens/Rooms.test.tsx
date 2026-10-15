@@ -201,8 +201,15 @@ describe('A hall', () => {
     expect(await within(region).findByTitle('Letters and stamps')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Members' }));
     const pane = screen.getByRole('complementary', { name: 'Members' });
-    const headings = await within(pane).findAllByRole('heading', { level: 3 });
-    expect(headings.map((h) => h.textContent)).toEqual(['Moderators', 'Participants', 'Visitors']);
+    // The Encryption heading is there at once; the role headings wait for the members.
+    await within(pane).findByRole('heading', { level: 3, name: 'Visitors' });
+    const headings = within(pane).getAllByRole('heading', { level: 3 });
+    expect(headings.map((h) => h.textContent)).toEqual([
+      'Moderators',
+      'Participants',
+      'Visitors',
+      'Encryption',
+    ]);
     expect(within(pane).getByText('Letters and stamps')).toBeInTheDocument();
     expect(within(pane).getByText('owner')).toBeInTheDocument();
     expect(within(pane).getByRole('radio', { name: 'Mentions only' })).toBeChecked();

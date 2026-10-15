@@ -12,12 +12,21 @@ interface MessageBubbleProps {
   last: boolean;
   onRetry: (message: Message) => void;
   onOpenLink: (url: string) => void;
+  /** From a letter sealed for another device: opens the sender's devices in the details pane. */
+  onShowDevices?: (() => void) | undefined;
 }
 
-export function MessageBubble({ message, last, onRetry, onOpenLink }: MessageBubbleProps) {
+export function MessageBubble({
+  message,
+  last,
+  onRetry,
+  onOpenLink,
+  onShowDevices,
+}: MessageBubbleProps) {
   const text = useText();
   const locale = useLocale();
   const sealed = message.encryption === 'undecryptable';
+  const wax = message.direction === 'out' && message.encryption === 'omemo';
   const mention = message.isMention && message.direction === 'in';
   const classes = [
     styles.bubble,
@@ -29,6 +38,11 @@ export function MessageBubble({ message, last, onRetry, onOpenLink }: MessageBub
   return (
     <div className={classes} data-status={message.status}>
       {mention && <span className={styles.srOnly}>{text('message.mention')}</span>}
+      {wax && (
+        <span className={styles.wax} title={text('message.encrypted')}>
+          <span className={styles.srOnly}>{text('message.encrypted')}</span>
+        </span>
+      )}
       <p className={sealed ? styles.sealed : styles.body}>
         {sealed ? (
           <>
@@ -39,6 +53,16 @@ export function MessageBubble({ message, last, onRetry, onOpenLink }: MessageBub
           <Linkify text={message.body} onOpenLink={onOpenLink} />
         )}
       </p>
+      {sealed && (
+        <p className={styles.help}>
+          {text('message.undecryptableHelp')}
+          {onShowDevices && (
+            <Button className={styles.helpAction} onClick={onShowDevices}>
+              {text('message.checkDevices')}
+            </Button>
+          )}
+        </p>
+      )}
       <span className={styles.meta}>
         <time dateTime={message.sentAt.toISOString()}>{formatTime(locale, message.sentAt)}</time>
         {message.direction === 'out' && (

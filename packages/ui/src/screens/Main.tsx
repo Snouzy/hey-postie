@@ -4,6 +4,7 @@ import { AddContact } from '../components/AddContact';
 import { Conversation } from '../components/Conversation';
 import { Details } from '../components/Details';
 import { JoinRoom } from '../components/JoinRoom';
+import { MyDevices } from '../components/MyDevices';
 import { NewChat } from '../components/NewChat';
 import { RoomDetails } from '../components/RoomDetails';
 import { Sidebar } from '../components/Sidebar';
@@ -24,7 +25,7 @@ interface MainProps {
   onLeave: (door: 'welcome' | 'signIn') => void;
 }
 
-type OpenDialog = 'newChat' | 'joinRoom' | 'addContact' | null;
+type OpenDialog = 'newChat' | 'joinRoom' | 'addContact' | 'myDevices' | null;
 
 /** The three columns. Owns the selection and tells the notifications service what is on screen. */
 export function Main({ account, onOpenLink, onLeave }: MainProps) {
@@ -36,6 +37,8 @@ export function Main({ account, onOpenLink, onLeave }: MainProps) {
   const [selected, setSelected] = useState<Chat | null>(null);
   const [dialog, setDialog] = useState<OpenDialog>(null);
   const [detailsOpen, setDetailsOpen] = useState(false);
+  // True only when the pane was opened from a sealed letter: its Encryption section takes the focus.
+  const [focusEncryption, setFocusEncryption] = useState(false);
   const [error, setError] = useState<MessageKey | null>(null);
   const searchRef = useRef<HTMLInputElement>(null);
 
@@ -124,6 +127,7 @@ export function Main({ account, onOpenLink, onLeave }: MainProps) {
         onNewChat={() => setDialog('newChat')}
         onJoinRoom={() => setDialog('joinRoom')}
         onAddContact={() => setDialog('addContact')}
+        onMyDevices={() => setDialog('myDevices')}
         onSignOut={() => void leave('welcome')}
         onSignInAgain={() => void leave('signIn')}
       />
@@ -135,7 +139,14 @@ export function Main({ account, onOpenLink, onLeave }: MainProps) {
           contact={contact}
           room={room}
           detailsOpen={detailsOpen}
-          onToggleDetails={() => setDetailsOpen((open) => !open)}
+          onToggleDetails={() => {
+            setFocusEncryption(false);
+            setDetailsOpen((open) => !open);
+          }}
+          onOpenEncryption={() => {
+            setFocusEncryption(true);
+            setDetailsOpen(true);
+          }}
           onOpenLink={onOpenLink}
         />
       ) : (
@@ -145,12 +156,17 @@ export function Main({ account, onOpenLink, onLeave }: MainProps) {
         </section>
       )}
       {chat?.kind === 'direct' && detailsOpen && (
-        <Details chat={chat} onClose={() => setDetailsOpen(false)} />
+        <Details
+          chat={chat}
+          focusEncryption={focusEncryption}
+          onClose={() => setDetailsOpen(false)}
+        />
       )}
       {room && detailsOpen && (
         <RoomDetails
           key={room.jid}
           room={room}
+          focusEncryption={focusEncryption}
           onChanged={refreshRooms}
           onClose={() => setDetailsOpen(false)}
           onLeft={() => {
@@ -173,6 +189,7 @@ export function Main({ account, onOpenLink, onLeave }: MainProps) {
         />
       )}
       {dialog === 'addContact' && <AddContact onClose={closeDialog} />}
+      {dialog === 'myDevices' && <MyDevices onClose={closeDialog} />}
     </div>
   );
 }

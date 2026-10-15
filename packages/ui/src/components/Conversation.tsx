@@ -3,6 +3,7 @@ import { Info, Users } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useCore, useText } from '../core/CoreProvider';
 import { useCoreEvent } from '../core/useCoreEvent';
+import { useEncryption } from '../core/useEncryption';
 import { useRoomMembers } from '../core/useRoomMembers';
 import type { MessageKey } from '../i18n';
 import { errorKey } from '../i18n/errors';
@@ -11,6 +12,7 @@ import { Composer } from './Composer';
 import styles from './Conversation.module.css';
 import { MessageList } from './MessageList';
 import { PresenceDot } from './PresenceDot';
+import { SealToggle } from './SealToggle';
 
 interface ConversationProps {
   chat: Chat;
@@ -20,6 +22,8 @@ interface ConversationProps {
   room: Room | undefined;
   detailsOpen: boolean;
   onToggleDetails: () => void;
+  /** Opens the details pane on its Encryption section (from a letter sealed for another device). */
+  onOpenEncryption: () => void;
   onOpenLink: (url: string) => void;
 }
 
@@ -30,6 +34,7 @@ export function Conversation({
   room,
   detailsOpen,
   onToggleDetails,
+  onOpenEncryption,
   onOpenLink,
 }: ConversationProps) {
   const core = useCore();
@@ -37,6 +42,7 @@ export function Conversation({
   const [messages, setMessages] = useState<Message[]>([]);
   const [hasOlder, setHasOlder] = useState(true);
   const [error, setError] = useState<MessageKey | null>(null);
+  const seal = useEncryption(chat);
   const members = useRoomMembers(room?.jid ?? '');
   const nicks = room
     ? members.map((member) => member.nick).filter((nick) => nick !== room.nick)
@@ -118,17 +124,25 @@ export function Conversation({
             </p>
           )}
         </div>
-        {(room || chat.kind === 'direct') && (
-          <Button
-            variant="ghost"
-            onClick={onToggleDetails}
-            aria-pressed={detailsOpen}
-            aria-label={text(room ? 'main.members' : 'main.details')}
-          >
-            {room ? <Users size={18} aria-hidden /> : <Info size={18} aria-hidden />}
-          </Button>
-        )}
+        <div className={styles.tools}>
+          <SealToggle encrypted={seal.encrypted} onToggle={() => void seal.toggle()} />
+          {(room || chat.kind === 'direct') && (
+            <Button
+              variant="ghost"
+              onClick={onToggleDetails}
+              aria-pressed={detailsOpen}
+              aria-label={text(room ? 'main.members' : 'main.details')}
+            >
+              {room ? <Users size={18} aria-hidden /> : <Info size={18} aria-hidden />}
+            </Button>
+          )}
+        </div>
       </header>
+      {seal.error && (
+        <p className={styles.error} role="alert">
+          {text(seal.error)}
+        </p>
+      )}
       {outside && (
         <div className={styles.outside} role="status">
           {text('room.notJoined')}
@@ -142,13 +156,14 @@ export function Conversation({
         onRetry={retry}
         onOpenLink={onOpenLink}
         showSenders={chat.kind === 'room'}
+        onShowDevices={onOpenEncryption}
       />
       {error && (
         <p className={styles.error} role="alert">
           {text(error)}
         </p>
       )}
-      <Composer onSend={send} nicks={nicks} disabled={outside} />
+      <Composer onSend={send} nicks={nicks} disabled={outside} sealed={seal.encrypted} />
     </section>
   );
 }

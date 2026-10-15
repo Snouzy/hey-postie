@@ -139,6 +139,30 @@ export const fr: Record<MessageKey, string> = {
   'room.confirm': 'Quitter',
   'message.mention': 'Vous mentionne',
 
+  'crypto.seal': 'Sceller les lettres',
+  'crypto.unavailable': 'Je ne peux pas sceller cette lettre : aucune clé de l’autre côté.',
+  'crypto.section': 'Chiffrement',
+  'crypto.compare':
+    'Comparez les empreintes en personne, ou au téléphone, avant de marquer un appareil vérifié.',
+  'crypto.empty': 'Aucune clé de l’autre côté pour le moment.',
+  'crypto.roomEmpty': 'Aucune clé que je puisse vérifier dans ce salon pour le moment.',
+  'crypto.trust.untrusted': 'Non vérifié',
+  'crypto.trust.trusted': 'Fiable',
+  'crypto.trust.verified': 'Vérifié',
+  'crypto.trust.blocked': 'Bloqué',
+  'crypto.verify': 'Vérifier',
+  'crypto.block': 'Bloquer',
+  'crypto.unblock': 'Débloquer',
+  'crypto.remove': 'Retirer',
+  'crypto.myDevices': 'Mes appareils',
+  'crypto.myDevicesHint': 'Les clés qui ouvrent vos lettres, une par appareil.',
+  'crypto.myDevicesEmpty': 'Aucune clé à moi pour le moment.',
+  'crypto.confirmRemove':
+    'Retirer cet appareil ? Il n’ouvrira plus les lettres scellées pour vous.',
+  'message.undecryptableHelp': 'Demandez-leur de la renvoyer, ou vérifiez leurs appareils.',
+  'message.checkDevices': 'Vérifier leurs appareils',
+  'composer.placeholderSealed': 'Écrire une lettre scellée…',
+
   'date.today': 'Aujourd’hui',
   'date.yesterday': 'Hier',
 };

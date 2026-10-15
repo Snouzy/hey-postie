@@ -1,5 +1,5 @@
 import type { Account, Chat, Contact, Room } from '@hey-postie/core';
-import { LogOut, Search } from 'lucide-react';
+import { KeyRound, LogOut, Search } from 'lucide-react';
 import { type RefObject, useState } from 'react';
 import { useText } from '../core/CoreProvider';
 import type { MessageKey } from '../i18n';
@@ -27,6 +27,8 @@ interface SidebarProps {
   onNewChat: () => void;
   onJoinRoom: () => void;
   onAddContact: () => void;
+  /** Opens the "My devices" dialog (own OMEMO keys). */
+  onMyDevices: () => void;
   onSignOut: () => void;
   onSignInAgain: () => void;
 }
@@ -50,6 +52,9 @@ export function Sidebar(props: SidebarProps) {
       <header className={styles.account}>
         <PresenceDot presence={online ? 'online' : 'offline'} />
         <span className={styles.accountName}>{props.account.displayName}</span>
+        <Button variant="ghost" onClick={props.onMyDevices} aria-label={text('crypto.myDevices')}>
+          <KeyRound size={18} aria-hidden />
+        </Button>
         <Button variant="ghost" onClick={props.onSignOut} aria-label={text('main.signOut')}>
           <LogOut size={18} aria-hidden />
         </Button>

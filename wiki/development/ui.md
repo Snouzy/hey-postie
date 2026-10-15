@@ -106,6 +106,50 @@ are bare and lowercase from the core, so rows and halls are matched as-is.
 - The sidebar badge of a hall is the **mentions count** on stamp yellow when it is above zero,
   otherwise the unread count in a muted chip.
 
+## Encryption (Postie Seal)
+
+_Added 2026-10-15. Sources: `components/SealToggle.tsx`, `DeviceList.tsx`,
+`EncryptionSection.tsx`, `RoomEncryption.tsx`, `MyDevices.tsx`, `core/useEncryption.ts`,
+`core/useDevices.ts`, `core/useTrustAction.ts`, `screens/Encryption.test.tsx`. The rules
+themselves (blind trust, when a chat can be sealed) live in the core (spec 3.6); the UI only
+shows and asks._
+
+- **The lock** (`SealToggle`, in the `Conversation` header): a `<button aria-pressed>` with the
+  lucide `lock` / `lock-open` icon. `useEncryption(chat)` holds the state: it starts from
+  `chat.encrypted`, follows `chat.updated` for that chat, and flips after a
+  `crypto.setEncryption(chat.id, !encrypted)` the service accepted (the real repository may or
+  may not announce it; both paths agree). `EncryptionUnavailable` shows Postie's sentence
+  `crypto.unavailable` ("no key on the other side") under the header, as a `role="alert"`; any
+  other error shows its usual sentence. `Conversation` is keyed by the chat, so the initial value
+  is read once per chat.
+- While sealed, the composer's hint reads "Write a sealed letter…" (`Composer`'s `sealed` prop).
+  An outgoing message with `encryption: 'omemo'` carries the **wax seal** badge (`MessageBubble`,
+  `.wax`): a `--red` dot at the corner of the bubble, with a hidden "Sealed" for screen readers.
+- **Undecryptable** messages keep Postie's sentence and add a plain help line ("Ask them to send
+  it again, or check their devices") with a "Check their devices" button. The button goes up to
+  `Main` (`onShowDevices` → `onOpenEncryption`), which opens the details pane with
+  `focusEncryption` set: the Encryption section takes the focus and scrolls into view, so a
+  keyboard reader lands on the devices. Toggling the pane from the header clears the flag.
+- **Devices of a contact** (`EncryptionSection`, in `Details`): `useDevices(jid)` loads
+  `crypto.devices(jid)` once and then takes the `devices.changed` payload for that address.
+  `DeviceList` renders one `<li>` per device: the fingerprint through `crypto.formatFingerprint`
+  in monospace, the **trust stamp** (Untrusted / Trusted / Verified / Blocked), and the actions
+  the trust allows: Verify and Block when untrusted or trusted, Block when verified, Unblock when
+  blocked. Every button carries the fingerprint in its accessible name ("Verify ABCDEF01 …"), as
+  the rows look alike. `useTrustAction` calls `crypto.verify / block / unblock`; the list itself
+  updates through `devices.changed`, never locally. A hint asks to compare fingerprints in person
+  before verifying. No device: "No key on the other side yet."
+- **Devices in a hall** (`RoomEncryption`, in `RoomDetails`): the same list, grouped by member,
+  for the members whose `jid` the hall reveals (non-anonymous halls); a member without any known
+  device takes no room, anonymous members cannot be checked. Nothing to show: Postie says so.
+- **My devices** (`MyDevices`): a `Dialog` opened from the key button beside "Sign out" in the
+  `Sidebar` (`onMyDevices`; the account menu will fold it in). `useOwnDevices()` re-reads
+  `crypto.ownDevices()` on every `devices.changed`, since the service does not say which address
+  is mine. "Remove" replaces the list by a confirmation inside the same dialog (no nested
+  dialogs: Esc has one card to close), then `crypto.removeOwnDevice(id)`. The service exposes no
+  own device id, so no row is marked "This device" (the repository has `ownDeviceId`; the service
+  does not, decision pending in the contracts).
+
 ## Keyboard
 
 Cmd/Ctrl+K focuses the search (listener in `Main`). The "+" of the sidebar opens a menu
@@ -158,4 +202,9 @@ success goes to Main, password prefill), `ChatList.test.tsx` (order, badge, seal
 sentence, focus back to "+", room service discovery, bad domain sentence, browse and pick,
 sender nick and mention highlight, Tab completion with the caret, outside a hall and "Join
 again", a room chat without a hall record, members by role and notify radios, Esc on the leave
-confirmation, leave with confirmation, a fresh hall on top, mentions badge).
+confirmation, leave with confirmation, a fresh hall on top, mentions badge),
+`Encryption.test.tsx` (the lock calls `setEncryption`, sealed composer hint, follows
+`chat.updated`, the no-key sentence, devices with formatted fingerprints and stamps, Verify /
+Block / Unblock through `devices.changed`, no device yet, a hall's devices by member, My devices
+list and removal with confirmation, the wax badge, undecryptable help line and the way to the
+devices).
