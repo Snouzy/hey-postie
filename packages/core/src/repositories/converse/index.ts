@@ -1,11 +1,13 @@
 import type {
   ChatRepository,
+  CryptoRepository,
   RegistrationRepository,
   RoomRepository,
   RosterRepository,
   XmppRepository,
 } from '../../contracts/repositories';
 import { ConverseChatRepository } from './chat';
+import { ConverseCryptoRepository } from './crypto';
 import { ConverseEngine, type EngineOptions } from './engine';
 import { ConverseRegistrationRepository } from './registration';
 import { ConverseRoomRepository } from './room';
@@ -19,6 +21,7 @@ export interface ConverseRepositories {
   roster: RosterRepository;
   chat: ChatRepository;
   room: RoomRepository;
+  crypto: CryptoRepository;
   registration: RegistrationRepository;
 }
 
@@ -32,6 +35,7 @@ export function createConverseRepositories(
     roster: new ConverseRosterRepository(engine),
     chat: new ConverseChatRepository(engine),
     room: new ConverseRoomRepository(engine, options.joinTimeoutMs),
+    crypto: new ConverseCryptoRepository(engine),
     registration: new ConverseRegistrationRepository(engine, options.connectTimeoutMs),
   };
 }
