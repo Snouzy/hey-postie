@@ -97,6 +97,15 @@ describe('Main', () => {
     expect(await screen.findByRole('heading', { name: 'Sign in' })).toBeInTheDocument();
   });
 
+  it('shows the reconnecting banner while the connection comes back', async () => {
+    const { deps } = await signedIn();
+    act(() => deps.fakes.xmpp.setState('connecting'));
+    expect(screen.getByRole('status')).toHaveTextContent('back on the bike');
+    expect(screen.getByRole('searchbox', { name: 'Search chats' })).toBeInTheDocument();
+    act(() => deps.fakes.xmpp.setState('online'));
+    expect(screen.queryByRole('status')).not.toBeInTheDocument();
+  });
+
   it('opens the chat a chat.requested event asks for, even when it is not listed yet', async () => {
     const { core } = await signedIn();
     act(() => core.events.emit('chat.requested', { chatId: 'erin@x.org' }));

@@ -32,6 +32,11 @@ export class FakeXmpp implements XmppRepository {
     return () => this.handlers.delete(handler);
   }
 
+  /** Simulates a state change coming from the connection (a reconnection, for instance). */
+  setState(state: AccountState): void {
+    this.notify(state);
+  }
+
   private notify(state: AccountState): void {
     for (const handler of this.handlers) handler(state);
   }
