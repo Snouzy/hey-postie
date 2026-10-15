@@ -5,7 +5,7 @@ import type { CryptoService } from '../contracts/services';
 import { normalizeJid } from './jid';
 
 export function createCryptoService(
-  deps: Pick<CoreDependencies, 'crypto'>,
+  deps: Pick<CoreDependencies, 'crypto' | 'chat'>,
   events: EventBus,
 ): CryptoService {
   deps.crypto.onDevicesChange((jid, devices) => events.emit('devices.changed', { jid, devices }));
@@ -25,13 +25,21 @@ export function createCryptoService(
         throw new DomainError('EncryptionUnavailable');
       }
       await deps.crypto.setEncryption(chatId, enabled);
+      // The UI follows chat.updated, in tests and in production alike.
+      const chat = (await deps.chat.list()).find((c) => c.id === chatId);
+      if (chat) events.emit('chat.updated', { ...chat, encrypted: enabled });
     },
     formatFingerprint,
   };
 }
 
-/** `ab12…` → `AB12CD34 EF56…`: eight characters per group, upper case, as other clients show it. */
+/**
+ * `ab12…` → `AB12CD34 EF56…`: eight characters per group, upper case, as other clients show it.
+ * Separators are dropped; anything else is not a fingerprint and is shown untouched, so a
+ * malformed key never looks like a shorter valid one.
+ */
 export function formatFingerprint(fingerprint: string): string {
-  const clean = fingerprint.replace(/[^0-9a-f]/gi, '').toUpperCase();
-  return clean.match(/.{1,8}/g)?.join(' ') ?? '';
+  const clean = fingerprint.replace(/[\s:-]/g, '');
+  if (!/^[0-9a-f]*$/i.test(clean)) return fingerprint;
+  return clean.toUpperCase().match(/.{1,8}/g)?.join(' ') ?? '';
 }

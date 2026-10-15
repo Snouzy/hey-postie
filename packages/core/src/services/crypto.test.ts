@@ -42,8 +42,12 @@ describe('crypto.setEncryption', () => {
       /EncryptionUnavailable/,
     );
     deps.fakes.crypto.seed('bob@x.org', { deviceId: 1, fingerprint: 'ab' });
-    await core.crypto.setEncryption('bob@x.org', true);
+    const chat = await core.chats.open('bob@x.org');
+    const seen: boolean[] = [];
+    core.events.on('chat.updated', (c) => seen.push(c.encrypted));
+    await core.crypto.setEncryption(chat.id, true);
     expect(deps.fakes.crypto.encryption.get('bob@x.org')).toBe(true);
+    expect(seen.at(-1)).toBe(true);
     await core.crypto.setEncryption('bob@x.org', false);
     expect(deps.fakes.crypto.encryption.get('bob@x.org')).toBe(false);
   });
@@ -67,5 +71,9 @@ describe('formatFingerprint', () => {
   it('groups by eight, upper case, ignoring separators', () => {
     expect(formatFingerprint('ab12cd34 ef56ab12cd')).toBe('AB12CD34 EF56AB12 CD');
     expect(formatFingerprint('')).toBe('');
+  });
+
+  it('leaves a malformed key untouched instead of shortening it', () => {
+    expect(formatFingerprint('ab12zz34')).toBe('ab12zz34');
   });
 });
