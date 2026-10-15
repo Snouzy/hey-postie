@@ -1,0 +1,43 @@
+.tabs {
+  display: flex;
+  border-bottom: 1px solid var(--line);
+}
+
+.tab {
+  flex: 1;
+  padding: var(--space-2);
+  border: none;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  color: var(--ink-muted);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    color var(--motion-fast),
+    border-color var(--motion-fast);
+}
+
+.tab[aria-pressed='true'] {
+  color: var(--navy);
+  border-bottom-color: var(--navy);
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-2);
+}
+
+.error {
+  margin: 0;
+  font-family: var(--font-heading);
+  font-variation-settings: 'SOFT' 100;
+  color: var(--red);
+}

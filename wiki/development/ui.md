@@ -54,9 +54,49 @@ when the window regains focus. Messages are merged by id (`mergeById`), so one t
 the history is loading is kept. `useChats` numbers its requests so an older `list()` answer never
 overwrites a newer one.
 
+## Rooms (halls)
+
+_Added 2026-10-15. Sources: `components/JoinRoom.tsx`, `RoomBrowser.tsx`, `RoomDetails.tsx`,
+`AddMenu.tsx`, `core/useRooms.ts`, `core/useRoomMembers.ts`, `screens/Rooms.test.tsx`._
+
+A hall is a chat with `kind: 'room'`: its messages arrive through the same `chats` /
+`message.received` path, with `fromNick` and `isMention` set by the repository. The UI keeps one
+list of rows for the sidebar, built by `withRooms(chats, rooms)` (`core/useRooms.ts`): every
+chat whose id is a hall's JID takes the hall's name and kind, and a hall with no message yet (just
+joined) gets a row of its own (`roomChat`). `rooms.list()` is therefore the source of truth for
+which rows are halls; `chat.kind` from the service is honoured too.
+
+- `useRooms()`: `rooms.list()` on mount and on every `room.updated`, kept to the halls that are
+  joined or bookmarked; same request counter as `useChats`.
+- `useRoomMembers(jid)`: `rooms.members(jid)` on mount and on every `room.members` for that JID.
+  An empty JID (a direct chat) asks nothing.
+- **Join a room** (`JoinRoom`, from the "+" menu): two tabs. *Address*: room JID, nick prefilled
+  with the account's local part, and a password field that appears only once the service
+  answers `RoomPasswordRequired`. *Browse* (`RoomBrowser`): a domain prefilled with
+  `rooms.<account domain>`, "Look up" → `rooms.browse(domain)`, a list of `RoomInfo` (name, JID,
+  members count); a click fills the address and returns to the first tab. Submit →
+  `rooms.join`; errors are Postie's sentence inline; on success `Main` selects the hall.
+- **Conversation** of a hall: the topic next to the name (one line, the full text in `title`),
+  a "Members" button instead of "Details" that toggles `RoomDetails`, the sender's nick above
+  each run of incoming messages (`MessageList showSenders`), and a **mention highlight**: a
+  bubble with `isMention` gets a soft `--yellow` background, a yellow left border and the title
+  "Mentions you" (`MessageBubble.mention`).
+- **Nick completion**: `Composer` receives the members' nicks (minus my own). Tab completes the
+  word before the caret into the first nick that starts with it, ignoring case: `nick: ` at the
+  start of a line, `nick ` elsewhere (`completeNick`, a pure function). Shift+Tab and a word that
+  matches nobody leave Tab to the browser.
+- **RoomDetails** (right pane): topic, JID, members grouped by role (moderators, participants,
+  visitors) with the affiliation as a kraft hint (owner, admin, member, banned; none is silent),
+  the notify rule as three radios (`rooms.setNotify`), and "Leave the hall", confirmed through
+  `Dialog` → `rooms.leave`; `Main` then drops the selection and the pane.
+- The sidebar badge of a hall is the **mentions count** on stamp yellow when it is above zero,
+  otherwise the unread count in a muted chip.
+
 ## Keyboard
 
-Cmd/Ctrl+K focuses the search (listener in `Main`). Esc closes the open dialog (listener in
+Cmd/Ctrl+K focuses the search (listener in `Main`). The "+" of the sidebar opens a menu
+(`AddMenu`, `role="menu"`): focus lands on the first item, arrow keys cycle, Esc or a click
+outside closes it and focus returns to "+". Esc closes the open dialog (listener in
 `Dialog`, which also traps Tab inside the card and gives the focus back to the opener) or, when no
 dialog is open, the details pane (listener in `Main`). Enter in the composer sends, except while an
 IME is composing (`isComposing`). Arrow keys move
@@ -91,4 +131,7 @@ and bodies are always rendered as text (no HTML).
 success goes to Main, password prefill), `ChatList.test.tsx` (order, badge, sealed preview),
 `MessageList.test.tsx` (grouping, day labels, retry, undecryptable, links, load older),
 `Composer.test.tsx` (Enter / Shift+Enter, empty disabled, inline error), `Main.test.tsx`
-(empty state, markRead and notification rules, new chat dialog, contacts, sign out).
+(empty state, markRead and notification rules, new chat dialog, contacts, sign out),
+`Rooms.test.tsx` (join by address, password field on `RoomPasswordRequired`, `NickTaken`
+sentence, browse and pick, sender nick and mention highlight, Tab completion, members by role
+and notify radios, leave with confirmation, mentions badge).

@@ -1,8 +1,9 @@
-import type { Account, Chat, Contact } from '@hey-postie/core';
-import { LogOut, Plus, Search, UserPlus } from 'lucide-react';
+import type { Account, Chat, Contact, Room } from '@hey-postie/core';
+import { LogOut, Search } from 'lucide-react';
 import { type RefObject, useState } from 'react';
 import { useText } from '../core/CoreProvider';
 import type { MessageKey } from '../i18n';
+import { AddMenu } from './AddMenu';
 import { Button } from './Button';
 import { ChatList } from './ChatList';
 import { ContactList } from './ContactList';
@@ -13,7 +14,9 @@ export type SidebarTab = 'chats' | 'contacts';
 
 interface SidebarProps {
   account: Account;
+  /** Direct chats and halls alike (`withRooms`). */
   chats: Chat[];
+  rooms: Room[];
   contacts: Contact[];
   selectedChatId: string | null;
   searchRef: RefObject<HTMLInputElement | null>;
@@ -22,6 +25,7 @@ interface SidebarProps {
   onSelectChat: (chat: Chat) => void;
   onSelectContact: (contact: Contact) => void;
   onNewChat: () => void;
+  onJoinRoom: () => void;
   onAddContact: () => void;
   onSignOut: () => void;
   onSignInAgain: () => void;
@@ -94,20 +98,21 @@ export function Sidebar(props: SidebarProps) {
             onChange={(event) => setQuery(event.target.value)}
           />
         </label>
-        {tab === 'chats' ? (
-          <Button variant="ghost" onClick={props.onNewChat} aria-label={text('main.newChat')}>
-            <Plus size={18} aria-hidden />
-          </Button>
-        ) : (
-          <Button variant="ghost" onClick={props.onAddContact} aria-label={text('main.addContact')}>
-            <UserPlus size={18} aria-hidden />
-          </Button>
-        )}
+        <AddMenu
+          onNewChat={props.onNewChat}
+          onJoinRoom={props.onJoinRoom}
+          onAddContact={props.onAddContact}
+        />
       </div>
 
       <div className={styles.body}>
         {tab === 'chats' ? (
-          <ChatList chats={chats} selectedId={props.selectedChatId} onSelect={props.onSelectChat} />
+          <ChatList
+            chats={chats}
+            rooms={props.rooms}
+            selectedId={props.selectedChatId}
+            onSelect={props.onSelectChat}
+          />
         ) : (
           <ContactList contacts={contacts} onSelect={props.onSelectContact} />
         )}

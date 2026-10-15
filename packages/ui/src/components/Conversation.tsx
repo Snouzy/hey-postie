@@ -1,8 +1,9 @@
-import type { Chat, Contact, Message } from '@hey-postie/core';
-import { Info } from 'lucide-react';
+import type { Chat, Contact, Message, Room } from '@hey-postie/core';
+import { Info, Users } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useCore, useText } from '../core/CoreProvider';
 import { useCoreEvent } from '../core/useCoreEvent';
+import { useRoomMembers } from '../core/useRoomMembers';
 import type { MessageKey } from '../i18n';
 import { errorKey } from '../i18n/errors';
 import { Button } from './Button';
@@ -15,6 +16,8 @@ interface ConversationProps {
   chat: Chat;
   /** The contact behind the chat, when it is in the address book: gives the presence. */
   contact: Contact | undefined;
+  /** The hall behind the chat, when it is one: gives the topic and the members. */
+  room: Room | undefined;
   detailsOpen: boolean;
   onToggleDetails: () => void;
   onOpenLink: (url: string) => void;
@@ -24,6 +27,7 @@ interface ConversationProps {
 export function Conversation({
   chat,
   contact,
+  room,
   detailsOpen,
   onToggleDetails,
   onOpenLink,
@@ -33,6 +37,10 @@ export function Conversation({
   const [messages, setMessages] = useState<Message[]>([]);
   const [hasOlder, setHasOlder] = useState(true);
   const [error, setError] = useState<MessageKey | null>(null);
+  const members = useRoomMembers(room?.jid ?? '');
+  const nicks = room
+    ? members.map((member) => member.nick).filter((nick) => nick !== room.nick)
+    : [];
 
   useEffect(() => {
     let cancelled = false;
@@ -92,14 +100,19 @@ export function Conversation({
         <div className={styles.peer}>
           {contact && <PresenceDot presence={contact.presence} />}
           <h2 className={styles.title}>{chat.title}</h2>
+          {room && (
+            <p className={styles.topic} title={room.topic}>
+              {room.topic || text('room.topicEmpty')}
+            </p>
+          )}
         </div>
         <Button
           variant="ghost"
           onClick={onToggleDetails}
           aria-pressed={detailsOpen}
-          aria-label={text('main.details')}
+          aria-label={text(room ? 'main.members' : 'main.details')}
         >
-          <Info size={18} aria-hidden />
+          {room ? <Users size={18} aria-hidden /> : <Info size={18} aria-hidden />}
         </Button>
       </header>
       <MessageList
@@ -108,13 +121,14 @@ export function Conversation({
         onLoadOlder={loadOlder}
         onRetry={retry}
         onOpenLink={onOpenLink}
+        showSenders={Boolean(room)}
       />
       {error && (
         <p className={styles.error} role="alert">
           {text(error)}
         </p>
       )}
-      <Composer onSend={send} />
+      <Composer onSend={send} nicks={nicks} />
     </section>
   );
 }

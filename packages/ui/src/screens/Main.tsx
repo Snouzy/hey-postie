@@ -3,12 +3,15 @@ import { useEffect, useRef, useState } from 'react';
 import { AddContact } from '../components/AddContact';
 import { Conversation } from '../components/Conversation';
 import { Details } from '../components/Details';
+import { JoinRoom } from '../components/JoinRoom';
 import { NewChat } from '../components/NewChat';
+import { RoomDetails } from '../components/RoomDetails';
 import { Sidebar } from '../components/Sidebar';
 import { useCore, useText } from '../core/CoreProvider';
 import { useChats } from '../core/useChats';
 import { useContacts } from '../core/useContacts';
 import { useCoreEvent } from '../core/useCoreEvent';
+import { roomChat, useRooms, withRooms } from '../core/useRooms';
 import type { MessageKey } from '../i18n';
 import { errorKey } from '../i18n/errors';
 import { Postie } from '../illustrations/Postie';
@@ -21,13 +24,14 @@ interface MainProps {
   onLeave: (door: 'welcome' | 'signIn') => void;
 }
 
-type OpenDialog = 'newChat' | 'addContact' | null;
+type OpenDialog = 'newChat' | 'joinRoom' | 'addContact' | null;
 
 /** The three columns. Owns the selection and tells the notifications service what is on screen. */
 export function Main({ account, onOpenLink, onLeave }: MainProps) {
   const core = useCore();
   const text = useText();
-  const { chats, refresh } = useChats();
+  const { chats: directChats, refresh } = useChats();
+  const { rooms } = useRooms();
   const contacts = useContacts();
   const [selected, setSelected] = useState<Chat | null>(null);
   const [dialog, setDialog] = useState<OpenDialog>(null);
@@ -36,8 +40,10 @@ export function Main({ account, onOpenLink, onLeave }: MainProps) {
   const searchRef = useRef<HTMLInputElement>(null);
 
   // The list is the fresh source once the chat is in it (title, unread count).
+  const chats = withRooms(directChats, rooms);
   const chat = selected ? (chats.find((c) => c.id === selected.id) ?? selected) : null;
   const contact = chat ? contacts.find((c) => c.jid === chat.peerJid) : undefined;
+  const room = chat?.kind === 'room' ? rooms.find((r) => r.jid === chat.id) : undefined;
   const chatId = chat?.id ?? null;
 
   useEffect(() => {
@@ -89,6 +95,11 @@ export function Main({ account, onOpenLink, onLeave }: MainProps) {
     }
   }
 
+  function closeDialog() {
+    setDialog(null);
+    setError(null);
+  }
+
   async function leave(door: 'welcome' | 'signIn') {
     try {
       await core.accounts.signOut();
@@ -103,6 +114,7 @@ export function Main({ account, onOpenLink, onLeave }: MainProps) {
       <Sidebar
         account={account}
         chats={chats}
+        rooms={rooms}
         contacts={contacts}
         selectedChatId={chatId}
         searchRef={searchRef}
@@ -110,6 +122,7 @@ export function Main({ account, onOpenLink, onLeave }: MainProps) {
         onSelectChat={setSelected}
         onSelectContact={(c: Contact) => void openWith(c.jid)}
         onNewChat={() => setDialog('newChat')}
+        onJoinRoom={() => setDialog('joinRoom')}
         onAddContact={() => setDialog('addContact')}
         onSignOut={() => void leave('welcome')}
         onSignInAgain={() => void leave('signIn')}
@@ -120,6 +133,7 @@ export function Main({ account, onOpenLink, onLeave }: MainProps) {
           key={chat.id}
           chat={chat}
           contact={contact}
+          room={room}
           detailsOpen={detailsOpen}
           onToggleDetails={() => setDetailsOpen((open) => !open)}
           onOpenLink={onOpenLink}
@@ -130,18 +144,33 @@ export function Main({ account, onOpenLink, onLeave }: MainProps) {
           <p className={styles.emptyText}>{text('main.empty')}</p>
         </section>
       )}
-      {chat && detailsOpen && <Details chat={chat} onClose={() => setDetailsOpen(false)} />}
-      {dialog === 'newChat' && (
-        <NewChat
-          error={error}
-          onOpen={(jid) => void openWith(jid)}
-          onClose={() => {
-            setDialog(null);
-            setError(null);
+      {chat && detailsOpen && !room && (
+        <Details chat={chat} onClose={() => setDetailsOpen(false)} />
+      )}
+      {room && detailsOpen && (
+        <RoomDetails
+          room={room}
+          onClose={() => setDetailsOpen(false)}
+          onLeft={() => {
+            setSelected(null);
+            setDetailsOpen(false);
           }}
         />
       )}
-      {dialog === 'addContact' && <AddContact onClose={() => setDialog(null)} />}
+      {dialog === 'newChat' && (
+        <NewChat error={error} onOpen={(jid) => void openWith(jid)} onClose={closeDialog} />
+      )}
+      {dialog === 'joinRoom' && (
+        <JoinRoom
+          account={account}
+          onJoined={(joined) => {
+            setSelected(roomChat(joined));
+            closeDialog();
+          }}
+          onClose={closeDialog}
+        />
+      )}
+      {dialog === 'addContact' && <AddContact onClose={closeDialog} />}
     </div>
   );
 }

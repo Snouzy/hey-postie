@@ -1,4 +1,5 @@
-import type { Chat } from '@hey-postie/core';
+import type { Chat, Room } from '@hey-postie/core';
+import { Users } from 'lucide-react';
 import type { KeyboardEvent } from 'react';
 import { useLocale, useText } from '../core/CoreProvider';
 import { formatRecent } from '../i18n/dates';
@@ -6,14 +7,17 @@ import styles from './ChatList.module.css';
 
 interface ChatListProps {
   chats: Chat[];
+  /** The halls, for their mentions count. */
+  rooms?: Room[];
   selectedId: string | null;
   onSelect: (chat: Chat) => void;
 }
 
 /** The sidebar list. Arrow keys move between rows; Enter or a click opens one. */
-export function ChatList({ chats, selectedId, onSelect }: ChatListProps) {
+export function ChatList({ chats, rooms = [], selectedId, onSelect }: ChatListProps) {
   const text = useText();
   const locale = useLocale();
+  const mentionsOf = (chat: Chat) => rooms.find((room) => room.jid === chat.id)?.mentionsCount ?? 0;
 
   if (chats.length === 0) return <p className={styles.empty}>{text('chatList.empty')}</p>;
 
@@ -28,6 +32,9 @@ export function ChatList({ chats, selectedId, onSelect }: ChatListProps) {
             onClick={() => onSelect(chat)}
           >
             <span className={styles.top}>
+              {chat.kind === 'room' && (
+                <Users size={14} className={styles.hall} aria-label={text('chatList.room')} />
+              )}
               <span className={styles.title}>{chat.title}</span>
               {chat.lastMessage && (
                 <time className={styles.time} dateTime={chat.lastMessage.sentAt.toISOString()}>
@@ -41,18 +48,35 @@ export function ChatList({ chats, selectedId, onSelect }: ChatListProps) {
                   ? text('chatList.undecryptablePreview')
                   : (chat.lastMessage?.body ?? '')}
               </span>
-              {chat.unreadCount > 0 && (
-                <span className={styles.badge}>
-                  {chat.unreadCount}
-                  <span className={styles.srOnly}> {text('chatList.unread')}</span>
-                </span>
-              )}
+              <Badge mentions={mentionsOf(chat)} unread={chat.unreadCount} />
             </span>
           </button>
         </li>
       ))}
     </ul>
   );
+}
+
+/** Mentions ring on stamp yellow; plain unread letters stay muted so a hall does not shout. */
+function Badge({ mentions, unread }: { mentions: number; unread: number }) {
+  const text = useText();
+  if (mentions > 0) {
+    return (
+      <span className={styles.badge}>
+        {mentions}
+        <span className={styles.srOnly}> {text('chatList.mentions')}</span>
+      </span>
+    );
+  }
+  if (unread > 0) {
+    return (
+      <span className={`${styles.badge} ${styles.muted}`}>
+        {unread}
+        <span className={styles.srOnly}> {text('chatList.unread')}</span>
+      </span>
+    );
+  }
+  return null;
 }
 
 function moveWithArrows(event: KeyboardEvent<HTMLUListElement>) {

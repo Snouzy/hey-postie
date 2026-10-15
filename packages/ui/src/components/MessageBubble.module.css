@@ -28,6 +28,12 @@
   color: inherit;
 }
 
+/* Someone said my name: a touch of stamp yellow, and a bar on the left. */
+.mention {
+  background: color-mix(in srgb, var(--yellow) 22%, var(--paper-raised));
+  border-left: 3px solid var(--yellow);
+}
+
 .body,
 .sealed {
   margin: 0;

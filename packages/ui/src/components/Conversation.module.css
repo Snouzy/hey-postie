@@ -22,6 +22,18 @@
   min-width: 0;
 }
 
+/* One line; the full topic sits in the title attribute. */
+.topic {
+  flex: 1;
+  min-width: 0;
+  margin: 0 0 0 var(--space-2);
+  font-size: 13px;
+  color: var(--ink-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .title {
   font-size: 20px;
   overflow: hidden;

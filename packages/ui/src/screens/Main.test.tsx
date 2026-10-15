@@ -50,7 +50,8 @@ describe('Main', () => {
 
   it('opens a new chat from the dialog', async () => {
     await signedIn();
-    fireEvent.click(screen.getByRole('button', { name: 'New chat' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Add' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'New chat' }));
     const dialog = screen.getByRole('dialog', { name: 'New chat' });
     fireEvent.change(screen.getByLabelText('Address'), { target: { value: 'Carol@x.org' } });
     fireEvent.click(screen.getByRole('button', { name: 'Open' }));
@@ -114,7 +115,8 @@ describe('Main', () => {
 
   it('shows the error sentence in the new chat dialog for a bad address', async () => {
     await signedIn();
-    fireEvent.click(screen.getByRole('button', { name: 'New chat' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Add' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'New chat' }));
     fireEvent.change(screen.getByLabelText('Address'), { target: { value: 'nope' } });
     fireEvent.click(screen.getByRole('button', { name: 'Open' }));
     expect(await screen.findByRole('alert')).toHaveTextContent('That address does not look right.');
