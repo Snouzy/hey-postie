@@ -76,7 +76,7 @@ export function createAccountsService(
 
     async deleteAccount() {
       const account = current;
-      if (!account || account.state !== 'online') {
+      if (account?.state !== 'online') {
         throw new DomainError('Unknown', 'Unknown: no account signed in');
       }
       await deps.registration.deleteCurrent();
