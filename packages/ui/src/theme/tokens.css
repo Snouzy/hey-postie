@@ -1,0 +1,113 @@
+/* Design tokens of the "Postal" design system. See wiki/development/design-system.md. */
+:root {
+  --paper: #f7f2e8;
+  --paper-raised: #fffdf8;
+  --ink: #1e2230;
+  --ink-muted: #5b6272;
+  --navy: #1f3a68;
+  --navy-contrast: #ffffff;
+  --red: #c8321b;
+  --kraft: #b98a4e;
+  --kraft-soft: #efe2cc;
+  --yellow: #f2c14e;
+  --success: #2e7d4f;
+  --warning: #a35900;
+  --line: rgb(30 34 48 / 0.12);
+
+  --font-heading: 'Fraunces', Georgia, 'Times New Roman', serif;
+  --font-text: 'Figtree', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-mono: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+
+  --radius-sm: 8px;
+  --radius: 12px;
+  --radius-bubble: 16px;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-12: 48px;
+
+  --shadow-card: 0 1px 2px rgb(30 34 48 / 0.08), 0 4px 16px rgb(30 34 48 / 0.06);
+
+  color-scheme: light dark;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --paper: #171a22;
+    --paper-raised: #20242f;
+    --ink: #eee9dd;
+    --ink-muted: #a9a496;
+    --navy: #8fb0e8;
+    --navy-contrast: #0f1a2e;
+    --red: #f07a66;
+    --kraft: #d9b27c;
+    --kraft-soft: #2b2619;
+    --line: rgb(238 233 221 / 0.14);
+    --shadow-card: 0 1px 2px rgb(0 0 0 / 0.4), 0 4px 16px rgb(0 0 0 / 0.3);
+  }
+}
+
+:root[data-theme='dark'] {
+  --paper: #171a22;
+  --paper-raised: #20242f;
+  --ink: #eee9dd;
+  --ink-muted: #a9a496;
+  --navy: #8fb0e8;
+  --navy-contrast: #0f1a2e;
+  --red: #f07a66;
+  --kraft: #d9b27c;
+  --kraft-soft: #2b2619;
+  --line: rgb(238 233 221 / 0.14);
+  --shadow-card: 0 1px 2px rgb(0 0 0 / 0.4), 0 4px 16px rgb(0 0 0 / 0.3);
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-text);
+  font-size: 15px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1,
+h2,
+h3 {
+  font-family: var(--font-heading);
+  font-weight: 700;
+  font-variation-settings: 'SOFT' 100;
+  line-height: 1.15;
+  margin: 0;
+}
+
+button {
+  font: inherit;
+}
+
+:focus-visible {
+  outline: 2px solid var(--navy);
+  outline-offset: 2px;
+}
+
+/* Reduced motion: the tokens below are the only durations the components may use. */
+:root {
+  --motion-fast: 120ms;
+  --motion: 200ms;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --motion-fast: 0ms;
+    --motion: 0ms;
+  }
+}

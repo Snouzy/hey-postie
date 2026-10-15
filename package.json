@@ -1,0 +1,25 @@
+{
+  "name": "hey-postie",
+  "private": true,
+  "license": "SEE LICENSE IN LICENSING.md",
+  "packageManager": "pnpm@12.11.2",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "check": "pnpm -r --parallel check",
+    "lint": "biome check .",
+    "lint:fix": "biome check --write .",
+    "test": "pnpm -r --parallel test",
+    "build": "pnpm -r build",
+    "rust": "cd apps/desktop/src-tauri && cargo fmt --check && cargo clippy --all-targets -- -D warnings && cargo test",
+    "verify": "pnpm check && pnpm lint && pnpm test && pnpm rust && pnpm build",
+    "desktop:dev": "pnpm --filter @hey-postie/desktop dev",
+    "desktop:build": "pnpm --filter @hey-postie/desktop bundle",
+    "desktop:smoke": "pnpm --filter @hey-postie/desktop smoke"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2.5.15",
+    "typescript": "6.0.3"
+  }
+}

@@ -1,0 +1,39 @@
+/*
+ * Self-hosted variable fonts (SIL Open Font License 1.1).
+ * Fraunces  — https://github.com/undercasetype/Fraunces  (license: ./fonts/OFL-Fraunces.txt)
+ * Figtree   — https://github.com/erikdkennedy/figtree    (license: ./fonts/OFL-Figtree.txt)
+ *
+ * Fraunces is only published as variable TTF upstream (axes: SOFT, WONK, opsz, wght).
+ */
+
+@font-face {
+  font-family: 'Fraunces';
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url('./fonts/Fraunces-Variable.ttf') format('truetype');
+}
+
+@font-face {
+  font-family: 'Fraunces';
+  font-style: italic;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url('./fonts/Fraunces-Italic-Variable.ttf') format('truetype');
+}
+
+@font-face {
+  font-family: 'Figtree';
+  font-style: normal;
+  font-weight: 300 900;
+  font-display: swap;
+  src: url('./fonts/Figtree-Variable.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Figtree';
+  font-style: italic;
+  font-weight: 300 900;
+  font-display: swap;
+  src: url('./fonts/Figtree-Italic-Variable.woff2') format('woff2');
+}

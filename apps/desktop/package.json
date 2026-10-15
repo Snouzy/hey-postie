@@ -1,0 +1,35 @@
+{
+  "name": "@hey-postie/desktop",
+  "version": "0.0.0",
+  "private": true,
+  "license": "SEE LICENSE IN ../../LICENSING.md",
+  "type": "module",
+  "scripts": {
+    "check": "tsc --noEmit",
+    "test": "vitest run --passWithNoTests",
+    "build": "vite build",
+    "app:dev": "vite",
+    "dev": "tauri dev",
+    "bundle": "tauri build",
+    "smoke": "tauri build --debug --no-bundle && src-tauri/target/debug/hey-postie --smoke",
+    "tauri": "tauri"
+  },
+  "dependencies": {
+    "@hey-postie/core": "workspace:*",
+    "@hey-postie/ui": "workspace:*",
+    "@tauri-apps/api": "2.12.4",
+    "@tauri-apps/plugin-notification": "2.7.0",
+    "@tauri-apps/plugin-store": "2.5.0",
+    "react": "19.3.1",
+    "react-dom": "19.3.1"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "2.12.3",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "@vitejs/plugin-react": "6.1.2",
+    "typescript": "6.0.3",
+    "vite": "8.3.4",
+    "vitest": "5.0.5"
+  }
+}

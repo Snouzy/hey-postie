@@ -1,0 +1,7 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "What the main window may ask the Rust side.",
+  "windows": ["main"],
+  "permissions": ["core:default", "core:event:allow-emit", "notification:default", "store:default"]
+}

@@ -1,0 +1,25 @@
+[package]
+name = "hey-postie"
+version = "0.0.0"
+description = "A friendly XMPP chat client, end-to-end encrypted."
+authors = ["Snouzylabs S.R.L. and the Hey Postie contributors"]
+license = "AGPL-3.0-or-later"
+edition = "2021"
+rust-version = "1.88"
+
+[lib]
+name = "hey_postie_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+tauri-plugin-notification = "2"
+tauri-plugin-store = "2"
+keyring = "4"
+keyring-core = "1"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+thiserror = "2"

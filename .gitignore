@@ -1,0 +1,12 @@
+.DS_Store
+node_modules/
+dist/
+apps/desktop/src-tauri/target/
+apps/desktop/src-tauri/gen/schemas/
+apps/desktop/dist-smoke/
+
+# Agent notes and per-machine Claude Code state: never published.
+tasks/
+.claude/worktrees/
+.claude/settings.local.json
+.superpowers/

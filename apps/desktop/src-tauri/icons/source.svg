@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <title>Hey Postie</title>
+  <!-- Placeholder app icon: a cream envelope with a red wax seal on navy. The final logo comes with the illustrator. -->
+  <rect width="1024" height="1024" rx="224" fill="#1F3A68"/>
+  <rect x="192" y="304" width="640" height="416" rx="40" fill="#F7F2E8"/>
+  <path d="M192 344 L512 560 L832 344" fill="none" stroke="#1E2230" stroke-width="28" stroke-linejoin="round"/>
+  <circle cx="512" cy="560" r="84" fill="#C8321B"/>
+  <circle cx="512" cy="560" r="40" fill="none" stroke="#F7F2E8" stroke-width="12"/>
+</svg>
