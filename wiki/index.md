@@ -13,7 +13,8 @@ The folder opens as an Obsidian vault.
 - [Technical guide](development/technical-guide.md): the tree, the three layers, how to run and verify, how to add a service.
 - [Patterns](development/patterns.md): every pattern used in the code, explained. A pattern that is not here does not go in the code.
 - [Dependencies](development/dependencies.md): every dependency, its license and why.
-- [Design system](development/design-system.md): tokens, fonts, Postie's moods.
+- [Design system](development/design-system.md): tokens, fonts, Postie's moods, the components and their rules.
+- [Interface](development/ui.md): screens, the state machine, how the UI subscribes to the core, how to add a screen.
 
 Contributing: [CONTRIBUTING.md](../CONTRIBUTING.md). Rules for agents and developers: [AGENTS.md](../AGENTS.md).
 
