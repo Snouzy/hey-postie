@@ -47,8 +47,13 @@ export class FakeCrypto implements CryptoRepository {
     this.notify(jid);
   }
 
+  /** Like the real repository: this device cannot retire itself; an unknown id is refused. */
   async removeOwnDevice(deviceId: number): Promise<void> {
     const devices = this.byJid.get(this.ownJid) ?? [];
+    if (deviceId === (await this.ownDeviceId())) {
+      throw new DomainError('Unknown', 'Unknown: this device cannot remove itself');
+    }
+    if (!devices.some((d) => d.deviceId === deviceId)) throw new DomainError('DeviceNotFound');
     this.byJid.set(
       this.ownJid,
       devices.filter((d) => d.deviceId !== deviceId),

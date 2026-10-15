@@ -171,7 +171,13 @@ Services expose `get*`/`list*` queries, commands, and a typed event emitter
   `blocked`. Once a contact has one verified device, new devices are no longer trusted blindly.
 - Own devices are listed with fingerprints; the user can remove one.
 - Encryption is on by default in direct chats when the contact has OMEMO devices; in rooms when the
-  room is members-only and non-anonymous and every member has devices (same rule as Conversations).
+  room is members-only and non-anonymous and every present occupant with a known JID has devices
+  (Converse's rule; updated on 2026-10-15 from "every member": absent members are not known to
+  the client).
+- Own devices follow the same rule as contacts' (decision of 2026-10-15, after the security review):
+  a new own device is excluded until the user verifies or unblocks it, so a stolen password alone
+  does not get future keys. A verification is bound to the device's identity key: if the key
+  changes, the device is no longer verified.
 - A chat without any device shows "Postie cannot seal this letter: no key on the other side".
 
 ### 3.7 Offline and reconnection
