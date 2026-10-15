@@ -7,6 +7,9 @@ export { en, fr };
 
 const dictionaries: Record<Locale, Record<MessageKey, string>> = { en, fr };
 
+/** Every supported language, in the dictionaries' order. */
+export const LOCALES = Object.keys(dictionaries) as Locale[];
+
 /** Picks the first supported language from the system's list; English when none matches. */
 export function pickLocale(candidates: readonly string[]): Locale {
   for (const candidate of candidates) {

@@ -2,12 +2,15 @@ import { fireEvent, screen, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import licenses from '../data/licenses.json';
 import { renderWithCore, setupCore } from '../test-utils';
-import { filterLicenses, groupByLicense, Licenses } from './Licenses';
+import { filterLicenses, groupByLicense, type LicenseEntry, Licenses } from './Licenses';
 
-function open() {
+function open(entries?: LicenseEntry[]) {
   const { core } = setupCore();
   const onOpenLink = vi.fn();
-  renderWithCore(<Licenses onClose={() => {}} onOpenLink={onOpenLink} />, core);
+  renderWithCore(
+    <Licenses onClose={() => {}} onOpenLink={onOpenLink} {...(entries ? { entries } : {})} />,
+    core,
+  );
   return { onOpenLink };
 }
 
@@ -34,7 +37,33 @@ describe('Licenses', () => {
     expect(screen.getByText('Fraunces')).toBeInTheDocument();
     expect(screen.queryByText('react')).not.toBeInTheDocument();
     fireEvent.change(search, { target: { value: 'nothing-here' } });
-    expect(screen.getByText(/Nothing in my satchel/)).toBeInTheDocument();
+    expect(screen.getAllByText(/Nothing in my satchel/)).toHaveLength(2); // visible + status
+    expect(screen.getByRole('status')).toHaveTextContent(/Nothing in my satchel/);
+  });
+
+  it('announces how many components the search found', () => {
+    open();
+    expect(screen.getByRole('status')).toHaveTextContent(`${licenses.length} components listed`);
+    fireEvent.change(screen.getByRole('searchbox', { name: /Search/ }), {
+      target: { value: 'strophe' },
+    });
+    expect(screen.getByRole('status')).toHaveTextContent('1 components listed');
+  });
+
+  it('lists two versions of one name as two rows, and links only https addresses', () => {
+    open([
+      { name: 'dup', version: '1.0.0', license: 'MIT', repository: 'https://example.org/dup' },
+      { name: 'dup', version: '2.0.0', license: 'MIT', repository: 'git+ssh://example.org/dup' },
+      { name: 'plain', version: '1', license: 'MIT' },
+    ]);
+    expect(screen.getAllByText('dup')).toHaveLength(2);
+    expect(screen.getByText('1.0.0')).toBeInTheDocument();
+    expect(screen.getByText('2.0.0')).toBeInTheDocument();
+    expect(screen.getAllByRole('link')).toHaveLength(1);
+    expect(screen.getByRole('link', { name: 'dup' })).toHaveAttribute(
+      'href',
+      'https://example.org/dup',
+    );
   });
 
   it('routes a repository link through onOpenLink', () => {
