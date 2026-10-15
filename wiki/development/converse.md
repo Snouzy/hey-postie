@@ -727,8 +727,11 @@ Observed on 2026-10-16:
 - Prosody delivers a bare-JID `chat` message to the resources with the **highest** priority only.
   Another session signed in as `bob@localhost` (an agent's Converse, resource `v9_9zzoDGlC_`, smacks
   on) was online at the same time and received alice's messages instead of the test's bob, whose
-  default priority is 0: nothing arrived, no error. The test's bob now sends `<priority>10</priority>`.
-  The shared accounts remain a hazard for every contract suite.
+  default priority is 0: nothing arrived, no error. Every contract suite now runs both sides at
+  priority 10: bob's presence in `test-support/bobClient.ts` (`AVAILABLE`) and alice through the
+  engine option `priority` (Converse's `priority` setting, `plugins/status/profile.js:93-109`),
+  passed to `createConverseRepositories`. A session of the author signed in as alice in the app at
+  priority 0 is then harmless; one at a higher priority would still take the messages.
 - The upload scenario needs the server's certificate to cover `upload.localhost`: `mod_http_file_share`
   hands out `https://upload.localhost:5281/file_share/...` (routing is by `Host`, so the URL cannot be
   rewritten to `localhost`), and the mkcert certificate had SANs `localhost, 127.0.0.1, ::1` only →

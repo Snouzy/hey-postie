@@ -16,6 +16,11 @@ export interface EngineOptions {
   mockConnection?: boolean;
   /** Converse at `loglevel: 'debug'`: every stanza, bodies included (§10). Never in production. */
   debug?: boolean;
+  /**
+   * Presence priority (RFC 6121 §4.7.2.3), Converse's `priority` setting, 0 by default. The contract
+   * tests set it high so that the shared accounts' other sessions do not receive their messages.
+   */
+  priority?: number;
 }
 
 export interface Loaded {
@@ -118,6 +123,7 @@ export class ConverseEngine {
       send_chat_markers: ['received', 'displayed', 'acknowledged'],
       // At 'warn' and above Converse still logs whole stanzas on parse errors (§10): 'fatal' only.
       loglevel: this.options.debug ? 'debug' : 'fatal',
+      priority: this.options.priority ?? 0,
       assets_path: '',
       ...(mock ? { bosh_service_url: 'montague.lit/http-bind' } : {}),
     };

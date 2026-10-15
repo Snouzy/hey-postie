@@ -30,6 +30,7 @@ const REACTIONS = 'urn:xmpp:reactions:0';
 
 const repositories = createConverseRepositories({
   persistentStore: 'localStorage',
+  priority: 10,
   connectTimeoutMs: 8_000,
 });
 const core = createCore({ ...createFakeDependencies(), ...repositories });
@@ -41,9 +42,6 @@ let bob: BobClient;
 describe.skipIf(!SERVER)('Parcels and reactions against the XMPP test server', () => {
   beforeAll(async () => {
     bob = await connectBob({ url: SERVER ?? '', jid: BOB, password: 'bob-pw' });
-    // Other sessions share these accounts (an agent's Converse signed in as bob was seen on
-    // 2026-10-16): the server delivers bare-JID messages to the highest-priority resources only.
-    bob.send('<presence><priority>10</priority></presence>');
     await repositories.xmpp.connect({
       jid: ALICE,
       password: 'alice-pw',

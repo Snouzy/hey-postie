@@ -29,6 +29,7 @@ const SECOND = { id: 434_343, keyStart: 101 };
 
 const repositories = createConverseRepositories({
   persistentStore: 'localStorage',
+  priority: 10,
   connectTimeoutMs: 8_000,
 });
 const chats: Chat[] = [];

@@ -28,6 +28,7 @@ const HALL = `hall-${RUN}@${SERVICE}`;
 
 const repositories = createConverseRepositories({
   persistentStore: 'localStorage',
+  priority: 10,
   connectTimeoutMs: 8_000,
   joinTimeoutMs: 8_000,
 });

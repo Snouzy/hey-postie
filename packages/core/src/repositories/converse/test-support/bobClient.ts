@@ -12,6 +12,13 @@ const NS = {
   mucUser: 'http://jabber.org/protocol/muc#user',
 };
 
+/**
+ * Bob's available presence. The test accounts are shared with other sessions (an agent's Converse
+ * signed in as bob was seen online on 2026-10-16) and the server delivers bare-JID messages to the
+ * highest-priority resources only: a high priority keeps alice's messages coming to this client.
+ */
+export const AVAILABLE = '<presence><priority>10</priority></presence>';
+
 export interface BobClient {
   readonly jid: string;
   send(xml: string): void;
@@ -116,7 +123,7 @@ export async function connectBob(input: {
   );
   if (bound.getAttribute('type') !== 'result') throw new Error('bob: bind failed');
   client.forget();
-  client.send('<presence/>');
+  client.send(AVAILABLE);
   return client;
 }
 
