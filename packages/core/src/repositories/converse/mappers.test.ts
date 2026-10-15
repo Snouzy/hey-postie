@@ -1,0 +1,172 @@
+import { describe, expect, it } from 'vitest';
+import { toChat, toContact, toMessage } from './mappers';
+import type { ChatModel, ContactModel, MessageModel } from './models';
+
+/** A skeletor model is just `get()` for the mappers. */
+function model(attrs: Record<string, unknown>): MessageModel {
+  return {
+    get: (key) => attrs[key],
+    save: () => undefined,
+    on: () => undefined,
+    off: () => undefined,
+  };
+}
+
+const context = { chatId: 'juliet@example.org', authenticated: true, unread: 0 };
+const incoming = {
+  id: 'm1',
+  from: 'juliet@example.org/balcony',
+  body: 'hello',
+  time: '2026-10-15T10:00:00.000Z',
+  sender: 'them',
+};
+
+describe('toMessage', () => {
+  it('maps an incoming message', () => {
+    const message = toMessage(model(incoming), context);
+    expect(message).toMatchObject({
+      id: 'm1',
+      chatId: 'juliet@example.org',
+      fromJid: 'juliet@example.org',
+      body: 'hello',
+      direction: 'in',
+      status: 'read',
+      encryption: 'none',
+      attachments: [],
+      reactions: [],
+      isMention: false,
+    });
+    expect(message.sentAt.toISOString()).toBe('2026-10-15T10:00:00.000Z');
+  });
+
+  it('marks incoming messages delivered while the chat has unread ones', () => {
+    expect(toMessage(model(incoming), { ...context, unread: 2 }).status).toBe('delivered');
+  });
+
+  it('maps own messages: sent, delivered once received, pending offline', () => {
+    const own = { ...incoming, sender: 'me', from: 'romeo@example.org/desk' };
+    expect(toMessage(model(own), context).status).toBe('sent');
+    expect(toMessage(model({ ...own, received: '2026-10-15T10:00:01Z' }), context).status).toBe(
+      'delivered',
+    );
+    expect(toMessage(model(own), { ...context, authenticated: false }).status).toBe('pending');
+    expect(toMessage(model(own), context).direction).toBe('out');
+  });
+
+  it('maps errors to failed, except decryption errors which are undecryptable', () => {
+    expect(toMessage(model({ ...incoming, is_error: true }), context).status).toBe('failed');
+    const sealed = toMessage(
+      model({ ...incoming, is_error: true, error_type: 'Decryption', body: 'notice' }),
+      context,
+    );
+    expect(sealed.status).toBe('read');
+    expect(sealed.encryption).toBe('undecryptable');
+    expect(sealed.body).toBe('');
+  });
+
+  it('prefers the decrypted plaintext and flags OMEMO', () => {
+    const message = toMessage(
+      model({ ...incoming, is_encrypted: true, body: 'fallback', plaintext: 'secret' }),
+      context,
+    );
+    expect(message.body).toBe('secret');
+    expect(message.encryption).toBe('omemo');
+  });
+
+  it('turns an http URL body or oob_url into one attachment', () => {
+    const url = 'https://files.example.org/upload/abc/photo%20one.JPG?x=1';
+    const [attachment] = toMessage(model({ ...incoming, body: url }), context).attachments;
+    expect(attachment).toEqual({
+      url,
+      name: 'photo one.JPG',
+      size: 0,
+      mimeType: 'image/jpeg',
+      encryption: 'none',
+    });
+    const oob = toMessage(model({ ...incoming, body: 'see file', oob_url: url }), context);
+    expect(oob.attachments).toHaveLength(1);
+    expect(oob.body).toBe('see file');
+  });
+
+  it('marks aesgcm URLs as encrypted attachments and guesses unknown types', () => {
+    const url = 'aesgcm://files.example.org/upload/abc/report.bin#0123abcd';
+    const [attachment] = toMessage(model({ ...incoming, body: url }), context).attachments;
+    expect(attachment).toMatchObject({
+      name: 'report.bin',
+      mimeType: 'application/octet-stream',
+      encryption: 'aesgcm',
+    });
+  });
+
+  it('does not treat text with a URL inside as an attachment', () => {
+    const message = toMessage(model({ ...incoming, body: 'look https://a.b/c' }), context);
+    expect(message.attachments).toEqual([]);
+  });
+
+  it('groups reactions by emoji', () => {
+    const reactions = {
+      'romeo@example.org': ['👍', '❤️'],
+      'juliet@example.org': ['👍'],
+    };
+    expect(toMessage(model({ ...incoming, reactions }), context).reactions).toEqual([
+      { emoji: '👍', fromJids: ['romeo@example.org', 'juliet@example.org'] },
+      { emoji: '❤️', fromJids: ['romeo@example.org'] },
+    ]);
+  });
+
+  it('keeps the nick when there is one', () => {
+    expect(toMessage(model({ ...incoming, nick: 'Juliet' }), context).fromNick).toBe('Juliet');
+    expect('fromNick' in toMessage(model(incoming), context)).toBe(false);
+  });
+});
+
+describe('toChat', () => {
+  it('maps a direct chat', () => {
+    const attrs = { jid: 'juliet@example.org', num_unread: 3, omemo_active: true };
+    const chat = { ...model(attrs), getDisplayName: () => 'Juliet' } as unknown as ChatModel;
+    expect(toChat(chat)).toEqual({
+      id: 'juliet@example.org',
+      kind: 'direct',
+      peerJid: 'juliet@example.org',
+      title: 'Juliet',
+      unreadCount: 3,
+      encrypted: true,
+    });
+  });
+
+  it('falls back to the local part and attaches the last message', () => {
+    const chat = { ...model({ jid: 'juliet@example.org' }), getDisplayName: () => null };
+    const last = toMessage(model(incoming), context);
+    const mapped = toChat(chat as unknown as ChatModel, last);
+    expect(mapped.title).toBe('juliet');
+    expect(mapped.unreadCount).toBe(0);
+    expect(mapped.encrypted).toBe(false);
+    expect(mapped.lastMessage).toBe(last);
+  });
+});
+
+describe('toContact', () => {
+  function contact(status: string, subscription?: string): ContactModel {
+    return {
+      ...model({ jid: 'juliet@example.org', subscription }),
+      getDisplayName: () => 'Juliet',
+      getStatus: () => status,
+      isUnsaved: () => subscription === undefined,
+    };
+  }
+
+  it('maps presence and subscription', () => {
+    expect(toContact(contact('online', 'both'))).toEqual({
+      jid: 'juliet@example.org',
+      name: 'Juliet',
+      presence: 'online',
+      subscription: 'both',
+    });
+    expect(toContact(contact('chat', 'to')).presence).toBe('online');
+    expect(toContact(contact('away', 'from')).presence).toBe('away');
+    expect(toContact(contact('xa', 'none')).presence).toBe('away');
+    expect(toContact(contact('dnd', 'both')).presence).toBe('dnd');
+    expect(toContact(contact('offline', 'both')).presence).toBe('offline');
+    expect(toContact(contact('offline')).subscription).toBe('none');
+  });
+});
