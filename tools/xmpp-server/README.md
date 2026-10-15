@@ -84,9 +84,11 @@ same reason the admin socket is at `/tmp/hey-postie-prosody.sock`.
 ## Contract tests
 
 `packages/core/src/repositories/converse/contract.test.ts` drives the Converse repositories against
-this server as `alice`, with `bob` as a raw WebSocket client. It is skipped unless `XMPP_TEST_SERVER`
-is set; the `test:contract` script of `@hey-postie/core` sets it to the WebSocket URL above. The test
-runs in Node (jsdom), whose TLS does not read the keychain: pass the mkcert CA explicitly.
+this server as `alice`, with `bob` as a raw WebSocket client; `registration.contract.test.ts` creates
+and deletes `reg-<run>-a` / `reg-<run>-b` accounts through in-band registration. Both are skipped
+unless `XMPP_TEST_SERVER` is set; the `test:contract` script of `@hey-postie/core` (`vitest run
+contract.test`, every `*contract.test.ts`) sets it to the WebSocket URL above. The tests run in Node
+(jsdom), whose TLS does not read the keychain: pass the mkcert CA explicitly.
 
 ```sh
 tools/xmpp-server/start.sh -d && tools/xmpp-server/users.sh
