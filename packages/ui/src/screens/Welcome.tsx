@@ -4,10 +4,11 @@ import styles from './Welcome.module.css';
 
 interface WelcomeProps {
   onSignIn: () => void;
+  onCreateAccount: () => void;
 }
 
-/** The first screen: Postie, the name, and the two doors in. Account creation comes with milestone 5. */
-export function Welcome({ onSignIn }: WelcomeProps) {
+/** The first screen: Postie, the name, and the two doors in. */
+export function Welcome({ onSignIn, onCreateAccount }: WelcomeProps) {
   const text = useText();
   return (
     <main className={styles.welcome}>
@@ -18,12 +19,7 @@ export function Welcome({ onSignIn }: WelcomeProps) {
         <button type="button" className={styles.primary} onClick={onSignIn}>
           {text('welcome.signIn')}
         </button>
-        <button
-          type="button"
-          className={styles.secondary}
-          disabled
-          title={text('welcome.createAccountSoon')}
-        >
+        <button type="button" className={styles.secondary} onClick={onCreateAccount}>
           {text('welcome.createAccount')}
         </button>
       </div>

@@ -22,6 +22,18 @@
   min-width: 0;
 }
 
+/* One line; the full topic sits in the title attribute. */
+.topic {
+  flex: 1;
+  min-width: 0;
+  margin: 0 0 0 var(--space-2);
+  font-size: 13px;
+  color: var(--ink-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .title {
   font-size: 20px;
   overflow: hidden;
@@ -36,4 +48,20 @@
   font-variation-settings: 'SOFT' 100;
   font-size: 14px;
   color: var(--red);
+}
+
+/* Postie at the door of a hall the user is not in. */
+.outside {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  margin: var(--space-3) var(--space-4) 0;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-sm);
+  background: var(--kraft-soft);
+  font-family: var(--font-heading);
+  font-variation-settings: 'SOFT' 100;
+  font-size: 14px;
 }

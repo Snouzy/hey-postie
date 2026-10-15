@@ -75,7 +75,7 @@ export interface ContactModel extends ModelLike {
   isUnsaved(): boolean;
 }
 
-/** Strophe's connection, including the private members the close reason needs (xmpp.ts). */
+/** Strophe's connection, including the private members the close reason needs (socketClose.ts). */
 export interface ConnectionLike {
   connected?: boolean;
   jid?: string;
@@ -96,6 +96,39 @@ export interface ConnectionLike {
   _doDisconnect(): void;
 }
 
+export type StropheStatusCallback = (status: number, condition?: string | null) => void;
+
+/**
+ * A bare `Strophe.Connection` driven without Converse (registration.ts), with the privates the
+ * registration flow borrows from Converse's own register plugin: `_connect_cb` to read the stream
+ * features before any SASL step, `_addSysHandler` for IQ handlers that run unauthenticated.
+ */
+export interface StropheConnection extends ConnectionLike {
+  connected: boolean;
+  _proto: {
+    _onClose?: (event: CloseEvent) => void;
+    _connect_cb(body: Element): number | undefined;
+    _abortAllRequests(): void;
+  };
+  connect(jid: string, password: string, callback: StropheStatusCallback): void;
+  disconnect(reason?: string): void;
+  send(stanza: Element): void;
+  getUniqueId(suffix?: string): string;
+  _connect_cb(body: Element, callback: unknown, raw?: string): void;
+  _addSysHandler(
+    handler: (stanza: Element) => boolean,
+    ns: string | null,
+    name: string | null,
+    type: string | null,
+    id: string | null,
+  ): unknown;
+}
+
+/** The localForage instance behind Converse's persistent store (`utils/init.js:106-136`). */
+export interface PersistentStorageLike {
+  dropInstance(options: { name: string; storeName: string }): Promise<void>;
+}
+
 export interface ConverseApi {
   settings: { get(key: string): unknown; set(key: string, value: unknown): void };
   user: { login(jid: string, password: string): Promise<void>; logout(): Promise<void> };
@@ -105,6 +138,8 @@ export interface ConverseApi {
     not(name: string, handler: Handler): unknown;
   };
   waitUntil(name: string): Promise<unknown> | null;
+  /** Rejects with the error stanza, or `null` on timeout (`shared/api/send.js:49-75`). */
+  sendIQ(stanza: unknown, timeout?: number): Promise<Element>;
   contacts: {
     add(attributes: { jid: string; name?: string }): Promise<ContactModel>;
     remove(jid: string, unsubscribe?: boolean): Promise<void>;
@@ -147,7 +182,11 @@ export interface ConverseState {
 }
 
 export interface ConverseEnv {
-  Strophe: { Status: Record<string, number>; getBareJidFromJid(jid: string): string | null };
+  Strophe: {
+    Status: Record<string, number>;
+    Connection: new (service: string) => StropheConnection;
+    getBareJidFromJid(jid: string): string | null;
+  };
   u: {
     mam: {
       fetchArchivedMessages(
@@ -167,6 +206,6 @@ export interface ConverseHeadless {
     ROOMSTATUS: RoomStatus;
   };
   api: ConverseApi;
-  _converse: { state: ConverseState };
+  _converse: { state: ConverseState; storage: { persistent?: PersistentStorageLike } };
   MAMPlaceholderMessage: new (...args: never[]) => unknown;
 }

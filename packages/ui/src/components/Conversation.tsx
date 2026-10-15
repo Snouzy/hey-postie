@@ -1,8 +1,9 @@
-import type { Chat, Contact, Message } from '@hey-postie/core';
-import { Info } from 'lucide-react';
+import type { Chat, Contact, Message, Room } from '@hey-postie/core';
+import { Info, Users } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useCore, useText } from '../core/CoreProvider';
 import { useCoreEvent } from '../core/useCoreEvent';
+import { useRoomMembers } from '../core/useRoomMembers';
 import type { MessageKey } from '../i18n';
 import { errorKey } from '../i18n/errors';
 import { Button } from './Button';
@@ -15,6 +16,8 @@ interface ConversationProps {
   chat: Chat;
   /** The contact behind the chat, when it is in the address book: gives the presence. */
   contact: Contact | undefined;
+  /** The hall behind the chat, when it is one: gives the topic and the members. */
+  room: Room | undefined;
   detailsOpen: boolean;
   onToggleDetails: () => void;
   onOpenLink: (url: string) => void;
@@ -24,6 +27,7 @@ interface ConversationProps {
 export function Conversation({
   chat,
   contact,
+  room,
   detailsOpen,
   onToggleDetails,
   onOpenLink,
@@ -33,6 +37,12 @@ export function Conversation({
   const [messages, setMessages] = useState<Message[]>([]);
   const [hasOlder, setHasOlder] = useState(true);
   const [error, setError] = useState<MessageKey | null>(null);
+  const members = useRoomMembers(room?.jid ?? '');
+  const nicks = room
+    ? members.map((member) => member.nick).filter((nick) => nick !== room.nick)
+    : [];
+  // A hall the user is not in: left elsewhere, kicked, or bookmarked and not joined yet.
+  const outside = chat.kind === 'room' && !room?.joined;
 
   useEffect(() => {
     let cancelled = false;
@@ -81,6 +91,16 @@ export function Conversation({
     setMessages((current) => mergeById(current, [sent]));
   }
 
+  async function joinAgain() {
+    if (!room) return;
+    try {
+      await core.rooms.join({ jid: room.jid, nick: room.nick });
+      setError(null);
+    } catch (caught) {
+      setError(errorKey(caught));
+    }
+  }
+
   function retry(failed: Message) {
     setMessages((current) => current.filter((m) => m.id !== failed.id));
     send(failed.body).catch(() => setMessages((current) => mergeById(current, [failed])));
@@ -92,29 +112,43 @@ export function Conversation({
         <div className={styles.peer}>
           {contact && <PresenceDot presence={contact.presence} />}
           <h2 className={styles.title}>{chat.title}</h2>
+          {room && (
+            <p className={styles.topic} title={room.topic}>
+              {room.topic || text('room.topicEmpty')}
+            </p>
+          )}
         </div>
-        <Button
-          variant="ghost"
-          onClick={onToggleDetails}
-          aria-pressed={detailsOpen}
-          aria-label={text('main.details')}
-        >
-          <Info size={18} aria-hidden />
-        </Button>
+        {(room || chat.kind === 'direct') && (
+          <Button
+            variant="ghost"
+            onClick={onToggleDetails}
+            aria-pressed={detailsOpen}
+            aria-label={text(room ? 'main.members' : 'main.details')}
+          >
+            {room ? <Users size={18} aria-hidden /> : <Info size={18} aria-hidden />}
+          </Button>
+        )}
       </header>
+      {outside && (
+        <div className={styles.outside} role="status">
+          {text('room.notJoined')}
+          {room && <Button onClick={() => void joinAgain()}>{text('room.joinAgain')}</Button>}
+        </div>
+      )}
       <MessageList
         messages={messages}
         hasOlder={hasOlder}
         onLoadOlder={loadOlder}
         onRetry={retry}
         onOpenLink={onOpenLink}
+        showSenders={chat.kind === 'room'}
       />
       {error && (
         <p className={styles.error} role="alert">
           {text(error)}
         </p>
       )}
-      <Composer onSend={send} />
+      <Composer onSend={send} nicks={nicks} disabled={outside} />
     </section>
   );
 }

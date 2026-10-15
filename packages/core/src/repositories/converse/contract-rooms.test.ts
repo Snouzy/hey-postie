@@ -162,6 +162,7 @@ describe.skipIf(!SERVER)('Converse room repository against the XMPP test server'
         name: 'The Lobby',
         membersCount: 1,
       });
+      expect(await repositories.room.roomService('localhost')).toBe(SERVICE);
       const fromDomain = await repositories.room.browse('localhost');
       expect(fromDomain.map((r) => r.jid)).toContain(lobby);
       bob.leaveRoom(lobby, 'bob');

@@ -1,11 +1,13 @@
 import type {
   ChatRepository,
+  RegistrationRepository,
   RoomRepository,
   RosterRepository,
   XmppRepository,
 } from '../../contracts/repositories';
 import { ConverseChatRepository } from './chat';
 import { ConverseEngine, type EngineOptions } from './engine';
+import { ConverseRegistrationRepository } from './registration';
 import { ConverseRoomRepository } from './room';
 import { ConverseRosterRepository } from './roster';
 import { ConverseXmppRepository } from './xmpp';
@@ -17,9 +19,10 @@ export interface ConverseRepositories {
   roster: RosterRepository;
   chat: ChatRepository;
   room: RoomRepository;
+  registration: RegistrationRepository;
 }
 
-/** The four XMPP repositories over one Converse engine (wiki/development/converse.md). */
+/** The XMPP repositories over one Converse engine (wiki/development/converse.md). */
 export function createConverseRepositories(
   options: EngineOptions & { connectTimeoutMs?: number; joinTimeoutMs?: number } = {},
 ): ConverseRepositories {
@@ -29,5 +32,6 @@ export function createConverseRepositories(
     roster: new ConverseRosterRepository(engine),
     chat: new ConverseChatRepository(engine),
     room: new ConverseRoomRepository(engine, options.joinTimeoutMs),
+    registration: new ConverseRegistrationRepository(engine, options.connectTimeoutMs),
   };
 }

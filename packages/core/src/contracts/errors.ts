@@ -5,6 +5,8 @@ export type ErrorCode =
   | 'CertificateInvalid'
   | 'RegistrationUnsupported'
   | 'AccountConflict'
+  | 'RegistrationRejected'
+  | 'AccountCreatedSignInFailed'
   | 'KeychainUnavailable'
   | 'FileTooLarge'
   | 'EmptyMessage'
@@ -13,6 +15,7 @@ export type ErrorCode =
   | 'RoomNotFound'
   | 'RoomBanned'
   | 'NickTaken'
+  | 'DeviceNotFound'
   | 'EncryptionUnavailable'
   | 'Unknown';
 

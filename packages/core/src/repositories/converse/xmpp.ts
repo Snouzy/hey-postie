@@ -4,6 +4,7 @@ import type { AccountState } from '../../contracts/types';
 import type { ConverseEngine, Loaded } from './engine';
 import { bareJid } from './mappers';
 import type { ConnectionLike, ConverseApi, ModelLike } from './models';
+import { wrapSocketClose } from './socketClose';
 
 type StateHandler = (state: AccountState, error?: DomainError) => void;
 type ConnectInput = Parameters<XmppRepository['connect']>[0];
@@ -133,35 +134,22 @@ export class ConverseXmppRepository implements XmppRepository {
     });
   }
 
-  /**
-   * Strophe discards the WebSocket close reason, and does nothing at all when the socket closes
-   * cleanly before the stream opened (`strophe.js/src/websocket.js:360-378`). The relay closes with
-   * reason `CertificateInvalid` in that very state, so we keep the reason and turn such a close
-   * into a CONNFAIL that Converse then handles like any other.
-   */
+  /** Keeps the WebSocket close reason (`socketClose.ts`): the relay says `CertificateInvalid` there. */
   private wrapSocketClose(): void {
     this.closeReason = '';
     const loaded = this.engine.current;
     if (!loaded) return;
     const { api, env } = loaded;
     const connection = api.connection.get();
-    if (connection) silenceStanzaLog(connection);
-    const proto = connection?._proto;
-    const original = proto?._onClose;
-    if (!connection || !proto || !original) {
+    if (!connection) return;
+    silenceStanzaLog(connection);
+    const { CONNFAIL = 2 } = env.Strophe.Status;
+    const wrapped = wrapSocketClose(connection, CONNFAIL, (reason) => {
+      this.closeReason = reason;
+    });
+    if (!wrapped) {
       console.warn('converse: transport has no _onClose to wrap, close reasons are unavailable');
-      return;
     }
-    proto._onClose = (event: CloseEvent) => {
-      this.closeReason = event?.reason ?? '';
-      if (!connection.connected && event?.code !== 1006) {
-        const { CONNFAIL = 2 } = env.Strophe.Status;
-        connection._changeConnectStatus(CONNFAIL, event?.reason || 'closed');
-        connection._doDisconnect();
-        return;
-      }
-      original.call(proto, event);
-    };
   }
 
   private recordFailure(feedback: ModelLike): void {

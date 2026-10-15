@@ -154,6 +154,7 @@ through `conn.send` with a `conn._addSysHandler`, parses legacy fields or an `x:
 in. It relies on Strophe private members (`_connect_cb`, `_proto._connect_cb`, `_addSysHandler`).
 `api.sendIQ` throws before authentication. Account deletion after login:
 `api.sendIQ(stx\`<iq type="set" xmlns="jabber:client"><query xmlns="jabber:iq:register"><remove/></query></iq>\`)`.
+What we built on this: [§13](#13-registration-xep-0077-what-the-repository-does).
 
 ## 10. Logging
 
@@ -192,6 +193,12 @@ for explicitly (`engine.ts`). Strophe's own level follows (`shared/connection/ut
   `fetch` stub so that OMEMO initializes normally (it publishes its device list and bundle to PEP).
 - RFC 7395 framing: a stanza sent over the WebSocket has no `<stream>` parent, so it must carry
   `xmlns="jabber:client"` itself or Prosody closes the stream (`test-support/bobClient.ts`).
+- A first sign-in generates the OMEMO bundle (slow key generation) after `connected`; signing out
+  or deleting the account meanwhile empties the device lists under `OMEMOStore.generateBundle`
+  (`plugins/omemo/store.js:415-417`, `devicelists.get()` → `null.devices`). In a browser that is a
+  console error; under Vitest libomemo's glue turns the unhandled rejection into exit code 7. The
+  registration contract test waits for `api.waitUntil('OMEMOInitialized')` before deleting
+  (found on 2026-10-15).
 
 ## 12. What the repository actually does
 
@@ -256,7 +263,7 @@ installed package and by `repositories.test.ts`, which drives the real headless 
   `oob_url`, or a body that is only an `aesgcm://` URL (its `#ivkey` goes to `decryptionKey`); a bare
   link in a body is just a link. A file name whose percent-escapes are malformed is kept raw.
 - `room.ts` (with `room-join.ts`, `room-browse.ts`, `room-notify.ts`, `room-mappers.ts`): rooms,
-  see §13.
+  see §14.
 
 ### Contract test
 
@@ -266,7 +273,7 @@ installed package and by `repositories.test.ts`, which drives the real headless 
 ([tools/xmpp-server](../../tools/xmpp-server/README.md)); `bob@localhost` is a hand-written
 XMPP-over-WebSocket client (`test-support/bobClient.ts`: `<open/>`, SASL PLAIN, bind, raw stanzas)
 so that the two sides are independent. The shared preamble (asset `fetch` stub, Node's `Event`
-class, §11) is `test-support/contractEnv.ts`; `contract-rooms.test.ts` (§13) is the second file.
+class, §11) is `test-support/contractEnv.ts`; `contract-rooms.test.ts` (§14) is another file.
 Vitest runs files in parallel workers, each with its own Converse signing in as alice: the script
 passes `--no-file-parallelism`, otherwise the two suites trample each other on the server.
 Six scenarios in order, all passing on 2026-10-15: wrong
@@ -318,7 +325,90 @@ sign-out and sign-in again. Observed along the way:
   `curve25519_compiled.wasm` (84 kB) and `emoji.json` (264 kB) sit in `apps/desktop/public/`.
   Checked on the 2026-10-15 build output; the OMEMO load itself is not exercised yet.
 
-## 13. Rooms (MUC)
+## 13. Registration (XEP-0077): what the repository does
+
+_Implementation of 2026-10-15, `registration.ts` + `registrationForm.ts`, verified by
+`registration.test.ts` (real Strophe over a scripted WebSocket) and `registration.contract.test.ts`
+(the local Prosody, `allow_registration = true`)._
+
+**Flow.** `form({ domain, websocketUrl })` opens a bare `new Strophe.Connection(websocketUrl)`
+(`converse.env.Strophe.Connection`, independent from Converse's login connection; `engine.ready()`
+only provides `Strophe`), calls `connect(domain, '', statusCallback)` and replaces
+`connection._connect_cb` as the UI plugin does: set `connected = true`, let
+`_proto._connect_cb(body)` check for a stream error, then look for
+`<register xmlns="http://jabber.org/features/iq-register"/>` in the features. No `<register/>` →
+`RegistrationUnsupported`, without sending anything; SASL never starts. Then
+`<iq type="get"><query xmlns="jabber:iq:register"/></iq>` goes through `connection.send` with a
+`_addSysHandler(handler, null, 'iq', null, id)` (system handlers run unauthenticated; user
+handlers do not, `strophe.js/src/connection.js:1279`). The stream **stays open** with the parsed
+form: `submit` answers on that same session, which a CAPTCHA challenge requires (XEP-0158 binds
+the answer to the stream). If the server closed it meanwhile (`connection.connected` false, or
+another domain), `submit` opens a new stream and fetches the form again. `submit` always ends with
+`connection.disconnect()` (`<close/>`, no presence since unauthenticated). A new `form()` closes
+any pending stream.
+
+**Parsing** (`registrationForm.ts`, pure DOM): an `<x xmlns="jabber:x:data"/>` child wins over
+the legacy children (Prosody sends both). x:data: `text-single`/no type → `text` (`password`,
+`email` by name), `text-private` → `password`, `hidden` → `hidden` (required, value kept in
+`defaults` and echoed back), `<required/>`; `fixed`, `boolean`, `list-*` are dropped. Legacy:
+every child except `instructions`, `registered`, `x` (`jabber:x:oob` URLs are ignored) and `key`
+is a required field. CAPTCHA: the `ocr` field's `<media><uri>cid:…</uri></media>` is matched to the
+`<data xmlns="urn:xmpp:bob" cid type>` sibling of the form → `captchaImageDataUrl`
+(`data:<type>;base64,…`), `captchaField: 'ocr'`.
+
+**Submit** receives the visible fields only (`RegistrationField` has no value, so the UI neither
+renders hidden fields nor echoes them; the CAPTCHA answer comes under `captchaField`). The
+repository merges the hidden values it kept from `form()` (`FORM_TYPE`, a CAPTCHA's
+`challenge`/`sid`...) itself. It builds `<iq type="set"><query xmlns="jabber:iq:register">` with either
+`<x type="submit">` (every field of the form: the user's value, else the server default; empty
+optional fields skipped) or one legacy child per value (names restricted to `[a-z][\w-]*`). Stanzas
+are built as XML strings, escaped, and parsed with `DOMParser`: Strophe's `Builder.serialize`
+writes the `xmlns` *attributes* it finds, and `createElementNS` would not produce any. Known limitation: when the stream of `form()` is gone and
+`submit` reopens one, the hidden values come from the re-fetched form; a CAPTCHA challenge of the
+first stream is then stale and the server rejects the answer (`RegistrationRejected`).
+
+**Errors.** `conflict` → `AccountConflict`; `not-acceptable`, `bad-request` →
+`RegistrationRejected` (Prosody's text, "The requested username is invalid.", is in the message);
+`not-allowed`, `forbidden`, `service-unavailable` → `RegistrationUnsupported`; else `Unknown`.
+CONNFAIL → `ServerUnreachable`, or `CertificateInvalid` when the WebSocket close reason says so
+(`socketClose.ts`, the same wrapper `xmpp.ts` uses); DISCONNECTED while waiting → `ServerUnreachable`;
+20 s without an answer (`connectTimeoutMs` of `createConverseRepositories`) → `ServerUnreachable`.
+
+**`deleteCurrent`** goes through the signed-in connection: `api.sendIQ(<iq type="set"><query
+xmlns="jabber:iq:register"><remove/></query></iq>)`; the rejection carries the error stanza (an
+`Element`) or `null` on timeout. Prosody closes the stream right after the result; the accounts
+service then calls `xmpp.disconnect()`, which is the normal logout path.
+
+**`wipeLocal(jid)`** removes, for the lower-cased bare JID: the localStorage keys prefixed
+`converse-persistent/<jid>/` (localForage's localStorage driver layout, `_getKeyPrefix`), our
+`hey-postie:<jid>:` keys, `conversejs-session-jid` when it names this account, and, when the engine
+is loaded, `_converse.storage.persistent.dropInstance({ name: 'converse-persistent', storeName:
+<jid> })` (best effort: a failure is a `console.warn`, the account is already gone from the
+server): Converse opens one localForage instance per account (`utils/init.js:106-136, 206`), an
+IndexedDB object store named after the JID inside the `converse-persistent` database, and
+everything of the account (roster, chats, messages, OMEMO store and sessions, user settings,
+login info) lives in it. Not wiped: the keychain (the service does that), `sessionStorage`
+(`converse-session`, per tab, gone with the window), the emoji cache and anything not keyed by
+JID.
+
+**Strophe privates used:** `Connection#_connect_cb` (replaced), `_proto._connect_cb`,
+`_addSysHandler`, `connected` (set by hand, as the UI plugin does: `_onIdle` only flushes while
+connected), `_proto._onClose` (through `socketClose.ts`). Verify them on every Strophe upgrade
+(`strophe.js` 4.0.0 today, a dependency of headless).
+
+**Contract test** (`registration.contract.test.ts`, part of `pnpm test:contract`): `form` of
+`localhost` has `username`/`password` (x:data, both required) and instructions; `submit` creates
+`reg-<run>-a`, a second `submit` of the same name is `AccountConflict`; `accounts.register` through
+`createCore` with the real repositories ends `online` as `reg-<run>-b`; registering `-b` again is
+`AccountConflict` and the session stays online; `deleteAccount` then `signIn` → `InvalidCredentials`.
+Both accounts are deleted at the end. `test-support/realSocket.ts` duplicates the Node `Event` and
+asset-serving fixes of `contract.test.ts` (follow-up: make that file import them). Known limitation:
+the OMEMO race of §11 (the service will gate deletion on an `OMEMOInitialized` signal once the crypto
+repository lands). Observed: Prosody's
+`mod_register_limits` is not throttling here (no `min_seconds_between_registrations`, 127.0.0.1
+allow-listed), so many registrations per run are fine.
+
+## 14. Rooms (MUC)
 
 _Implementation of 2026-10-15, `room.ts`, `room-join.ts`, `room-browse.ts`, `room-notify.ts`,
 `room-mappers.ts`, plus the room paths of `chat.ts`. Verified by `room.test.ts` (MockConnection)

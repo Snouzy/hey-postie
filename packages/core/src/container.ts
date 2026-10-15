@@ -1,7 +1,9 @@
 import type {
   ChatRepository,
+  CryptoRepository,
   KeychainRepository,
   Notifier,
+  RegistrationRepository,
   RoomRepository,
   RosterRepository,
   TransportRepository,
@@ -11,6 +13,7 @@ import type { Core } from './contracts/services';
 import { createAccountsService } from './services/accounts';
 import { createChatsService } from './services/chats';
 import { createContactsService } from './services/contacts';
+import { createCryptoService } from './services/crypto';
 import { createEventBus } from './services/events';
 import { createNotificationsService } from './services/notifications';
 import { createRoomsService } from './services/rooms';
@@ -22,6 +25,8 @@ export interface CoreDependencies {
   roster: RosterRepository;
   chat: ChatRepository;
   room: RoomRepository;
+  crypto: CryptoRepository;
+  registration: RegistrationRepository;
   notifier: Notifier;
 }
 
@@ -32,6 +37,7 @@ export function createCore(deps: CoreDependencies): Core {
   const contacts = createContactsService(deps, events);
   const chats = createChatsService(deps, events);
   const rooms = createRoomsService(deps, events);
+  const crypto = createCryptoService(deps, events);
   const notifications = createNotificationsService(deps, events);
-  return { accounts, contacts, chats, rooms, notifications, events };
+  return { accounts, contacts, chats, rooms, crypto, notifications, events };
 }

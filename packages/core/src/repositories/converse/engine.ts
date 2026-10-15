@@ -21,6 +21,7 @@ export interface EngineOptions {
 export interface Loaded {
   api: ConverseApi;
   state: ConverseState;
+  storage: ConverseHeadless['_converse']['storage'];
   env: ConverseEnv;
   roomStatus: RoomStatus;
   MAMPlaceholderMessage: ConverseHeadless['MAMPlaceholderMessage'];
@@ -85,6 +86,7 @@ export class ConverseEngine {
     const loaded = {
       api,
       state: _converse.state,
+      storage: _converse.storage,
       env: converse.env,
       roomStatus: converse.ROOMSTATUS,
       MAMPlaceholderMessage,

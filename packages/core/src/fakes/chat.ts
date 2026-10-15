@@ -26,10 +26,18 @@ export class FakeChat implements ChatRepository {
     this.archive.set(chatId, messages);
   }
 
-  /** An incoming message from the server. */
-  receive(input: Partial<Message> & { chatId: string; fromJid: string; body: string }): Message {
-    const chat = this.ensureChat(input.chatId, input.fromJid);
-    const message = this.build({ direction: 'in', ...input });
+  /** An incoming message from the server. `kind` applies when the chat is created by this call. */
+  receive(
+    input: Partial<Message> & {
+      chatId: string;
+      fromJid: string;
+      body: string;
+      kind?: Chat['kind'];
+    },
+  ): Message {
+    const { kind, ...rest } = input;
+    const chat = this.ensureChat(input.chatId, input.fromJid, kind);
+    const message = this.build({ direction: 'in', ...rest });
     this.append(chat, message);
     for (const handler of this.messageHandlers) handler(message);
     return message;
@@ -96,12 +104,12 @@ export class FakeChat implements ChatRepository {
     return () => this.chatHandlers.delete(handler);
   }
 
-  private ensureChat(id: string, peerJid: string): Chat {
+  private ensureChat(id: string, peerJid: string, kind: Chat['kind'] = 'direct'): Chat {
     const existing = this.chats.get(id);
     if (existing) return existing;
     const chat: Chat = {
       id,
-      kind: 'direct',
+      kind,
       peerJid,
       title: peerJid.split('@')[0] ?? peerJid,
       unreadCount: 0,

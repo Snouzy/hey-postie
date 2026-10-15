@@ -13,6 +13,8 @@ interface MessageListProps {
   onLoadOlder: () => Promise<boolean>;
   onRetry: (message: Message) => void;
   onOpenLink: (url: string) => void;
+  /** In a hall: the sender's nick above each run of incoming messages. */
+  showSenders?: boolean;
 }
 
 interface Run {
@@ -37,6 +39,7 @@ export function MessageList({
   onLoadOlder,
   onRetry,
   onOpenLink,
+  showSenders = false,
 }: MessageListProps) {
   const text = useText();
   const locale = useLocale();
@@ -95,6 +98,9 @@ export function MessageList({
           <h3 className={styles.separator}>{dayLabel(locale, day.date, text)}</h3>
           {day.runs.map((run) => (
             <div key={run.messages[0]?.id} className={styles.run} data-from={run.fromJid}>
+              {showSenders && run.messages[0]?.direction === 'in' && (
+                <span className={styles.sender}>{senderOf(run.messages[0])}</span>
+              )}
               {run.messages.map((message, index) => (
                 <MessageBubble
                   key={message.id}
@@ -110,6 +116,10 @@ export function MessageList({
       ))}
     </div>
   );
+}
+
+function senderOf(message: Message): string {
+  return message.fromNick ?? message.fromJid.split('/')[1] ?? message.fromJid;
 }
 
 export function groupByDay(messages: Message[]): Day[] {

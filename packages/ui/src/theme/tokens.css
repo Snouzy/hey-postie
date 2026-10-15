@@ -10,6 +10,7 @@
   --kraft: #b98a4e;
   --kraft-soft: #efe2cc;
   --yellow: #f2c14e;
+  --on-yellow: #1e2230;
   --success: #2e7d4f;
   --warning: #a35900;
   --line: rgb(30 34 48 / 0.12);
@@ -43,6 +44,7 @@
     --navy: #8fb0e8;
     --navy-contrast: #0f1a2e;
     --red: #f07a66;
+    --on-yellow: #1e2230;
     --kraft: #d9b27c;
     --kraft-soft: #2b2619;
     --line: rgb(238 233 221 / 0.14);
@@ -58,6 +60,7 @@
   --navy: #8fb0e8;
   --navy-contrast: #0f1a2e;
   --red: #f07a66;
+  --on-yellow: #1e2230;
   --kraft: #d9b27c;
   --kraft-soft: #2b2619;
   --line: rgb(238 233 221 / 0.14);

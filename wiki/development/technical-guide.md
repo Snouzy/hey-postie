@@ -8,7 +8,7 @@ _Created 2026-10-15. Updated as the code grows; each section names the files it 
 packages/core/     the engine, TypeScript, no React
   src/contracts/   types, errors, events, repository and service interfaces
   src/services/    business rules; depend on repository interfaces only
-  src/repositories/ implementations: converse/ (XMPP, roster, chats, rooms), tauri/ (keychain, transport, notifier)
+  src/repositories/ implementations: converse/ (XMPP, roster, chats, rooms, registration), tauri/ (keychain, transport, notifier)
   src/fakes/       in-memory repositories for tests and for the UI in development
   src/container.ts createCore(deps): the single place where everything is wired
 packages/ui/       React: theme/, i18n/, illustrations/, screens/, components/
@@ -30,7 +30,8 @@ tasks/             agents' plans and lessons, untracked
 - **Persistence**: `apps/desktop/app/repositories/keychain.ts` calls the Rust `keychain_*` commands;
   `packages/core/src/fakes/keychain.ts` keeps a `Map` in memory for tests.
   `packages/core/src/repositories/converse/` wraps `@converse/headless`: `engine.ts` owns the one
-  Converse instance, `xmpp.ts`, `roster.ts`, `chat.ts` and `room.ts` implement the four repository contracts,
+  Converse instance, `xmpp.ts`, `roster.ts`, `chat.ts`, `room.ts` and `registration.ts` (XEP-0077 over a bare
+  Strophe connection, plus account deletion and local wipe) implement the repository contracts,
   `mappers.ts` turns Converse models into the plain types of `contracts/`. `createConverseRepositories()`
   (exported by `@hey-postie/core`) wires them over one engine; `apps/desktop/app/dependencies.ts`
   calls it. Details and pitfalls: [converse.md](converse.md).
@@ -54,8 +55,7 @@ A local Prosody 13 server, bound to `localhost` only, for development and for th
 gated by `XMPP_TEST_SERVER`: see [`tools/xmpp-server/README.md`](../../tools/xmpp-server/README.md)
 (install, start/stop, test accounts `alice@localhost` and `bob@localhost`, ports, certificates).
 
-The contract tests of the Converse repositories (`packages/core/src/repositories/converse/contract*.test.ts`,
-described in [converse.md](converse.md#contract-test)) runs against it:
+  src/repositories/ implementations: converse/ (XMPP, roster, chats, rooms, registration), tauri/ (keychain, transport, notifier)
 
 ```sh
 tools/xmpp-server/start.sh -d && tools/xmpp-server/users.sh

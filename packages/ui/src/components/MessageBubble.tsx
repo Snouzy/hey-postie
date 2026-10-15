@@ -18,10 +18,17 @@ export function MessageBubble({ message, last, onRetry, onOpenLink }: MessageBub
   const text = useText();
   const locale = useLocale();
   const sealed = message.encryption === 'undecryptable';
-  const classes = [styles.bubble, styles[message.direction], last ? styles.last : ''].join(' ');
+  const mention = message.isMention && message.direction === 'in';
+  const classes = [
+    styles.bubble,
+    styles[message.direction],
+    last ? styles.last : '',
+    mention ? styles.mention : '',
+  ].join(' ');
 
   return (
     <div className={classes} data-status={message.status}>
+      {mention && <span className={styles.srOnly}>{text('message.mention')}</span>}
       <p className={sealed ? styles.sealed : styles.body}>
         {sealed ? (
           <>
