@@ -4,33 +4,36 @@ import { useDevices } from '../core/useDevices';
 import { useTrustAction } from '../core/useTrustAction';
 import { DeviceList } from './DeviceList';
 import styles from './Encryption.module.css';
+import { RetryNotice } from './RetryNotice';
 
 interface EncryptionSectionProps {
   jid: string;
-  /** Opened from a sealed letter: the section takes the focus so the reader lands on it. */
-  focus?: boolean;
+  /** Counts the "Check their devices" requests: every new one sends the focus to the section. */
+  focusRequest?: number;
 }
 
 /** The "Encryption" part of a contact's details: their devices, and how far each one is trusted. */
-export function EncryptionSection({ jid, focus = false }: EncryptionSectionProps) {
+export function EncryptionSection({ jid, focusRequest = 0 }: EncryptionSectionProps) {
   const text = useText();
   const headingId = useId();
   const section = useRef<HTMLElement>(null);
-  const devices = useDevices(jid);
-  const { error, act } = useTrustAction();
+  const { devices, error, reload } = useDevices(jid);
+  const trust = useTrustAction();
 
   useEffect(() => {
-    if (!focus) return;
+    if (focusRequest === 0) return;
     section.current?.focus();
     section.current?.scrollIntoView?.({ block: 'start' });
-  }, [focus]);
+  }, [focusRequest]);
 
   return (
     <section ref={section} className={styles.section} aria-labelledby={headingId} tabIndex={-1}>
       <h3 id={headingId} className={styles.heading}>
         {text('crypto.section')}
       </h3>
-      {devices.length === 0 ? (
+      {error ? (
+        <RetryNotice error={error} onRetry={reload} />
+      ) : devices.length === 0 ? (
         <p className={styles.empty}>{text('crypto.empty')}</p>
       ) : (
         <>
@@ -39,13 +42,13 @@ export function EncryptionSection({ jid, focus = false }: EncryptionSectionProps
             devices={devices}
             label={text('crypto.section')}
             actions="trust"
-            onAction={(device, action) => void act(device, action)}
+            onAction={trust.act}
           />
         </>
       )}
-      {error && (
+      {trust.error && (
         <p className={styles.error} role="alert">
-          {text(error)}
+          {text(trust.error)}
         </p>
       )}
     </section>

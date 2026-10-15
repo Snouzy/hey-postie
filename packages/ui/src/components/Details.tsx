@@ -12,12 +12,12 @@ import { EncryptionSection } from './EncryptionSection';
 interface DetailsProps {
   chat: Chat;
   onClose: () => void;
-  /** Opened from a sealed letter: the Encryption section takes the focus. */
-  focusEncryption?: boolean;
+  /** Counts the "Check their devices" requests; each new one focuses the Encryption section. */
+  focusRequest?: number;
 }
 
 /** The right pane: who the peer is, their devices, and the one destructive action. */
-export function Details({ chat, onClose, focusEncryption = false }: DetailsProps) {
+export function Details({ chat, onClose, focusRequest = 0 }: DetailsProps) {
   const core = useCore();
   const text = useText();
   const [confirming, setConfirming] = useState(false);
@@ -45,7 +45,7 @@ export function Details({ chat, onClose, focusEncryption = false }: DetailsProps
         <dt>{text('details.jid')}</dt>
         <dd className={styles.jid}>{chat.peerJid}</dd>
       </dl>
-      <EncryptionSection jid={chat.peerJid} focus={focusEncryption} />
+      <EncryptionSection jid={chat.peerJid} focusRequest={focusRequest} />
       <Button variant="danger" onClick={() => setConfirming(true)}>
         {text('details.removeContact')}
       </Button>

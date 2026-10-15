@@ -144,9 +144,9 @@ are bare and lowercase from the core, so rows and halls are matched as-is.
   right now" on a kraft banner and a disabled composer. When the hall is still known (bookmarked,
   left elsewhere, kicked) the banner offers "Join again" → `rooms.join` with the stored nick,
   errors inline. A room chat with no hall record at all (history of a hall left for good) shows
-  the banner alone, and neither the members button nor the contact pane: `Main` renders
-  `Details` only for `chat.kind === 'direct'` and `RoomDetails` (keyed by the JID) only when the
-  hall record exists.
+  the banner alone, and neither the members button nor the contact pane: `DetailsPane` (keyed
+  by the chat) renders `Details` only for `chat.kind === 'direct'` and `RoomDetails` (keyed by
+  the JID) only when the hall record exists.
 - **Nick completion**: `Composer` receives the members' nicks (minus my own). Tab completes the
   word before the caret into the nick it equals, else the first nick that starts with it, both
   ignoring case: `nick: ` at the start of a line, `nick ` elsewhere, and no second space when one
@@ -163,47 +163,61 @@ are bare and lowercase from the core, so rows and halls are matched as-is.
 
 ## Encryption (Postie Seal)
 
-_Added 2026-10-15. Sources: `components/SealToggle.tsx`, `DeviceList.tsx`,
-`EncryptionSection.tsx`, `RoomEncryption.tsx`, `MyDevices.tsx`, `core/useEncryption.ts`,
-`core/useDevices.ts`, `core/useTrustAction.ts`, `screens/Encryption.test.tsx`. The rules
+_Added 2026-10-15, reworked after review the same day. Sources: `components/SealToggle.tsx`,
+`DeviceList.tsx`, `EncryptionSection.tsx`, `RoomEncryption.tsx`, `MyDevices.tsx`,
+`RetryNotice.tsx`, `core/useEncryption.ts`, `core/useDevices.ts`, `core/useMemberDevices.ts`,
+`core/useTrustAction.ts`, `screens/Encryption.test.tsx`, `screens/Devices.test.tsx`. The rules
 themselves (blind trust, when a chat can be sealed) live in the core (spec 3.6); the UI only
 shows and asks._
 
 - **The lock** (`SealToggle`, in the `Conversation` header): a `<button aria-pressed>` with the
-  lucide `lock` / `lock-open` icon. `useEncryption(chat)` holds the state: it starts from
-  `chat.encrypted`, follows `chat.updated` for that chat, and flips after a
-  `crypto.setEncryption(chat.id, !encrypted)` the service accepted (the real repository may or
-  may not announce it; both paths agree). `EncryptionUnavailable` shows Postie's sentence
-  `crypto.unavailable` ("no key on the other side") under the header, as a `role="alert"`; any
-  other error shows its usual sentence. `Conversation` is keyed by the chat, so the initial value
-  is read once per chat.
+  lucide `lock` / `lock-open` icon. `useEncryption(chat)` holds the state, and the truth is
+  always the record: `chat.encrypted`, then every `chat.updated` for that chat (the service emits
+  one after a `setEncryption` it accepted). The hook never flips the state itself, so a
+  `chat.updated` that says otherwise after the call wins. While the call is pending the lock is
+  disabled with `aria-busy`, and a second click does nothing. `EncryptionUnavailable` shows
+  Postie's sentence `crypto.unavailable` ("no key on the other side") under the header, as a
+  `role="alert"`; any other error shows its usual sentence.
 - While sealed, the composer's hint reads "Write a sealed letter…" (`Composer`'s `sealed` prop).
   An outgoing message with `encryption: 'omemo'` carries the **wax seal** badge (`MessageBubble`,
   `.wax`): a `--red` dot at the corner of the bubble, with a hidden "Sealed" for screen readers.
 - **Undecryptable** messages keep Postie's sentence and add a plain help line ("Ask them to send
-  it again, or check their devices") with a "Check their devices" button. The button goes up to
-  `Main` (`onShowDevices` → `onOpenEncryption`), which opens the details pane with
-  `focusEncryption` set: the Encryption section takes the focus and scrolls into view, so a
-  keyboard reader lands on the devices. Toggling the pane from the header clears the flag.
-- **Devices of a contact** (`EncryptionSection`, in `Details`): `useDevices(jid)` loads
-  `crypto.devices(jid)` once and then takes the `devices.changed` payload for that address.
-  `DeviceList` renders one `<li>` per device: the fingerprint through `crypto.formatFingerprint`
-  in monospace, the **trust stamp** (Untrusted / Trusted / Verified / Blocked), and the actions
-  the trust allows: Verify and Block when untrusted or trusted, Block when verified, Unblock when
-  blocked. Every button carries the fingerprint in its accessible name ("Verify ABCDEF01 …"), as
-  the rows look alike. `useTrustAction` calls `crypto.verify / block / unblock`; the list itself
-  updates through `devices.changed`, never locally. A hint asks to compare fingerprints in person
-  before verifying. No device: "No key on the other side yet."
+  it again, or check their devices") with a "Check their devices" button, only when a pane can
+  open (a direct chat, or a hall the app has a record of). The button goes up to `Main`
+  (`onShowDevices` → `onOpenEncryption` → `showDetails(true)`), which opens the pane and bumps
+  `encryptionFocus`, a request counter: the Encryption section focuses itself and scrolls into
+  view on every new value, so a second request re-focuses too. The header toggle resets it to 0.
+- **Loading devices**: `useDevices(jid)` loads `crypto.devices(jid)` and then takes the
+  `devices.changed` payload for that address; a new address empties the list at once, only the
+  latest request may set it, and an event arriving during the load wins over the load (the
+  request is cancelled). `useOwnDevices()` re-reads `crypto.ownDevices()` on every
+  `devices.changed`, since the service does not say which address is mine. `useMemberDevices`
+  loads several addresses at once (a hall) and says when all have answered. A failed load is an
+  **error state**: `RetryNotice` shows Postie's sentence with "Retry" (`reload`), never the
+  "no key" sentence. `Main` keys `Details` by `chat.id` (and `RoomDetails` by the hall's JID), so
+  switching chats with the pane open never shows the previous peer's devices.
+- **Devices of a contact** (`EncryptionSection`, in `Details`): `DeviceList` renders one
+  focusable `<li>` per device: the fingerprint through `crypto.formatFingerprint` in a `<code>`,
+  the **trust stamp** (Untrusted / Trusted / Verified / Blocked), and the actions the trust
+  allows: Verify and Block when untrusted or trusted, Block when verified, Unblock when blocked
+  (Block needs no confirmation: it is reversible). Every button is `aria-describedby` its row's
+  `<code>`, so a screen reader hears the fingerprint after the verb while the visible label stays
+  short. `useTrustAction` calls `crypto.verify / block / unblock`, one call at a time; the list
+  itself updates through `devices.changed`, never locally, and once the service answered the
+  **row takes the focus** (its buttons just changed). A hint asks to compare fingerprints in
+  person before verifying. No device: "No key on the other side yet."
 - **Devices in a hall** (`RoomEncryption`, in `RoomDetails`): the same list, grouped by member,
-  for the members whose `jid` the hall reveals (non-anonymous halls); a member without any known
-  device takes no room, anonymous members cannot be checked. Nothing to show: Postie says so.
+  for the members whose `jid` the hall reveals (non-anonymous halls). Emptiness is decided from
+  the loaded lists: known members without any device show Postie's "no key" sentence, not the
+  hint; nothing shows while the lists are still being read.
 - **My devices** (`MyDevices`): a `Dialog` opened from the "My devices…" item of the
-  `AccountMenu` (`onMyDevices`, through `Sidebar` to `Main`). `useOwnDevices()` re-reads
-  `crypto.ownDevices()` on every `devices.changed`, since the service does not say which address
-  is mine. "Remove" replaces the list by a confirmation inside the same dialog (no nested
-  dialogs: Esc has one card to close), then `crypto.removeOwnDevice(id)`. The row whose id is
-  `crypto.ownDeviceId()` wears a "This device" stamp and has no "Remove": a device does not
-  retire itself from here (no row is marked until the service has answered).
+  `AccountMenu` (`onMyDevices`, through `Sidebar` to `Main`). "Remove" replaces the list by a
+  confirmation inside the same dialog (no nested dialogs: Esc has one card to close), then
+  `crypto.removeOwnDevice(id)`, one call at a time. Focus follows: the confirm button when asked,
+  back to that row's "Remove" on cancel (or on a failure), the list once a device is gone. A
+  `devices.changed` that no longer lists the device being confirmed drops the confirmation. The
+  row whose id is `crypto.ownDeviceId()` wears a "This device" stamp and has no "Remove": a
+  device does not retire itself from here (no row is marked until the service has answered).
 
 ## Keyboard
 
@@ -271,8 +285,11 @@ sentence, focus back to "+", room service discovery, bad domain sentence, browse
 sender nick and mention highlight, Tab completion with the caret, outside a hall and "Join
 again", a room chat without a hall record, members by role and notify radios, Esc on the leave
 confirmation, leave with confirmation, a fresh hall on top, mentions badge),
-`Encryption.test.tsx` (the lock calls `setEncryption`, sealed composer hint, follows
-`chat.updated`, the no-key sentence, devices with formatted fingerprints and stamps, Verify /
-Block / Unblock through `devices.changed`, no device yet, a hall's devices by member, My devices
-list and removal with confirmation, the wax badge, undecryptable help line and the way to the
-devices).
+`Encryption.test.tsx` (the lock seals through the service and the composer hint follows, pending
+lock with `aria-busy` and a double click, `chat.updated` wins after the call, the no-key
+sentence, devices with formatted fingerprints and stamps, Verify / Block / Unblock through
+`devices.changed` with the focus on the row, failed load with Retry, no stale devices after a
+chat switch, an event during the load wins, the wax badge, undecryptable help line and the way
+to the devices twice, no way when no pane can open), `Devices.test.tsx` (My devices with "This
+device", confirm / cancel / remove with the focus following, confirmation dropped when the device
+goes away, failed load with Retry; a hall's devices by member, known members without any key).

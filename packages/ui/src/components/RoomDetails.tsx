@@ -17,8 +17,8 @@ interface RoomDetailsProps {
   onChanged: () => Promise<void>;
   /** After leaving: Main drops the selection. */
   onLeft: () => void;
-  /** Opened from a sealed letter: the Encryption section takes the focus. */
-  focusEncryption?: boolean;
+  /** Counts the "Check their devices" requests; each new one focuses the Encryption section. */
+  focusRequest?: number;
 }
 
 const ROLES: readonly RoomMember['role'][] = ['moderator', 'participant', 'visitor'];
@@ -30,7 +30,7 @@ export function RoomDetails({
   onClose,
   onChanged,
   onLeft,
-  focusEncryption = false,
+  focusRequest = 0,
 }: RoomDetailsProps) {
   const core = useCore();
   const text = useText();
@@ -93,7 +93,7 @@ export function RoomDetails({
         })}
       </section>
 
-      <RoomEncryption members={members} focus={focusEncryption} />
+      <RoomEncryption members={members} focusRequest={focusRequest} />
 
       <fieldset className={styles.notify}>
         <legend className={styles.heading}>{text('room.notify')}</legend>

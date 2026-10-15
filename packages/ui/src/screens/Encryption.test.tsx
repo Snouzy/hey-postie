@@ -1,153 +1,134 @@
-import type { FakeDependencies } from '@hey-postie/core';
-import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
-import { App } from '../App';
+import { act, fireEvent, screen, waitFor, within } from '@testing-library/react';
+import { describe, expect, it, vi } from 'vitest';
 import { MessageList } from '../components/MessageList';
 import { message, renderWithCore, setupCore } from '../test-utils';
+import {
+  BOB,
+  deferred,
+  FINGERPRINT,
+  FORMATTED,
+  HALL,
+  signedIn,
+  withChat,
+} from './seal-test-helpers';
 
-const BOB = 'bob@x.org';
-const HALL = 'hall@rooms.x.org';
-const FINGERPRINT = 'abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789';
-const FORMATTED = 'ABCDEF01 23456789 ABCDEF01 23456789 ABCDEF01 23456789 ABCDEF01 23456789';
-
-async function signedIn(before: (deps: FakeDependencies) => void = () => {}) {
-  const { deps, core } = setupCore();
-  before(deps);
-  render(<App core={core} locale="en" />);
-  await act(() => core.accounts.signIn({ jid: 'alice@x.org', password: 'pw', remember: false }));
-  return { deps, core };
-}
-
-/** A direct chat with Bob, open on screen. */
-async function withBob(deps: FakeDependencies, body = 'hello', encryption?: 'undecryptable') {
-  act(() => {
-    deps.fakes.chat.receive({ chatId: BOB, fromJid: BOB, body, ...(encryption && { encryption }) });
-  });
-  fireEvent.click(await screen.findByRole('button', { name: /bob/ }));
-  return screen.getByRole('region', { name: 'bob' });
-}
-
-function sealToggle() {
-  return screen.getByRole('button', { name: 'Seal letters' });
-}
+const seal = () => screen.getByRole('button', { name: 'Seal letters' });
 
 describe('The lock in the header', () => {
-  it('seals the chat, says so in the composer, and follows chat.updated', async () => {
+  it('seals the chat through the service and says so in the composer', async () => {
+    const { deps } = await signedIn((d) =>
+      d.fakes.crypto.seed(BOB, { deviceId: 1, fingerprint: FINGERPRINT }),
+    );
+    await withChat(deps);
+    expect(seal()).toHaveAttribute('aria-pressed', 'false');
+    expect(screen.getByPlaceholderText('Write a letter…')).toBeInTheDocument();
+    fireEvent.click(seal());
+    await waitFor(() => expect(seal()).toHaveAttribute('aria-pressed', 'true'));
+    expect(deps.fakes.crypto.encryption.get(BOB)).toBe(true);
+    expect(screen.getByPlaceholderText('Write a sealed letter…')).toBeInTheDocument();
+  });
+
+  it('waits for the service, takes no second click, and lets chat.updated have the last word', async () => {
     const { deps, core } = await signedIn((d) =>
       d.fakes.crypto.seed(BOB, { deviceId: 1, fingerprint: FINGERPRINT }),
     );
-    await withBob(deps);
-    expect(sealToggle()).toHaveAttribute('aria-pressed', 'false');
-    expect(screen.getByPlaceholderText('Write a letter…')).toBeInTheDocument();
+    await withChat(deps);
+    const call = deferred<void>();
+    const spy = vi.spyOn(deps.fakes.crypto, 'setEncryption').mockReturnValue(call.promise);
+    fireEvent.click(seal());
+    fireEvent.click(seal());
+    await waitFor(() => expect(seal()).toHaveAttribute('aria-busy', 'true'));
+    expect(seal()).toBeDisabled();
+    expect(seal()).toHaveAttribute('aria-pressed', 'false');
+    await act(async () => call.resolve());
+    await waitFor(() => expect(seal()).toHaveAttribute('aria-pressed', 'true'));
+    expect(spy).toHaveBeenCalledTimes(1);
+    expect(seal()).not.toHaveAttribute('aria-busy', 'true');
 
-    fireEvent.click(sealToggle());
-    await waitFor(() => expect(sealToggle()).toHaveAttribute('aria-pressed', 'true'));
-    expect(deps.fakes.crypto.encryption.get(BOB)).toBe(true);
-    expect(screen.getByPlaceholderText('Write a sealed letter…')).toBeInTheDocument();
-
+    // The server says otherwise after the call: the record wins over anything local.
     const [chat] = await core.chats.list();
     if (!chat) throw new Error('no chat');
     act(() => core.events.emit('chat.updated', { ...chat, encrypted: false }));
-    expect(sealToggle()).toHaveAttribute('aria-pressed', 'false');
+    expect(seal()).toHaveAttribute('aria-pressed', 'false');
   });
 
   it('tells, in Postie’s words, when the other side has no key', async () => {
     const { deps } = await signedIn();
-    await withBob(deps);
-    fireEvent.click(sealToggle());
+    await withChat(deps);
+    fireEvent.click(seal());
     expect(await screen.findByRole('alert')).toHaveTextContent(
       'I cannot seal this letter: no key on the other side.',
     );
-    expect(sealToggle()).toHaveAttribute('aria-pressed', 'false');
+    expect(seal()).toHaveAttribute('aria-pressed', 'false');
   });
 });
 
 describe('The Encryption section of the details pane', () => {
-  it('lists the devices with their fingerprint and stamp, and changes the trust', async () => {
+  it('lists the devices, changes the trust, and keeps the focus on the row', async () => {
     const { deps } = await signedIn((d) =>
       d.fakes.crypto.seed(BOB, { deviceId: 7, fingerprint: FINGERPRINT }),
     );
-    await withBob(deps);
+    await withChat(deps);
     fireEvent.click(screen.getByRole('button', { name: 'Details' }));
     const section = screen.getByRole('region', { name: 'Encryption' });
     const list = await within(section).findByRole('list', { name: 'Encryption' });
-    expect(within(list).getByText(FORMATTED)).toBeInTheDocument();
-    expect(within(list).getByText('Untrusted')).toBeInTheDocument();
+    const row = within(list).getByRole('listitem');
+    expect(within(row).getByText(FORMATTED)).toBeInTheDocument();
+    expect(within(row).getByText('Untrusted')).toBeInTheDocument();
     expect(within(section).getByText(/Compare the fingerprints/)).toBeInTheDocument();
+    const verify = within(row).getByRole('button', { name: 'Verify' });
+    expect(verify).toHaveAccessibleDescription(FORMATTED);
 
-    fireEvent.click(within(list).getByRole('button', { name: `Verify ${FORMATTED}` }));
-    expect(await within(list).findByText('Verified')).toBeInTheDocument();
-    expect(within(list).queryByRole('button', { name: /^Verify/ })).not.toBeInTheDocument();
+    fireEvent.click(verify);
+    expect(await within(row).findByText('Verified')).toBeInTheDocument();
+    expect(row).toHaveFocus();
+    expect(within(row).queryByRole('button', { name: 'Verify' })).not.toBeInTheDocument();
 
-    fireEvent.click(within(list).getByRole('button', { name: `Block ${FORMATTED}` }));
-    expect(await within(list).findByText('Blocked')).toBeInTheDocument();
-
-    fireEvent.click(within(list).getByRole('button', { name: `Unblock ${FORMATTED}` }));
-    expect(await within(list).findByText('Untrusted')).toBeInTheDocument();
+    fireEvent.click(within(row).getByRole('button', { name: 'Block' }));
+    expect(await within(row).findByText('Blocked')).toBeInTheDocument();
+    fireEvent.click(within(row).getByRole('button', { name: 'Unblock' }));
+    expect(await within(row).findByText('Untrusted')).toBeInTheDocument();
     const [device] = await deps.fakes.crypto.devices(BOB);
     expect(device?.trust).toBe('untrusted');
   });
 
-  it('says when the other side has no key yet', async () => {
+  it('says when the other side has no key yet, but never for a failed load', async () => {
     const { deps } = await signedIn();
-    await withBob(deps);
+    const spy = vi.spyOn(deps.fakes.crypto, 'devices').mockRejectedValueOnce(new Error('offline'));
+    await withChat(deps);
     fireEvent.click(screen.getByRole('button', { name: 'Details' }));
     const section = screen.getByRole('region', { name: 'Encryption' });
-    expect(within(section).getByText('No key on the other side yet.')).toBeInTheDocument();
+    expect(await within(section).findByRole('alert')).toHaveTextContent(/Something went wrong/);
+    expect(within(section).queryByText('No key on the other side yet.')).not.toBeInTheDocument();
+    fireEvent.click(within(section).getByRole('button', { name: 'Retry' }));
+    expect(await within(section).findByText('No key on the other side yet.')).toBeInTheDocument();
+    expect(spy).toHaveBeenCalledTimes(2);
   });
 
-  it('groups the members’ devices by member in a hall', async () => {
-    const { deps, core } = await signedIn((d) =>
-      d.fakes.crypto.seed(BOB, { deviceId: 2, fingerprint: FINGERPRINT, trust: 'verified' }),
+  it('shows the devices of the chat on screen, never those of the one before', async () => {
+    const { deps } = await signedIn((d) =>
+      d.fakes.crypto.seed(BOB, { deviceId: 7, fingerprint: FINGERPRINT }),
     );
-    await act(() => core.rooms.join({ jid: HALL, nick: 'alice' }));
-    act(() => {
-      deps.fakes.room.setMembers(HALL, [
-        { nick: 'bob', jid: BOB, role: 'moderator', affiliation: 'owner' },
-        { nick: 'ghost', role: 'visitor', affiliation: 'none' },
-      ]);
-    });
-    fireEvent.click(await screen.findByRole('button', { name: /hall/ }));
-    fireEvent.click(screen.getByRole('button', { name: 'Members' }));
+    await withChat(deps);
+    fireEvent.click(screen.getByRole('button', { name: 'Details' }));
+    await screen.findByText(FORMATTED);
+    await withChat(deps, 'carol@x.org');
     const section = screen.getByRole('region', { name: 'Encryption' });
-    const list = await within(section).findByRole('list', { name: 'bob' });
-    expect(within(list).getByText(FORMATTED)).toBeInTheDocument();
-    expect(within(list).getByText('Verified')).toBeInTheDocument();
-    expect(within(section).queryByRole('list', { name: 'ghost' })).not.toBeInTheDocument();
+    expect(await within(section).findByText('No key on the other side yet.')).toBeInTheDocument();
+    expect(screen.queryByText(FORMATTED)).not.toBeInTheDocument();
   });
-});
 
-describe('My devices', () => {
-  it('lists my keys, marks this device, and removes another after confirmation', async () => {
-    const other = FINGERPRINT.replace(/a/g, 'f');
-    const { deps } = await signedIn((d) => {
-      d.fakes.crypto.seed(
-        d.fakes.crypto.ownJid,
-        { deviceId: 1, fingerprint: FINGERPRINT },
-        { deviceId: 2, fingerprint: other },
-      );
-    });
-    fireEvent.click(screen.getByRole('button', { name: 'alice' }));
-    fireEvent.click(screen.getByRole('menuitem', { name: 'My devices…' }));
-    const dialog = screen.getByRole('dialog', { name: 'My devices' });
-    const list = await within(dialog).findByRole('list', { name: 'My devices' });
-    expect(within(list).getAllByRole('listitem')).toHaveLength(2);
-    expect(within(list).getByText(FORMATTED)).toBeInTheDocument();
-    // The fake's own device is the first seeded one: marked, and not removable from itself.
-    expect(await within(list).findByText('This device')).toBeInTheDocument();
-    expect(
-      within(list).queryByRole('button', { name: `Remove ${FORMATTED}` }),
-    ).not.toBeInTheDocument();
-
-    const otherFormatted = FORMATTED.replace(/A/g, 'F');
-    fireEvent.click(within(list).getByRole('button', { name: `Remove ${otherFormatted}` }));
-    expect(within(dialog).getByText(/Remove this device\?/)).toBeInTheDocument();
-    expect((await deps.fakes.crypto.ownDevices()).length).toBe(2);
-
-    fireEvent.click(within(dialog).getByRole('button', { name: 'Remove' }));
-    await waitFor(() => expect(within(dialog).getAllByRole('listitem')).toHaveLength(1));
-    expect((await deps.fakes.crypto.ownDevices()).map((d) => d.deviceId)).toEqual([1]);
-    expect(within(dialog).queryByText(otherFormatted)).not.toBeInTheDocument();
+  it('keeps a devices.changed that arrives while the first load is still out', async () => {
+    const { deps } = await signedIn();
+    const load = deferred<never[]>();
+    vi.spyOn(deps.fakes.crypto, 'devices').mockReturnValueOnce(load.promise);
+    await withChat(deps);
+    fireEvent.click(screen.getByRole('button', { name: 'Details' }));
+    act(() => deps.fakes.crypto.seed(BOB, { deviceId: 9, fingerprint: FINGERPRINT }));
+    const section = screen.getByRole('region', { name: 'Encryption' });
+    expect(await within(section).findByText(FORMATTED)).toBeInTheDocument();
+    await act(async () => load.resolve([]));
+    expect(within(section).getByText(FORMATTED)).toBeInTheDocument();
   });
 });
 
@@ -167,17 +148,39 @@ describe('Sealed letters', () => {
     expect(screen.getByTitle('Sealed')).toBeInTheDocument();
   });
 
-  it('explains an undecryptable letter and leads to the sender’s devices', async () => {
+  it('explains an undecryptable letter and leads to the sender’s devices, every time', async () => {
     const { deps } = await signedIn((d) =>
       d.fakes.crypto.seed(BOB, { deviceId: 3, fingerprint: FINGERPRINT }),
     );
-    const region = await withBob(deps, '', 'undecryptable');
+    const region = await withChat(deps, BOB, '', 'undecryptable');
     expect(await within(region).findByText(/sealed for another device/)).toBeInTheDocument();
     expect(within(region).getByText(/Ask them to send it again/)).toBeInTheDocument();
 
-    fireEvent.click(within(region).getByRole('button', { name: 'Check their devices' }));
+    const check = within(region).getByRole('button', { name: 'Check their devices' });
+    fireEvent.click(check);
     const section = screen.getByRole('region', { name: 'Encryption' });
     expect(section).toHaveFocus();
     expect(await within(section).findByText(FORMATTED)).toBeInTheDocument();
+
+    check.focus();
+    fireEvent.click(check);
+    expect(section).toHaveFocus();
+  });
+
+  it('offers no way to the devices when no pane can open (a hall without a record)', async () => {
+    const { deps } = await signedIn();
+    act(() => {
+      deps.fakes.chat.receive({
+        chatId: HALL,
+        kind: 'room',
+        fromJid: `${HALL}/bob`,
+        body: '',
+        encryption: 'undecryptable',
+      });
+    });
+    fireEvent.click(await screen.findByRole('button', { name: /hall/ }));
+    expect(await screen.findByText(/sealed for another device/)).toBeInTheDocument();
+    expect(screen.getByText(/Ask them to send it again/)).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Check their devices' })).not.toBeInTheDocument();
   });
 });

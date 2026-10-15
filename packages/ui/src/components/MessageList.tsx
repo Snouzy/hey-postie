@@ -16,7 +16,7 @@ interface MessageListProps {
   /** In a hall: the sender's nick above each run of incoming messages. */
   showSenders?: boolean;
   /** From a letter sealed for another device: opens the sender's devices. */
-  onShowDevices?: () => void;
+  onShowDevices?: (() => void) | undefined;
 }
 
 interface Run {

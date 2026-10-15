@@ -49,6 +49,8 @@ export function Conversation({
     : [];
   // A hall the user is not in: left elsewhere, kicked, or bookmarked and not joined yet.
   const outside = chat.kind === 'room' && !room?.joined;
+  // The details pane exists for a direct chat, or for a hall the app has a record of.
+  const hasDetails = chat.kind === 'direct' || room !== undefined;
 
   useEffect(() => {
     let cancelled = false;
@@ -125,8 +127,12 @@ export function Conversation({
           )}
         </div>
         <div className={styles.tools}>
-          <SealToggle encrypted={seal.encrypted} onToggle={() => void seal.toggle()} />
-          {(room || chat.kind === 'direct') && (
+          <SealToggle
+            encrypted={seal.encrypted}
+            pending={seal.pending}
+            onToggle={() => void seal.toggle()}
+          />
+          {hasDetails && (
             <Button
               variant="ghost"
               onClick={onToggleDetails}
@@ -156,7 +162,7 @@ export function Conversation({
         onRetry={retry}
         onOpenLink={onOpenLink}
         showSenders={chat.kind === 'room'}
-        onShowDevices={onOpenEncryption}
+        onShowDevices={hasDetails ? onOpenEncryption : undefined}
       />
       {error && (
         <p className={styles.error} role="alert">

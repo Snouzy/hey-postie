@@ -1,75 +1,69 @@
-import type { Device, RoomMember } from '@hey-postie/core';
+import type { RoomMember } from '@hey-postie/core';
 import { useEffect, useId, useRef } from 'react';
 import { useText } from '../core/CoreProvider';
-import { useDevices } from '../core/useDevices';
+import { useMemberDevices } from '../core/useMemberDevices';
 import { useTrustAction } from '../core/useTrustAction';
-import { type DeviceAction, DeviceList } from './DeviceList';
+import { DeviceList } from './DeviceList';
 import styles from './Encryption.module.css';
+import { RetryNotice } from './RetryNotice';
 
 interface RoomEncryptionProps {
   members: RoomMember[];
-  /** Opened from a sealed letter: the section takes the focus so the reader lands on it. */
-  focus?: boolean;
+  /** Counts the "Check their devices" requests: every new one sends the focus to the section. */
+  focusRequest?: number;
 }
 
 /**
  * The "Encryption" part of a hall's details: the devices of the members whose address the hall
  * reveals, grouped by member. Anonymous members have no address, so nothing to check.
  */
-export function RoomEncryption({ members, focus = false }: RoomEncryptionProps) {
+export function RoomEncryption({ members, focusRequest = 0 }: RoomEncryptionProps) {
   const text = useText();
   const headingId = useId();
   const section = useRef<HTMLElement>(null);
-  const { error, act } = useTrustAction();
+  const trust = useTrustAction();
   const known = members.filter((member): member is RoomMember & { jid: string } => !!member.jid);
+  const { byJid, loaded, error, reload } = useMemberDevices(known.map((member) => member.jid));
+  const withDevices = known.filter((member) => (byJid.get(member.jid)?.length ?? 0) > 0);
 
   useEffect(() => {
-    if (!focus) return;
+    if (focusRequest === 0) return;
     section.current?.focus();
     section.current?.scrollIntoView?.({ block: 'start' });
-  }, [focus]);
+  }, [focusRequest]);
 
   return (
     <section ref={section} className={styles.section} aria-labelledby={headingId} tabIndex={-1}>
       <h3 id={headingId} className={styles.heading}>
         {text('crypto.section')}
       </h3>
-      {known.length === 0 ? (
+      {error ? (
+        <RetryNotice error={error} onRetry={reload} />
+      ) : loaded && withDevices.length === 0 ? (
         <p className={styles.empty}>{text('crypto.roomEmpty')}</p>
       ) : (
-        <>
-          <p className={styles.hint}>{text('crypto.compare')}</p>
-          {known.map((member) => (
-            <MemberDevices
-              key={member.jid}
-              member={member}
-              onAction={(device, action) => void act(device, action)}
-            />
-          ))}
-        </>
+        withDevices.length > 0 && (
+          <>
+            <p className={styles.hint}>{text('crypto.compare')}</p>
+            {withDevices.map((member) => (
+              <div key={member.jid}>
+                <h4 className={styles.member}>{member.nick}</h4>
+                <DeviceList
+                  devices={byJid.get(member.jid) ?? []}
+                  label={member.nick}
+                  actions="trust"
+                  onAction={trust.act}
+                />
+              </div>
+            ))}
+          </>
+        )
       )}
-      {error && (
+      {trust.error && (
         <p className={styles.error} role="alert">
-          {text(error)}
+          {text(trust.error)}
         </p>
       )}
     </section>
-  );
-}
-
-interface MemberDevicesProps {
-  member: RoomMember & { jid: string };
-  onAction: (device: Device, action: DeviceAction) => void;
-}
-
-/** One member's devices; a member without any known device takes no room. */
-function MemberDevices({ member, onAction }: MemberDevicesProps) {
-  const devices = useDevices(member.jid);
-  if (devices.length === 0) return null;
-  return (
-    <div>
-      <h4 className={styles.member}>{member.nick}</h4>
-      <DeviceList devices={devices} label={member.nick} actions="trust" onAction={onAction} />
-    </div>
   );
 }
