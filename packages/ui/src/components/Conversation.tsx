@@ -60,7 +60,6 @@ export function Conversation({
   // The details pane exists for a direct chat, or for a hall the app has a record of.
   const hasDetails = chat.kind === 'direct' || room !== undefined;
   const drop = useFileDrop(uploads.add, !outside);
-  const myJid = core.accounts.current()?.jid.split('/')[0] ?? null;
 
   // A parcel that landed: its message joins the list and the pending bubble goes.
   useEffect(() => {
@@ -127,21 +126,23 @@ export function Conversation({
         messages={letters.messages}
         hasOlder={letters.hasOlder}
         onLoadOlder={letters.loadOlder}
-        myJid={myJid}
         onRetry={letters.retry}
         onOpenLink={onOpenLink}
         onReact={letters.react}
         onSaveFile={onSaveFile}
         showSenders={chat.kind === 'room'}
         onShowDevices={hasDetails ? onOpenEncryption : undefined}
-        footer={uploads.list.map((upload) => (
-          <PendingParcel
-            key={upload.id}
-            upload={upload}
-            onRetry={() => uploads.retry(upload.id)}
-            onDismiss={() => uploads.dismiss(upload.id)}
-          />
-        ))}
+        // A parcel that landed is already in the list: its bubble is not drawn once more.
+        footer={uploads.list
+          .filter((upload) => !upload.sent)
+          .map((upload) => (
+            <PendingParcel
+              key={upload.id}
+              upload={upload}
+              onRetry={() => uploads.retry(upload.id)}
+              onDismiss={() => uploads.dismiss(upload.id)}
+            />
+          ))}
       />
       {letters.error && (
         <p className={styles.error} role="alert">

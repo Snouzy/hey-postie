@@ -140,7 +140,6 @@ describe('Sealed letters', () => {
         messages={[message({ direction: 'out', encryption: 'omemo', body: 'secret' })]}
         hasOlder={false}
         onLoadOlder={async () => false}
-        myJid={null}
         onRetry={() => {}}
         onOpenLink={() => {}}
         onReact={() => {}}

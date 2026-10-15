@@ -4,27 +4,27 @@ import styles from './Reactions.module.css';
 
 interface ReactionsProps {
   reactions: Reaction[];
-  /** The account's bare JID: its own reactions are highlighted. Null while signed out. */
-  myJid: string | null;
   onToggle: (emoji: string) => void;
 }
 
-/** The row of pills under a bubble: each emoji with its count; mine pressed; who, in the title. */
-export function Reactions({ reactions, myJid, onToggle }: ReactionsProps) {
+/**
+ * The row of pills under a bubble: each emoji with its count; mine pressed (`reaction.mine`, set
+ * by the repository, which knows the occupant JID in a hall); who, in the title.
+ */
+export function Reactions({ reactions, onToggle }: ReactionsProps) {
   const text = useText();
   const shown = reactions.filter((reaction) => reaction.fromJids.length > 0);
   if (shown.length === 0) return null;
   return (
     <ul className={styles.list} aria-label={text('reaction.list')}>
       {shown.map((reaction) => {
-        const mine = myJid !== null && reaction.fromJids.includes(myJid);
         const who = reaction.fromJids.map(localPart).join(', ');
         return (
           <li key={reaction.emoji}>
             <button
               type="button"
               className={styles.pill}
-              aria-pressed={mine}
+              aria-pressed={reaction.mine}
               aria-label={`${reaction.emoji} ${reaction.fromJids.length}`}
               title={who}
               onClick={() => onToggle(reaction.emoji)}

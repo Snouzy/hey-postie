@@ -13,8 +13,6 @@ interface MessageBubbleProps {
   message: Message;
   /** The last bubble of a run always shows its time; the others only on hover. */
   last: boolean;
-  /** The account's bare JID, to tell my reactions apart. */
-  myJid: string | null;
   onRetry: (message: Message) => void;
   onOpenLink: (url: string) => void;
   onReact: (message: Message, emoji: string) => void;
@@ -26,7 +24,6 @@ interface MessageBubbleProps {
 export function MessageBubble({
   message,
   last,
-  myJid,
   onRetry,
   onOpenLink,
   onReact,
@@ -83,11 +80,7 @@ export function MessageBubble({
         </p>
       )}
       <Attachments attachments={message.attachments} onSaveFile={onSaveFile} />
-      <Reactions
-        reactions={message.reactions}
-        myJid={myJid}
-        onToggle={(emoji) => onReact(message, emoji)}
-      />
+      <Reactions reactions={message.reactions} onToggle={(emoji) => onReact(message, emoji)} />
       <span className={styles.meta}>
         <time dateTime={message.sentAt.toISOString()}>{formatTime(locale, message.sentAt)}</time>
         {message.direction === 'out' && (

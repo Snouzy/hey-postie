@@ -20,7 +20,6 @@ function renderList(
       messages={messages}
       hasOlder={false}
       onLoadOlder={noop}
-      myJid={null}
       onRetry={onRetry}
       onOpenLink={onOpenLink}
       onReact={() => {}}
@@ -144,7 +143,6 @@ describe('MessageList scroll anchor', () => {
           messages={messages}
           hasOlder
           onLoadOlder={() => new Promise<boolean>((done) => (prepend = done))}
-          myJid={null}
           onRetry={() => {}}
           onOpenLink={() => {}}
           onReact={() => {}}

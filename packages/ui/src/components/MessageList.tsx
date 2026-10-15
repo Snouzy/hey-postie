@@ -12,8 +12,6 @@ interface MessageListProps {
   hasOlder: boolean;
   /** Resolves to true when something was prepended. */
   onLoadOlder: () => Promise<boolean>;
-  /** The account's bare JID, to tell my reactions apart. */
-  myJid: string | null;
   onRetry: (message: Message) => void;
   onOpenLink: (url: string) => void;
   onReact: (message: Message, emoji: string) => void;
@@ -53,7 +51,6 @@ export function MessageList({
   messages,
   hasOlder,
   onLoadOlder,
-  myJid,
   onRetry,
   onOpenLink,
   onReact,
@@ -134,7 +131,6 @@ export function MessageList({
                   key={message.id}
                   message={message}
                   last={index === run.messages.length - 1}
-                  myJid={myJid}
                   onRetry={onRetry}
                   onOpenLink={onOpenLink}
                   onReact={onReact}

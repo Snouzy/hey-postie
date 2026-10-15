@@ -365,8 +365,9 @@ _Added 2026-10-15. Sources: `components/ReactionBar.tsx`, `Reactions.tsx`, `core
   `chats.toggleReaction(chat.id, message.id, emoji)` through `useMessages.react`, closes and gives
   the focus back to "React"; an error shows as the conversation's sentence.
 - The pills (`Reactions`, a `<ul aria-label="Reactions">`) show each emoji with its count as a
-  toggle button: `aria-label` "👍 2", `aria-pressed` when `fromJids` holds the account's bare JID
-  (`accounts.current()?.jid`, resource stripped), `title` with the local parts of who reacted
+  toggle button: `aria-label` "👍 2", `aria-pressed` when `reaction.mine` (set by the repository,
+  which alone knows the occupant JID the account reacts under in a hall; the UI never compares
+  `fromJids` with the account JID), `title` with the local parts of who reacted
   (`alice, bob`; in a hall the nick after the `/`). A click toggles that emoji. Nothing is patched
   locally: the row changes when `message.updated` brings the message back.
 

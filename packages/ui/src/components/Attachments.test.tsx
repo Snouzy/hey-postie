@@ -56,7 +56,7 @@ describe('Receiving a parcel', () => {
     act(() => {
       deps.fakes.chat.update({
         ...received,
-        reactions: [{ emoji: '👍', fromJids: ['bob@example.org'] }],
+        reactions: [{ emoji: '👍', fromJids: ['bob@example.org'], mine: false }],
         attachments: [{ ...attachment }],
       });
     });

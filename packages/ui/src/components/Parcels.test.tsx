@@ -11,9 +11,9 @@ describe('Sending a parcel', () => {
     await waitFor(() =>
       expect(deps.fakes.chat.uploaded).toEqual([{ chatId: CHAT.id, name: 'notes.txt' }]),
     );
-    expect(await screen.findByText('notes.txt')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Save' })).toBeInTheDocument();
-    expect(screen.queryByRole('progressbar')).not.toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: 'Save' })).toBeInTheDocument();
+    await waitFor(() => expect(screen.queryByRole('progressbar')).not.toBeInTheDocument());
+    expect(screen.getByText('notes.txt')).toBeInTheDocument();
   });
 
   it('shows the pending parcel with its progress until the message arrives', async () => {
