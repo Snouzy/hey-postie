@@ -69,6 +69,11 @@ _Checked on 2026-10-15 against Tauri 2.12.4, `tauri-plugin-notification` 2.7.0,
   `window.rs` are described below; `smoke.rs` implements `--smoke`.
 - macOS entitlements (`src-tauri/Entitlements.plist`): app sandbox, network client, user-selected
   files. They are on from the first build so that the App Store build is the same build.
+- Content Security Policy (`tauri.conf.json`, `app.security.csp`): `script-src 'self'
+  'wasm-unsafe-eval'` and `worker-src 'self'` because `@converse/headless` loads libomemo as a
+  lazy chunk plus a WebAssembly module (`/curve25519_compiled.wasm`); `connect-src` allows the
+  local relay (`ws://127.0.0.1:*`) and `https:` for HTTP upload hosts (XEP-0363); the desktop
+  app always connects through the relay, so no `wss://`. No `unsafe-inline` for scripts, no `unsafe-eval`.
 - The webview reaches Rust through the repositories in `apps/desktop/app/repositories/` and the
   small modules in `apps/desktop/app/`, started once by `app/desktop.ts` when the page runs inside
   Tauri (`isTauri()`); in a plain browser (`pnpm app:dev`) none of this runs.
