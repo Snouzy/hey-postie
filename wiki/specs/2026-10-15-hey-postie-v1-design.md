@@ -177,8 +177,12 @@ Services expose `get*`/`list*` queries, commands, and a typed event emitter
 ### 3.7 Offline and reconnection
 
 - Messages written offline stay `pending` and are sent on reconnection (Converse's queue).
-- Reconnection with exponential backoff (1 s to 60 s); stream resumption first, then a full
-  reconnect with MAM catch-up.
+- Reconnection: Converse's own loop (a fixed 3 s debounce, stream resumption first, then a full
+  reconnect with MAM catch-up). The exponential backoff first planned was dropped on 2026-10-15:
+  the engine's loop is good enough for version 1.
+- Messages received while the app was offline come back through MAM and update the chats and
+  their unread counts, but do not raise a system notification (decision of 2026-10-15: a
+  notification per archived message would flood the user on every reconnection).
 - The sidebar shows the account state; a yellow banner says "Postie is on his bike" while
   reconnecting.
 

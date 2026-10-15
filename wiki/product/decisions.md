@@ -48,6 +48,13 @@ When the protocol behavior is unclear, look at how [Gajim](https://github.com/ga
 - Decision of 2026-10-15: no CI for now. `pnpm verify` runs locally before every commit; CI comes
   when a second contributor or a release needs it. Speed of iteration first.
 
+## Milestone 1 (2026-10-15)
+
+- Built in five parallel lanes, one git worktree each: Rust relay, Converse repositories, UI,
+  desktop wiring, local Prosody. Each code lane got an independent review before the merge.
+- Reconnection uses Converse's loop; MAM catch-up does not notify (see the spec, 3.7).
+- Local test server: Prosody built from source into `tools/xmpp-server/` (Homebrew has no formula).
+
 ## Points to check
 
 - Licenses: OMEMO relies on libsignal (GPL-3.0). Combined with app-store distribution, this is a
