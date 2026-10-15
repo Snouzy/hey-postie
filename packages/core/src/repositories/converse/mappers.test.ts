@@ -224,6 +224,22 @@ describe('toMessage in a room', () => {
     ).toBe('hall@rooms.example.org/romeo');
   });
 
+  it('flags our reactions through the occupant address, not the nick', () => {
+    const reactions = {
+      'hall@rooms.example.org/romeo': ['🎉'],
+      'hall@rooms.example.org/juliet': ['🎉', '👍'],
+    };
+    const own = { ...room, ownReactionJid: 'hall@rooms.example.org/romeo' };
+    expect(toMessage(model({ ...groupchat, reactions }), own).reactions).toEqual([
+      {
+        emoji: '🎉',
+        fromJids: ['hall@rooms.example.org/romeo', 'hall@rooms.example.org/juliet'],
+        mine: true,
+      },
+      { emoji: '👍', fromJids: ['hall@rooms.example.org/juliet'], mine: false },
+    ]);
+  });
+
   it('prefers the real JID when the room reveals it', () => {
     const known = { ...groupchat, from_real_jid: 'juliet@example.org/balcony' };
     expect(toMessage(model(known), room).fromJid).toBe('juliet@example.org');

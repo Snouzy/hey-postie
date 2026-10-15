@@ -277,7 +277,13 @@ export class ConverseChatRepository implements ChatRepository {
   private mapMessage(model: MessageModel, chat: ChatModel): Message {
     const authenticated = this.loaded?.api.connection.authenticated() === true;
     const unread = Number(chat.get(isRoom(chat) ? 'num_unread_general' : 'num_unread')) || 0;
-    const context = { chatId: String(chat.get('jid')), authenticated, unread };
+    const ownReactionJid = this.loaded?.env.u.reactions?.getOwnReactionJID(chat);
+    const context = {
+      chatId: String(chat.get('jid')),
+      authenticated,
+      unread,
+      ...(ownReactionJid ? { ownReactionJid } : {}),
+    };
     return toMessage(
       model,
       isRoom(chat) ? { ...context, ownNick: String(chat.get('nick')) } : context,

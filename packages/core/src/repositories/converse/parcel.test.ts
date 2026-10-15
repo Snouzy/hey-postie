@@ -157,8 +157,8 @@ describe('react', () => {
     expect(Array.from(reactions?.children ?? []).map((r) => r.textContent)).toEqual(['👍', '❤️']);
     expect(sizzle('store[xmlns="urn:xmpp:hints"]', stanza)).toHaveLength(1);
     expect(updated.at(-1)?.reactions).toEqual([
-      { emoji: '❤️', fromJids: [JID], mine: false },
-      { emoji: '👍', fromJids: [JID], mine: false },
+      { emoji: '❤️', fromJids: [JID], mine: true },
+      { emoji: '👍', fromJids: [JID], mine: true },
     ]);
   });
 
@@ -173,8 +173,8 @@ describe('react', () => {
       updated.some((m) => m.reactions.some((r) => r.fromJids.includes(JULIET))),
     );
     expect(updated.at(-1)?.reactions).toEqual([
-      { emoji: '❤️', fromJids: [JID], mine: false },
-      { emoji: '👍', fromJids: [JID, JULIET], mine: false },
+      { emoji: '❤️', fromJids: [JID], mine: true },
+      { emoji: '👍', fromJids: [JID, JULIET], mine: true },
     ]);
     expect(received.find((m) => m.id === 'r1')).toBeUndefined();
 

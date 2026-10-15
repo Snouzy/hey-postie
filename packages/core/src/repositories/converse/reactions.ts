@@ -54,7 +54,7 @@ export async function sendReactions(
   }
 
   // Our own stanza is not echoed back in a direct chat: record it, which raises `change:reactions`.
-  const own = u.reactions.getOwnReactionJID(chat);
+  const own = u.reactions?.getOwnReactionJID(chat) ?? string(loaded.state.session?.get('bare_jid'));
   const current = message.get('reactions');
   const next: Record<string, unknown> =
     current && typeof current === 'object' ? { ...(current as Record<string, unknown>) } : {};

@@ -232,7 +232,7 @@ export interface ConverseEnv {
   u: {
     getUniqueId(suffix?: string): string;
     /** The key under which our own reactions sit in `message.reactions` (`plugins/reactions/utils.js`). */
-    reactions: { getOwnReactionJID(chat: ChatModel): string };
+    reactions?: { getOwnReactionJID(chat: ChatModel): string };
     mam: {
       fetchArchivedMessages(
         chat: ChatModel,

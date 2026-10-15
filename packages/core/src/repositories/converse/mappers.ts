@@ -19,6 +19,11 @@ export interface MessageContext {
   unread: number;
   /** Our nick in the room the message belongs to; absent for direct chats. */
   ownNick?: string;
+  /**
+   * The key of our own reactions on this chat's messages (`u.reactions.getOwnReactionJID`): our bare
+   * JID in a direct chat, our occupant id or `room@service/nick` in a room. Unknown → nothing is `mine`.
+   */
+  ownReactionJid?: string;
 }
 
 export function toMessage(model: MessageModel, context: MessageContext): Message {
@@ -40,7 +45,7 @@ export function toMessage(model: MessageModel, context: MessageContext): Message
     status: status(model, direction, context),
     encryption: undecryptable ? 'undecryptable' : model.get('is_encrypted') ? 'omemo' : 'none',
     attachments: files,
-    reactions: reactions(model.get('reactions')),
+    reactions: reactions(model.get('reactions'), context.ownReactionJid),
     isMention:
       direction === 'in' && Boolean(context.ownNick) && isMention(model, context.ownNick ?? ''),
     retracted,
@@ -184,7 +189,7 @@ function mimeType(name: string): string {
  * occupant id or address in a room); the contract groups by emoji, sorted so that two updates
  * of the same message compare equal.
  */
-function reactions(value: unknown): Reaction[] {
+function reactions(value: unknown, ownKey: string | undefined): Reaction[] {
   if (!value || typeof value !== 'object') return [];
   const byEmoji = new Map<string, string[]>();
   for (const [jid, emojis] of Object.entries(value as Record<string, unknown>)) {
@@ -196,12 +201,13 @@ function reactions(value: unknown): Reaction[] {
       byEmoji.set(emoji, jids);
     }
   }
-  return (
-    [...byEmoji]
-      // `mine` is settled by the chat repository, which knows the own reaction JID of the chat.
-      .map(([emoji, fromJids]) => ({ emoji, fromJids, mine: false }))
-      .sort((a, b) => a.emoji.localeCompare(b.emoji))
-  );
+  return [...byEmoji]
+    .map(([emoji, fromJids]) => ({
+      emoji,
+      fromJids,
+      mine: ownKey !== undefined && fromJids.includes(ownKey),
+    }))
+    .sort((a, b) => a.emoji.localeCompare(b.emoji));
 }
 
 function presence(status: string): Presence {
