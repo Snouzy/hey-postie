@@ -19,6 +19,7 @@ export interface Mock {
       set(attributes: { jid: string; autojoin?: boolean; nick?: string }): Promise<unknown>;
     };
     waitUntil(name: string): Promise<unknown> | null;
+    disco: { own: { features: { get(): string[] } } };
   };
   _converse: {
     state: { chatboxes: { get(jid: string): { get(key: string): unknown } | undefined } };
@@ -139,6 +140,12 @@ export class MockHarness {
   /** Simulates the relay closing the WebSocket before the stream opened (see `create`). */
   closeNextSocketWith(code: number, reason: string): void {
     this.failNextConnectionWith((connection) => connection._proto._onClose({ code, reason }));
+  }
+
+  /** The features this client advertises in disco#info, once `addClientFeatures` ran. */
+  async ownFeatures(): Promise<string[]> {
+    await this.mock.api.waitUntil('discoInitialized');
+    return this.mock.api.disco.own.features.get();
   }
 
   nextEvent(name: string): Promise<void> {

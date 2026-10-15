@@ -4,6 +4,8 @@ import type { Chat, Message } from '../../contracts/types';
 import type { ConverseEngine, Loaded } from './engine';
 import { isRoom, toChat, toMessage } from './mappers';
 import type { ChatModel, MessageModel } from './models';
+import { REACTIONS_NS, sendReactions } from './reactions';
+import { discoverUploadService, type UploadService, uploadFile } from './upload';
 
 type MessageHandler = (message: Message) => void;
 type ChatHandler = (chat: Chat) => void;
@@ -29,9 +31,15 @@ export class ConverseChatRepository implements ChatRepository {
   private loaded: Loaded | null = null;
   /** The chat the user looks at. Every other direct chat is hidden so that `num_unread` counts (§4). */
   private openJid: string | null = null;
+  /** The upload component of the session's server, discovered once per connection. */
+  private uploadService: Promise<UploadService | null> | null = null;
 
   constructor(private readonly engine: ConverseEngine) {
     engine.onReady((loaded) => this.bindCollection(loaded));
+    engine.on('addClientFeatures', () => engine.current?.api.disco.own.features.add(REACTIONS_NS));
+    engine.on('disconnected', () => {
+      this.uploadService = null;
+    });
   }
 
   async list(): Promise<Chat[]> {
@@ -84,21 +92,51 @@ export class ConverseChatRepository implements ChatRepository {
     return this.message(model, chat);
   }
 
-  /** The bare JID of the signed-in account (milestone 4 wires reactions and uploads). */
+  /** The bare JID of the signed-in account, the key of our own reactions in a direct chat. */
   selfJid(): string {
     return String(this.engine.current?.state.session?.get('bare_jid') ?? '').toLowerCase();
   }
 
-  async sendFile(): Promise<Message> {
-    throw new DomainError('Unknown', 'Unknown: file upload arrives with milestone 4');
+  /**
+   * Converse checks the limit itself but answers with an ephemeral notice: the check runs here
+   * first so that the caller gets `FileTooLarge`. Converse knows no file size on a message, so the
+   * sent attachment takes the size of the file we uploaded.
+   */
+  async sendFile(
+    chatId: string,
+    file: File,
+    onProgress?: (fraction: number) => void,
+  ): Promise<Message> {
+    const chat = await this.find(chatId);
+    const limit = await this.maxFileSize();
+    if (limit !== null && file.size > limit) {
+      throw new DomainError('FileTooLarge', `FileTooLarge: limit ${limit} bytes`);
+    }
+    const model = await uploadFile(chat, file, onProgress);
+    const message = this.message(model, chat);
+    return {
+      ...message,
+      attachments: message.attachments.map((attachment) => ({ ...attachment, size: file.size })),
+    };
   }
 
   async maxFileSize(): Promise<number | null> {
-    return null;
+    const loaded = await this.engine.ready();
+    if (!this.uploadService) {
+      this.uploadService = discoverUploadService(loaded).catch((error: unknown) => {
+        this.uploadService = null;
+        throw error;
+      });
+    }
+    return (await this.uploadService)?.maxFileSize ?? null;
   }
 
-  async react(): Promise<void> {
-    throw new DomainError('Unknown', 'Unknown: reactions arrive with milestone 4');
+  async react(chatId: string, messageId: string, emojis: string[]): Promise<void> {
+    const loaded = await this.engine.ready();
+    const chat = await this.find(chatId);
+    const model = chat.messages.get(messageId);
+    if (!model) throw new DomainError('Unknown', 'Unknown: no such message');
+    await sendReactions(loaded, chat, model, emojis);
   }
 
   async markRead(chatId: string): Promise<void> {
@@ -244,13 +282,16 @@ export class ConverseChatRepository implements ChatRepository {
   }
 
   /**
-   * Drops MAM gap placeholders, orphan reactions and retractions (§6, `model-with-messages.js:985`)
-   * and transient notices; keeps decryption errors.
+   * Drops MAM gap placeholders, upload placeholders (`file: true`, their progress goes through
+   * `sendFile`), orphan reactions and retractions (§6, `model-with-messages.js:985`) and transient
+   * notices; keeps decryption errors.
    */
   private isDisplayable(model: MessageModel): boolean {
     const placeholder = this.loaded?.MAMPlaceholderMessage;
     if (placeholder && model instanceof placeholder) return false;
-    if (model.get('dangling_reaction') || model.get('dangling_retraction')) return false;
+    if (model.get('file') || model.get('dangling_reaction') || model.get('dangling_retraction')) {
+      return false;
+    }
     return !model.get('is_ephemeral') || model.get('error_type') === 'Decryption';
   }
 }

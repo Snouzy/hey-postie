@@ -27,6 +27,8 @@ export interface ChatModel extends ModelLike {
   /** The queue through which parsed messages become models (`model-with-messages.js:268-272`). */
   msg_chain?: Promise<unknown>;
   sendMessage(attributes: { body: string }): Promise<MessageModel | undefined>;
+  /** XEP-0363 upload, one placeholder message per file (`shared/model-with-messages.js:432`). */
+  sendFiles(files: File[]): Promise<void>;
   /** Synchronous on a direct chat, async on a room (`plugins/muc/muc.js` sends a marker first). */
   clearUnreadMsgCounter(): Promise<unknown> | undefined;
   getDisplayName(): string | null | undefined;
@@ -55,6 +57,14 @@ export type BookmarkModel = ModelLike;
 /** `getIdentity()` would wait for the entity's items; the identities already known are read directly. */
 export interface DiscoEntityLike {
   identities: { findWhere(attributes: { category: string; type: string }): unknown };
+}
+
+/** A disco entity that supports a feature: its JID is `id`, its data forms hold `max-file-size`. */
+export interface DiscoFeatureEntity {
+  id: string;
+  dataforms: {
+    where(query: Record<string, unknown>): Array<{ attributes: Record<string, unknown> }>;
+  };
 }
 
 export interface BookmarksCollection extends CollectionLike<BookmarkModel> {
@@ -190,6 +200,15 @@ export interface ConverseApi {
     getIdentity(category: string, type: string, jid: string): Promise<ModelLike | undefined>;
     /** The cached entity, or undefined when nothing was ever discovered about the JID. */
     entities: { get(jid: string): Promise<DiscoEntityLike | undefined> };
+    /** The entity and its items that support a feature (`plugins/disco/api.js:335`). */
+    features: { get(feature: string, jid: string): Promise<DiscoFeatureEntity[]> };
+    own: { features: { add(feature: string): void } };
+  };
+  /** A raw stanza (`Element` or `stx` result) over the connection; IQs go through `sendIQ`. */
+  send(stanza: unknown): unknown;
+  /** Present once the OMEMO plugin loaded (`plugins/omemo/api.js`). */
+  omemo?: {
+    send(chat: ChatModel, plaintext: string | null, extensions?: unknown[]): Promise<void>;
   };
   alert?: Handler;
 }
@@ -206,10 +225,14 @@ export interface ConverseState {
 export interface ConverseEnv {
   Strophe: {
     Status: Record<string, number>;
+    NS: Record<string, string>;
     Connection: new (service: string) => StropheConnection;
     getBareJidFromJid(jid: string): string | null;
   };
   u: {
+    getUniqueId(suffix?: string): string;
+    /** The key under which our own reactions sit in `message.reactions` (`plugins/reactions/utils.js`). */
+    reactions: { getOwnReactionJID(chat: ChatModel): string };
     mam: {
       fetchArchivedMessages(
         chat: ChatModel,

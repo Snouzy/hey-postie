@@ -25,19 +25,21 @@ export function toMessage(model: MessageModel, context: MessageContext): Message
   const direction = model.get('sender') === 'me' ? 'out' : 'in';
   const undecryptable = model.get('error_type') === 'Decryption';
   const retracted = Boolean(model.get('retracted'));
-  const body =
+  const text =
     undecryptable || retracted ? '' : string(model.get('plaintext')) || string(model.get('body'));
+  const files = retracted ? [] : attachments(string(model.get('oob_url')), text);
   const nick = string(model.get('nick'));
   const message: Message = {
     id: string(model.get('id')),
     chatId: context.chatId,
     fromJid: fromJid(model, context),
-    body,
+    // An upload's body is nothing but its URL (§7): the attachment carries it, the body is empty.
+    body: files.length > 0 && isOnlyUrl(text) ? '' : text,
     sentAt: new Date(string(model.get('time'))),
     direction,
     status: status(model, direction, context),
     encryption: undecryptable ? 'undecryptable' : model.get('is_encrypted') ? 'omemo' : 'none',
-    attachments: retracted ? [] : attachments(string(model.get('oob_url')), body),
+    attachments: files,
     reactions: reactions(model.get('reactions')),
     isMention:
       direction === 'in' && Boolean(context.ownNick) && isMention(model, context.ownNick ?? ''),
@@ -128,6 +130,10 @@ function attachments(oobUrl: string, body: string): Attachment[] {
   return [];
 }
 
+function isOnlyUrl(text: string): boolean {
+  return /^(https?|aesgcm):\/\/\S+$/i.test(text.trim());
+}
+
 function attachment(url: string): Attachment {
   const encrypted = url.toLowerCase().startsWith('aesgcm://');
   const [location = '', fragment] = url.split('#', 2);
@@ -173,7 +179,11 @@ function mimeType(name: string): string {
   return MIME_BY_EXTENSION[extension] ?? 'application/octet-stream';
 }
 
-/** Converse stores `{ senderBareJid: emojis[] }` (§6); the contract groups by emoji. */
+/**
+ * Converse stores `{ senderKey: emojis[] }` (§6; the key is a bare JID in a direct chat, an
+ * occupant id or address in a room); the contract groups by emoji, sorted so that two updates
+ * of the same message compare equal.
+ */
 function reactions(value: unknown): Reaction[] {
   if (!value || typeof value !== 'object') return [];
   const byEmoji = new Map<string, string[]>();
@@ -186,7 +196,9 @@ function reactions(value: unknown): Reaction[] {
       byEmoji.set(emoji, jids);
     }
   }
-  return [...byEmoji].map(([emoji, fromJids]) => ({ emoji, fromJids }));
+  return [...byEmoji]
+    .map(([emoji, fromJids]) => ({ emoji, fromJids }))
+    .sort((a, b) => a.emoji.localeCompare(b.emoji));
 }
 
 function presence(status: string): Presence {
