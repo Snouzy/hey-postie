@@ -171,3 +171,69 @@ sending while disconnected. Our wrapper keeps `warn` in production and never for
 - Test hook: `bosh_service_url: 'montague.lit/http-bind'` makes `isTestEnv()` true and swaps in a
   `MockConnection` with `sent_stanzas` / `IQ_stanzas`.
 - `_converse` is a Proxy: use `_converse.state.*`.
+
+## 12. What the repository actually does
+
+_Implementation of 2026-10-15, `packages/core/src/repositories/converse/`. Verified against the
+installed package and by `repositories.test.ts`, which drives the real headless build over its
+`MockConnection` in jsdom._
+
+- `engine.ts`: one `ConverseEngine` per process. `@converse/headless` is imported lazily (its
+  import touches `window`), `converse.initialize` runs once. A second sign-in only calls
+  `api.user.login` again: `api.user.logout` ends in `api.connection.destroy()` which drops the
+  connection, and `login` creates a new one (`shared/connection/api.js:27-50`). `initialize` could
+  be called again (its `cleanup` is made for Converse's tests) but it also removes every listener,
+  so we never do. Settings of §1 plus `keepalive: false` and `reuse_scram_keys: false` (SCRAM keys
+  in IndexedDB would be a stored credential; the password lives in the keychain). `api.alert` and
+  `window.alert` are replaced by a `console.warn` with no content.
+- `xmpp.ts`: `connect` sets `websocket_url` per call, turns `auto_reconnect` off until `connected`
+  (otherwise a failed first attempt loops through `reconnect`, `shared/connection/index.js:333`),
+  resolves after `connected` + `rosterContactsFetched` + `chatBoxesFetched`, rejects with
+  `InvalidCredentials` on AUTHFAIL, `ServerUnreachable` on CONNFAIL/DISCONNECTED/timeout (30 s),
+  `CertificateInvalid` when the WebSocket close reason says so. The close reason is read by wrapping
+  `connection._proto._onClose` at `connectionInitialized`: Strophe discards `event.reason` and does
+  nothing at all for a clean close before the stream opened (`strophe.js/src/websocket.js:360-378`),
+  so the wrapper also turns that case into a CONNFAIL. `onStateChange`: `connected`/`reconnected`
+  → `online`, `will-reconnect` → `connecting`, `disconnected` → `offline` (with the last
+  AUTHFAIL/CONNFAIL as error), only after having been online: a failed sign-in and the logout
+  cascade below also fire `disconnected`.
+- `roster.ts`: `rosterInitialized` fires at every login with a new collection (`plugins/roster/utils.js:14-19`):
+  the repository re-binds `add`/`change`/`remove` each time; `contactPresenceChanged` and
+  `contactRequest` come from `api.listen`. `remove` on the collection is reported with
+  `subscription: 'none'`, like the fake.
+- `chat.ts`: the `chatboxes` collection is created once at `pluginsInitialized` and only emptied on
+  logout, so it is bound once (`engine.onReady`). `onMessage` fires for live stanzas only: not for
+  `is_archived` (MAM) results, which would notify a chat's whole history on first open, and not for
+  our own messages unless they are carbons. Archived messages reach the UI through `messages()`,
+  `chat.updated` and the unread counter. `open(jid)` hides the other direct chats: `num_unread` is
+  only counted while a chat `isHidden()` (§4). `messages({ before })` pages with
+  `u.mam.fetchArchivedMessages(chat, { rsm: { before: <stanza_id>, max } }, false)` and returns the
+  models added meanwhile; a message without `stanza_id <bare_jid>` yields `[]`.
+- `mappers.ts`: pure functions, unit-tested with plain `{ get }` objects.
+
+### Corrections to the map above
+
+- Direct chats have `type === 'chatbox'` (`PRIVATE_CHAT_TYPE`, `shared/constants.js:66`), not `chat`.
+- `connected`, `reconnected`, `disconnected` are events only: `api.waitUntil('connected')` returns
+  `null` (`shared/api/promise.js`), which an `await` silently treats as resolved. Promises exist for
+  `rosterContactsFetched`, `chatBoxesFetched`, `statusInitialized`, `OMEMOInitialized`...
+- `bosh_service_url` is a setting of the `converse-bosh` plugin: with that plugin blacklisted,
+  Converse answers `login` with DISCONNECTED "Could not automatically determine a connection URL"
+  unless `websocket_url` is set. The test hook (§11) therefore needs the BOSH plugin enabled and
+  **no** `websocket_url`: with a `ws://` URL the mock still uses Strophe's WebSocket transport, whose
+  `_onIdle` dereferences a socket that was never opened. The repository tests pass `websocketUrl: ''`.
+- `getDisplayName()` falls back to the JID itself (`plugins/roster/contact.js:79`); the mappers
+  treat that as "no name" and use the local part.
+- Logout cascade: `finishDisconnection` calls `api.connection.destroy()`, whose `disconnect()` on
+  the already closed connection re-enters `onDisconnected` → `finishDisconnection` twice more. Those
+  late passes destroy whatever connection exists at that moment, including a fresh login's.
+  `connect()` and `disconnect()` wait until no connection has existed for three 10 ms ticks.
+- Opening a chat with a JID that is not in the roster awaits `api.blocklist.get()`
+  (`shared/model-with-contact.js:59`): fine with a server, but the mock never answers that IQ.
+- Vite (rolldown) resolves the `import('./libomemo.esm.min.js')` at build time and emits
+  `dist/assets/libomemo.esm.min-<hash>.js` (99 kB; two harmless "path/fs externalized" warnings).
+  The `webpackIgnore` comment is irrelevant, nothing to externalize. libomemo looks for the wasm at
+  `__WASM_BASE__ + 'curve25519_compiled.wasm'`, and Converse sets `__WASM_BASE__` to the page's
+  directory when no `<script src>` mentions converse (`dist/converse-headless.js:46599-46616`), so
+  `curve25519_compiled.wasm` (84 kB) and `emoji.json` (264 kB) sit in `apps/desktop/public/`.
+  Checked on the 2026-10-15 build output; the OMEMO load itself is not exercised yet.

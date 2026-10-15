@@ -28,6 +28,11 @@ tasks/             agents' plans and lessons, untracked
   system notification is shown (window not focused, or another chat open).
 - **Persistence**: `apps/desktop/app/repositories/keychain.ts` calls the Rust `keychain_*` commands;
   `packages/core/src/fakes/keychain.ts` keeps a `Map` in memory for tests.
+  `packages/core/src/repositories/converse/` wraps `@converse/headless`: `engine.ts` owns the one
+  Converse instance, `xmpp.ts`, `roster.ts` and `chat.ts` implement the three repository contracts,
+  `mappers.ts` turns Converse models into the plain types of `contracts/`. `createConverseRepositories()`
+  (exported by `@hey-postie/core`) wires them over one engine; `apps/desktop/app/dependencies.ts`
+  calls it. Details and pitfalls: [converse.md](converse.md).
 
 ## Run and verify
 
