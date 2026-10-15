@@ -7,6 +7,7 @@ The folder opens as an Obsidian vault.
 
 - [Brand](product/brand.md): name, character, domains, what is still to check.
 - [Decisions](product/decisions.md): the choices made so far and why (stack, scope, distribution).
+- [Release](product/release.md): how to cut a release, signing, the updater, the App Store path and the store listing checklist.
 
 ## Development
 

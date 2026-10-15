@@ -1,6 +1,6 @@
 [package]
 name = "hey-postie"
-version = "0.0.0"
+version = "0.1.0"
 description = "A friendly XMPP chat client, end-to-end encrypted."
 authors = ["Snouzylabs S.R.L. and the Hey Postie contributors"]
 license = "AGPL-3.0-or-later"
@@ -38,6 +38,8 @@ tauri-plugin-dialog = "2"
 sys-locale = "0.3"
 tauri-plugin-single-instance = { version = "2", features = ["deep-link"] }
 percent-encoding = "2"
+tauri-plugin-updater = "2"
+tauri-plugin-process = "2"
 
 [dev-dependencies]
 rcgen = "0.14"

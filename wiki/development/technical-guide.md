@@ -51,8 +51,11 @@ tasks/             agents' plans and lessons, untracked
 | `pnpm lint` | Biome (lint and format). `pnpm lint:fix` writes the fixes. |
 | `pnpm test` | Vitest, every package. |
 | `pnpm rust` | `cargo fmt --check`, `cargo clippy -D warnings`, `cargo test` in `apps/desktop/src-tauri`. |
-| `pnpm licenses` | Regenerates `packages/ui/src/data/licenses.json` from the dependency trees (see [dependencies.md](dependencies.md)). |
+| `pnpm run licenses` | Regenerates `packages/ui/src/data/licenses.json` from the dependency trees (see [dependencies.md](dependencies.md)). `run` is needed: `pnpm licenses` alone is pnpm's own built-in command. |
 | `pnpm verify` | All of the above, then the Vite build. Must be green before a pull request. |
+| `pnpm version:set <x.y.z>` | Writes the version in `tauri.conf.json`, `Cargo.toml`, `Cargo.lock` and the three `package.json` (`scripts/version-set.mjs`). |
+| `pnpm desktop:build` | `tauri build`: the installers and updater artifacts for the current platform; needs `TAURI_SIGNING_PRIVATE_KEY` (see [release.md](../product/release.md)). |
+| `pnpm release:build` | `pnpm verify && pnpm desktop:build`. |
 
 ## Test server
 
@@ -91,7 +94,8 @@ distribution. Only one session at a time adds or upgrades dependencies.
 
 _Checked on 2026-10-15 against Tauri 2.12.4, `tauri-plugin-notification` 2.7.0,
 `tauri-plugin-deep-link` 2.6.2, `tauri-plugin-single-instance` 2.5.4, `tauri-plugin-opener` 2.7.2,
-`tauri-plugin-dialog` 2.8.3, on macOS. Windows and Linux are assumed from the crates' docs._
+`tauri-plugin-dialog` 2.8.3, on macOS; on 2026-10-16 for `tauri-plugin-updater` 2.14.0 and
+`tauri-plugin-process` 2.4.0. Windows and Linux are assumed from the crates' docs._
 
 - The Rust side lives in `apps/desktop/src-tauri/src/`: `lib.rs` registers plugins, commands and
   window events; `keychain.rs` wraps the `keyring` crate (macOS Keychain, Windows Credential
@@ -316,9 +320,38 @@ entitlement `files.user-selected.read-write` already in `Entitlements.plist`.
 
 ### Licenses (`apps/desktop/scripts/licenses.mjs`)
 
-`pnpm licenses` writes `packages/ui/src/data/licenses.json`, the data of the "Licenses" dialog
+`pnpm run licenses` writes `packages/ui/src/data/licenses.json`, the data of the "Licenses" dialog
 (dialog not built yet). Sources and format: [dependencies.md](dependencies.md), "The licenses
 file". Rerun it in the same commit as a dependency change.
+
+### Version (`src-tauri/tauri.conf.json`, `vite.config.ts`, `scripts/version-set.mjs`)
+
+`version` in `tauri.conf.json` is the only hand-edited version. `pnpm version:set <x.y.z>` copies it
+to `Cargo.toml`, `Cargo.lock` and the three `package.json`; `vite.config.ts` imports the JSON and
+defines `import.meta.env.VITE_APP_VERSION` (typed in `app/modules.d.ts`), which `app/main.tsx`
+hands to `App` as `version` for Settings > About. Changing the number by hand in one file is the
+mistake the script exists to prevent.
+
+### Updater (`app/updater.ts`, `tauri-plugin-updater`, `tauri-plugin-process`)
+
+`checkForUpdatesAtStartup()` runs last in `startDesktopIntegrations` and never blocks: at most one
+check per hour across restarts (`lastCheckedAt` in the `updater.json` store; `isCheckDue` is unit
+tested), `check()` against `plugins.updater.endpoints`, and on a newer version the Tauri event
+`update-available` (`{ version, currentVersion }`) plus a console line with the event name. No
+download, no install, no interface yet. The capabilities `updater:default` and
+`process:allow-restart` are granted for the day the interface calls `downloadAndInstall()` and
+`relaunch()`. The signing key, the `latest.json` format and the release steps are in
+[release.md](../product/release.md).
+
+### Bundles (`src-tauri/tauri.conf.json`, `bundle`)
+
+macOS `app` + `dmg`, Windows `nsis` + `msi`, Linux `appimage` + `deb`, plus the updater artifacts
+(`createUpdaterArtifacts: true`, so a build needs the signing key). Publisher, category,
+descriptions, copyright and `licenseFile` feed the installers' metadata. macOS: hardened runtime,
+`Entitlements.plist`, macOS 12 minimum, `signingIdentity` null until a certificate exists (set by
+environment, see release.md). Windows: WebView2 bootstrapper download, `certificateThumbprint`
+null. Linux `.deb`: depends on `libwebkit2gtk-4.1-0`. Built and opened on macOS on 2026-10-16
+(unsigned); Windows and Linux not run.
 
 ### Still open on the desktop side
 
@@ -326,3 +359,4 @@ file". Rerun it in the same commit as a dependency change.
 - `chat.requested` is emitted by the shell; the interface listens to it (milestone 1, UI).
 - The default-window-icon tray icon (template icon for macOS dark menu bars).
 - Single instance and `xmpp:` links on Windows and Linux: written from the crates' docs, not run.
+- The update screen (download, install, relaunch) and the release server behind `latest.json`.

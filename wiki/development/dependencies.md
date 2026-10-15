@@ -12,6 +12,8 @@ listed at the end. Checked on 2026-10-15.
 | `lucide-react` | latest 0.x | ISC | Icons. |
 | `@tauri-apps/api` and plugins (`notification`, `store`) | 2.x | MIT or Apache-2.0 | Bridge to the Rust side. |
 | `@tauri-apps/plugin-opener` | 2.7.2 | MIT or Apache-2.0 | `openUrl`: links in messages go to the system browser (`apps/desktop/app/openLink.ts`). Added 2026-10-15. |
+| `@tauri-apps/plugin-updater` | 2.14.0 | MIT or Apache-2.0 | `check()` for a newer release at startup (`apps/desktop/app/updater.ts`); `downloadAndInstall()` later, with the update screen. Added 2026-10-16. |
+| `@tauri-apps/plugin-process` | 2.4.0 | MIT or Apache-2.0 | `relaunch()` after an update is installed. Not called yet. Added 2026-10-16. |
 | Fraunces, Figtree | variable fonts | SIL OFL 1.1 | Headings and text, bundled. |
 
 ## Rust (`apps/desktop/src-tauri`)
@@ -22,6 +24,8 @@ listed at the end. Checked on 2026-10-15.
 | `tauri-plugin-deep-link` | 2.6 | MIT or Apache-2.0 | Registers the `xmpp:` scheme and hands the links to the app. Rust side only; its npm package is not used. |
 | `tauri-plugin-single-instance` | 2.5.4, feature `deep-link` | MIT or Apache-2.0 | A second instance (an `xmpp:` link on Windows or Linux starts one) hands its arguments to the running app and exits. Added 2026-10-15. |
 | `tauri-plugin-opener` | 2.7.2 | MIT or Apache-2.0 | Rust side of `@tauri-apps/plugin-opener`. Added 2026-10-15. |
+| `tauri-plugin-updater` | 2.14.0 | MIT or Apache-2.0 | Downloads `latest.json`, verifies the minisign signature (`minisign-verify`, MIT) of the artifact and installs it. Pulls `reqwest` 0.13 over `rustls` (MIT or Apache-2.0), `hyper`/`tower` (MIT), `zip` 4 (MIT), `tar`, `flate2` (MIT or Apache-2.0), `webpki-root-certs` (CDLA-Permissive-2.0, Mozilla's root store), `osakit` (MIT, macOS only). Added 2026-10-16; see [release.md](../product/release.md). |
+| `tauri-plugin-process` | 2.4.0 | MIT or Apache-2.0 | `restart` command, so the webview can relaunch the app after an update. Added 2026-10-16. |
 | `tauri-plugin-dialog` | 2.8.3 | MIT or Apache-2.0 | The save panel, driven from Rust (`save.rs`). Pulls `rfd` (MIT) and `tauri-plugin-fs` (MIT or Apache-2.0), whose commands are not exposed to the webview. Its npm package is not used. Added 2026-10-15. |
 | `sys-locale` | 0.3.2 | MIT or Apache-2.0 | The system locale, to show the tray menu in French or English (`i18n.rs`). Added 2026-10-15. |
 | `percent-encoding` | 2.3.2 | MIT or Apache-2.0 | Decodes the file name header of `save_file`. Already in the tree through `url`. Added 2026-10-15. |
@@ -40,7 +44,7 @@ listed at the end. Checked on 2026-10-15.
 
 ## The licenses file
 
-`pnpm licenses` runs `apps/desktop/scripts/licenses.mjs`, which writes
+`pnpm run licenses` runs `apps/desktop/scripts/licenses.mjs`, which writes
 `packages/ui/src/data/licenses.json`: one entry per shipped dependency (`source`: `npm`, `cargo`
 or `font`; `name`, `version`, `license`, `repository`), for the "Licenses" dialog of the interface.
 npm entries come from `pnpm -r licenses list --prod --json` (runtime dependencies of every
@@ -49,8 +53,8 @@ workspace package; `repository` read from each `package.json`), Rust entries fro
 targets; dev and build dependencies left out), the two fonts are written by hand in the script
 since they are not packages. Two packages without a `license` field (`@converse/localforage-getitems`,
 `localforage-setitems`) are Apache-2.0 by their `LICENSE` file; the script carries that by hand.
-Run it after adding or upgrading a dependency and commit the file. Generated on 2026-10-15:
-497 entries, including `@converse/headless` (MPL-2.0), `libomemo.js` (GPL-3.0), the fonts (OFL-1.1)
+Run it after adding or upgrading a dependency and commit the file. Generated on 2026-10-16:
+524 entries, including `@converse/headless` (MPL-2.0), `libomemo.js` (GPL-3.0), the fonts (OFL-1.1)
 and the `tauri` crates.
 
 ## Development
