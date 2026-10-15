@@ -21,5 +21,8 @@ export type {
   Presence,
   Reaction,
   Room,
+  RoomInfo,
+  RoomMember,
+  RoomNotify,
   Trust,
 } from './types';
