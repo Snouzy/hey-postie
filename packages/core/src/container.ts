@@ -1,6 +1,7 @@
 import type {
   ChatRepository,
   CryptoRepository,
+  FileRepository,
   KeychainRepository,
   Notifier,
   RegistrationRepository,
@@ -15,6 +16,7 @@ import { createChatsService } from './services/chats';
 import { createContactsService } from './services/contacts';
 import { createCryptoService } from './services/crypto';
 import { createEventBus } from './services/events';
+import { createFilesService } from './services/files';
 import { createNotificationsService } from './services/notifications';
 import { createRoomsService } from './services/rooms';
 
@@ -27,6 +29,7 @@ export interface CoreDependencies {
   room: RoomRepository;
   crypto: CryptoRepository;
   registration: RegistrationRepository;
+  file: FileRepository;
   notifier: Notifier;
 }
 
@@ -38,6 +41,7 @@ export function createCore(deps: CoreDependencies): Core {
   const chats = createChatsService(deps, events);
   const rooms = createRoomsService(deps, events);
   const crypto = createCryptoService(deps, events);
+  const files = createFilesService(deps);
   const notifications = createNotificationsService(deps, events);
-  return { accounts, contacts, chats, rooms, crypto, notifications, events };
+  return { accounts, contacts, chats, rooms, crypto, files, notifications, events };
 }

@@ -45,6 +45,21 @@ export function createChatsService(
       if (!trimmed) throw new DomainError('EmptyMessage');
       return deps.chat.send(chatId, trimmed);
     },
+    async toggleReaction(chatId, messageId, emoji) {
+      const trimmed = emoji.trim();
+      if (!trimmed) throw new DomainError('EmptyMessage');
+      const message = (await deps.chat.messages(chatId, { limit: PAGE_SIZE })).find(
+        (m) => m.id === messageId,
+      );
+      const mine = new Set(
+        (message?.reactions ?? [])
+          .filter((r) => r.fromJids.includes(deps.chat.selfJid()))
+          .map((r) => r.emoji),
+      );
+      if (mine.has(trimmed)) mine.delete(trimmed);
+      else mine.add(trimmed);
+      await deps.chat.react(chatId, messageId, [...mine]);
+    },
     markRead(chatId) {
       return deps.chat.markRead(chatId);
     },

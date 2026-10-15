@@ -4,7 +4,7 @@ import { createCore } from '../../container';
 import { DomainError } from '../../contracts/errors';
 import type { Core } from '../../contracts/services';
 import type { Account } from '../../contracts/types';
-import { FakeCrypto, FakeKeychain, FakeNotifier, FakeRoom } from '../../fakes';
+import { FakeCrypto, FakeFile, FakeKeychain, FakeNotifier, FakeRoom } from '../../fakes';
 import { createConverseRepositories } from './index';
 import { restoreNodeEvent, serveHeadlessAssets } from './test-support/realSocket';
 
@@ -61,6 +61,7 @@ describe.skipIf(!SERVER)('Converse registration against the XMPP test server', (
       transport: { websocketUrlFor: async () => SERVER ?? '' },
       room: new FakeRoom(),
       crypto: new FakeCrypto(),
+      file: new FakeFile(),
       notifier: new FakeNotifier(),
     });
     core.events.on('account.changed', (account) => accounts.push(account));

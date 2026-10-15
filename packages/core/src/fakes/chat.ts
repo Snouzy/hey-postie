@@ -20,6 +20,10 @@ export class FakeChat implements ChatRepository {
   private openId: string | null = null;
   readonly sent: Message[] = [];
   readonly markedRead: string[] = [];
+  readonly reactions: Array<{ chatId: string; messageId: string; emojis: string[] }> = [];
+  readonly uploaded: Array<{ chatId: string; name: string }> = [];
+  maxUpload: number | null = 5 * 1024 * 1024;
+  myJid = 'me@example.org';
 
   /** Older messages, oldest first, that the server would return on demand. */
   history(chatId: string, messages: Message[]): void {
@@ -49,6 +53,10 @@ export class FakeChat implements ChatRepository {
     const index = list.findIndex((m) => m.id === message.id);
     if (index >= 0) list[index] = message;
     for (const handler of this.updateHandlers) handler(message);
+  }
+
+  selfJid(): string {
+    return this.myJid;
   }
 
   async list(): Promise<Chat[]> {
@@ -81,6 +89,56 @@ export class FakeChat implements ChatRepository {
     this.append(chat, message);
     this.sent.push(message);
     return message;
+  }
+
+  async sendFile(
+    chatId: string,
+    file: File,
+    onProgress?: (fraction: number) => void,
+  ): Promise<Message> {
+    const chat = this.ensureChat(chatId, chatId);
+    onProgress?.(0.5);
+    onProgress?.(1);
+    this.uploaded.push({ chatId, name: file.name });
+    const message = this.build({
+      chatId,
+      fromJid: this.myJid,
+      body: '',
+      direction: 'out',
+      status: 'sent',
+      attachments: [
+        {
+          url: `https://upload.example.org/${encodeURIComponent(file.name)}`,
+          name: file.name,
+          size: file.size,
+          mimeType: file.type || 'application/octet-stream',
+          encryption: 'none',
+        },
+      ],
+    });
+    this.append(chat, message);
+    this.sent.push(message);
+    return message;
+  }
+
+  async maxFileSize(): Promise<number | null> {
+    return this.maxUpload;
+  }
+
+  /** Replaces this account's reactions on the message and reports the update. */
+  async react(chatId: string, messageId: string, emojis: string[]): Promise<void> {
+    this.reactions.push({ chatId, messageId, emojis });
+    const message = (this.byChat.get(chatId) ?? []).find((m) => m.id === messageId);
+    if (!message) return;
+    const others = message.reactions
+      .map((r) => ({ emoji: r.emoji, fromJids: r.fromJids.filter((j) => j !== this.myJid) }))
+      .filter((r) => r.fromJids.length > 0);
+    for (const emoji of emojis) {
+      const existing = others.find((r) => r.emoji === emoji);
+      if (existing) existing.fromJids.push(this.myJid);
+      else others.push({ emoji, fromJids: [this.myJid] });
+    }
+    this.update({ ...message, reactions: others });
   }
 
   async markRead(chatId: string): Promise<void> {

@@ -106,3 +106,30 @@ describe('chats.markRead', () => {
     expect(unread.at(-1)).toBe(0);
   });
 });
+
+describe('chats.toggleReaction', () => {
+  it('adds my emoji, then removes it, keeping the reactions of others', async () => {
+    const chat = await core.chats.open('bob@x.org');
+    const incoming = deps.fakes.chat.receive({
+      chatId: chat.id,
+      fromJid: 'bob@x.org',
+      body: 'hi',
+      reactions: [{ emoji: '👍', fromJids: ['carol@x.org'] }],
+    });
+    const seen: string[][] = [];
+    core.events.on('message.updated', (m) =>
+      seen.push(m.reactions.map((r) => `${r.emoji}:${r.fromJids.join('+')}`)),
+    );
+    await core.chats.toggleReaction(chat.id, incoming.id, '👍');
+    expect(seen.at(-1)).toEqual(['👍:carol@x.org+me@example.org']);
+    await core.chats.toggleReaction(chat.id, incoming.id, '❤️');
+    expect(deps.fakes.chat.reactions.at(-1)?.emojis).toEqual(['👍', '❤️']);
+    await core.chats.toggleReaction(chat.id, incoming.id, '👍');
+    expect(deps.fakes.chat.reactions.at(-1)?.emojis).toEqual(['❤️']);
+    expect(seen.at(-1)).toEqual(['👍:carol@x.org', '❤️:me@example.org']);
+  });
+
+  it('refuses an empty emoji', async () => {
+    await expect(core.chats.toggleReaction('c', 'm', ' ')).rejects.toThrow(/EmptyMessage/);
+  });
+});

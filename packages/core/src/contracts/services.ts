@@ -1,6 +1,7 @@
 import type { EventBus } from './events';
 import type {
   Account,
+  Attachment,
   Chat,
   Contact,
   Device,
@@ -49,6 +50,8 @@ export interface ChatsService {
   loadOlder(chatId: string): Promise<Message[]>;
   /** Trims the body; refuses an empty one with `EmptyMessage`. */
   send(chatId: string, body: string): Promise<Message>;
+  /** Toggles one emoji of this account on a message. */
+  toggleReaction(chatId: string, messageId: string, emoji: string): Promise<void>;
   markRead(chatId: string): Promise<void>;
 }
 
@@ -87,6 +90,16 @@ export interface CryptoService {
   formatFingerprint(fingerprint: string): string;
 }
 
+export interface FilesService {
+  /** Checks the size against the server's limit before uploading; progress 0..1. */
+  send(chatId: string, file: File, onProgress?: (fraction: number) => void): Promise<Message>;
+  maxFileSize(): Promise<number | null>;
+  /** Bytes of an attachment, decrypted when needed; the UI makes an object URL from them. */
+  fetch(attachment: Attachment): Promise<Blob>;
+  /** True for images the UI may show inline (by media type and size). */
+  isInlineImage(attachment: Attachment): boolean;
+}
+
 /** Decides when a system notification is shown. The UI tells it what the user is looking at. */
 export interface NotificationsService {
   setWindowFocused(focused: boolean): void;
@@ -99,6 +112,7 @@ export interface Core {
   chats: ChatsService;
   rooms: RoomsService;
   crypto: CryptoService;
+  files: FilesService;
   notifications: NotificationsService;
   events: EventBus;
 }

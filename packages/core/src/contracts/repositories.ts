@@ -1,6 +1,7 @@
 import type { DomainError } from './errors';
 import type {
   AccountState,
+  Attachment,
   Chat,
   Contact,
   Device,
@@ -39,12 +40,24 @@ export interface RosterRepository {
 }
 
 export interface ChatRepository {
+  /** The bare JID of the signed-in account, as it appears in `Reaction.fromJids`. */
+  selfJid(): string;
   list(): Promise<Chat[]>;
   /** Opens (or creates) the direct chat with a bare JID. */
   open(jid: string): Promise<Chat>;
   /** The most recent messages, oldest first. `before` asks for the page that precedes a message id. */
   messages(chatId: string, options?: { before?: string; limit?: number }): Promise<Message[]>;
   send(chatId: string, body: string): Promise<Message>;
+  /**
+   * Uploads a file (XEP-0363; encrypted with AES-GCM when the chat is sealed) and sends the
+   * message that carries it. `onProgress` gets 0..1. Rejects with `FileTooLarge` when the server's
+   * limit is known and exceeded.
+   */
+  sendFile(chatId: string, file: File, onProgress?: (fraction: number) => void): Promise<Message>;
+  /** The server's upload limit in bytes, when it announces one. */
+  maxFileSize(): Promise<number | null>;
+  /** Sets this account's reactions on a message (XEP-0444); an empty list removes them all. */
+  react(chatId: string, messageId: string, emojis: string[]): Promise<void>;
   markRead(chatId: string): Promise<void>;
   onMessage(handler: (message: Message) => void): () => void;
   onMessageUpdate(handler: (message: Message) => void): () => void;
@@ -101,6 +114,12 @@ export interface RegistrationRepository {
   deleteCurrent(): Promise<void>;
   /** Removes every local trace of an account: engine stores, caches. Not the keychain. */
   wipeLocal(jid: string): Promise<void>;
+}
+
+/** Fetches attachments (and decrypts `aesgcm` ones) for display and saving. */
+export interface FileRepository {
+  /** The bytes of an attachment, decrypted when it has a `decryptionKey`. Cached by URL. */
+  fetch(attachment: Attachment): Promise<Blob>;
 }
 
 export interface Notifier {

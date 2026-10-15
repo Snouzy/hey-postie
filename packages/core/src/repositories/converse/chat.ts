@@ -78,6 +78,23 @@ export class ConverseChatRepository implements ChatRepository {
     return this.message(model, chat);
   }
 
+  /** The bare JID of the signed-in account (milestone 4 wires reactions and uploads). */
+  selfJid(): string {
+    return String(this.engine.current?.state.session?.get('bare_jid') ?? '').toLowerCase();
+  }
+
+  async sendFile(): Promise<Message> {
+    throw new DomainError('Unknown', 'Unknown: file upload arrives with milestone 4');
+  }
+
+  async maxFileSize(): Promise<number | null> {
+    return null;
+  }
+
+  async react(): Promise<void> {
+    throw new DomainError('Unknown', 'Unknown: reactions arrive with milestone 4');
+  }
+
   async markRead(chatId: string): Promise<void> {
     const chat = await this.find(chatId);
     chat.clearUnreadMsgCounter();
