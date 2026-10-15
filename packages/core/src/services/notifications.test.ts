@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { createCore } from '../container';
 import { createFakeDependencies } from '../fakes';
+import { HIDDEN_PREVIEW } from './notifications';
 
 let deps: ReturnType<typeof createFakeDependencies>;
 let core: ReturnType<typeof createCore>;
@@ -44,6 +45,22 @@ describe('notifications', () => {
     await core.chats.send(chat.id, 'mine');
     await tick();
     expect(deps.fakes.notifier.shown).toHaveLength(0);
+  });
+
+  it('shows the preview by default and hides it when asked', async () => {
+    expect(core.notifications.getShowPreview()).toBe(true);
+    core.notifications.setWindowFocused(false);
+    core.notifications.setShowPreview(false);
+    expect(core.notifications.getShowPreview()).toBe(false);
+    deps.fakes.chat.receive({ chatId: 'bob@x.org', fromJid: 'bob@x.org', body: 'secret plan' });
+    await tick();
+    expect(deps.fakes.notifier.shown).toEqual([
+      { title: 'bob', body: HIDDEN_PREVIEW, chatId: 'bob@x.org' },
+    ]);
+    core.notifications.setShowPreview(true);
+    deps.fakes.chat.receive({ chatId: 'bob@x.org', fromJid: 'bob@x.org', body: 'open again' });
+    await tick();
+    expect(deps.fakes.notifier.shown[1]?.body).toBe('open again');
   });
 
   it('shortens long bodies and hides undecryptable ones', async () => {

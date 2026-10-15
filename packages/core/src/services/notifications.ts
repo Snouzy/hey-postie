@@ -6,14 +6,19 @@ import type { Message, Room } from '../contracts/types';
 /**
  * Shows a system notification for an incoming message unless the user is already looking at it:
  * window focused and that chat open. In a room, the room's rule decides: every message, mentions
- * only (the default), or never.
+ * only (the default), or never. With the preview off, the body is `HIDDEN_PREVIEW`: the text of a
+ * letter never reaches the notification center.
  */
+/** The body when the user does not want the text of a letter in the notification center. */
+export const HIDDEN_PREVIEW = 'New letter';
+
 export function createNotificationsService(
   deps: Pick<CoreDependencies, 'notifier' | 'chat' | 'room'>,
   events: EventBus,
 ): NotificationsService {
   let focused = true;
   let openChat: string | null = null;
+  let showPreview = true;
 
   events.on('message.received', (message) => {
     if (message.direction !== 'in') return;
@@ -29,7 +34,8 @@ export function createNotificationsService(
     const title = room
       ? `${message.fromNick ?? ''} · ${room.name}`.replace(/^ · /, '')
       : (chat?.title ?? message.fromJid.split('@')[0] ?? message.fromJid);
-    await deps.notifier.show({ title, body: preview(message), chatId: message.chatId });
+    const body = showPreview ? preview(message) : HIDDEN_PREVIEW;
+    await deps.notifier.show({ title, body, chatId: message.chatId });
   }
 
   return {
@@ -38,6 +44,12 @@ export function createNotificationsService(
     },
     setOpenChat(chatId) {
       openChat = chatId;
+    },
+    setShowPreview(value) {
+      showPreview = value;
+    },
+    getShowPreview() {
+      return showPreview;
     },
   };
 }
