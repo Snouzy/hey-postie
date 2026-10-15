@@ -105,3 +105,21 @@ export interface Device {
   trust: Trust;
   isOwn: boolean;
 }
+
+/** What a server asks for when creating an account in band (XEP-0077). */
+export interface RegistrationField {
+  /** `username` and `password` are always present; servers may add `email` or custom fields. */
+  name: string;
+  label: string;
+  type: 'text' | 'password' | 'email' | 'hidden';
+  required: boolean;
+}
+
+export interface RegistrationForm {
+  domain: string;
+  instructions?: string;
+  fields: RegistrationField[];
+  /** A CAPTCHA image when the server requires one (XEP-0158); `captchaField` names its answer. */
+  captchaImageDataUrl?: string;
+  captchaField?: string;
+}

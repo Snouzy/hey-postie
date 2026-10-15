@@ -19,6 +19,7 @@ const SENTENCES: Record<ErrorCode, MessageKey> = {
   RoomBanned: 'error.RoomBanned',
   NickTaken: 'error.NickTaken',
   DeviceNotFound: 'error.DeviceNotFound',
+  RegistrationRejected: 'error.RegistrationRejected',
   Unknown: 'error.Unknown',
 };
 

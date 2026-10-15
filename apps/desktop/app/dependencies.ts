@@ -2,6 +2,7 @@ import {
   type CoreDependencies,
   createConverseRepositories,
   FakeCrypto,
+  FakeRegistration,
   FakeRoom,
 } from '@hey-postie/core';
 import { TauriKeychain } from './repositories/keychain';
@@ -25,6 +26,8 @@ export function createTauriDependencies(): CoreDependencies {
     room: new FakeRoom(),
     // Milestone 3 replaces the fake with the Converse OMEMO repository.
     crypto: new FakeCrypto(),
+    // Milestone 5 replaces the fake with the Converse registration repository.
+    registration: new FakeRegistration(),
     notifier: new TauriNotifier(),
   };
 }

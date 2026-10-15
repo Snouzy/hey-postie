@@ -5,6 +5,7 @@ import type {
   Contact,
   Device,
   Message,
+  RegistrationForm,
   Room,
   RoomInfo,
   RoomMember,
@@ -16,6 +17,20 @@ export interface AccountsService {
   signIn(input: { jid: string; password: string; remember: boolean }): Promise<Account>;
   signOut(): Promise<void>;
   rememberedPassword(jid: string): Promise<string | null>;
+  /** Asks a server what it needs to create an account; `RegistrationUnsupported` when it refuses. */
+  registrationForm(domain: string): Promise<RegistrationForm>;
+  /**
+   * Creates the account then signs in and remembers the password. `AccountConflict` when the
+   * name is taken, `RegistrationRejected` when the server refuses the values.
+   */
+  register(input: {
+    domain: string;
+    username: string;
+    password: string;
+    extra?: Record<string, string>;
+  }): Promise<Account>;
+  /** Deletes the signed-in account on the server, wipes its local data, signs out. */
+  deleteAccount(): Promise<void>;
 }
 
 export interface ContactsService {

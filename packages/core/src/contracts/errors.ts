@@ -5,6 +5,7 @@ export type ErrorCode =
   | 'CertificateInvalid'
   | 'RegistrationUnsupported'
   | 'AccountConflict'
+  | 'RegistrationRejected'
   | 'KeychainUnavailable'
   | 'FileTooLarge'
   | 'EmptyMessage'

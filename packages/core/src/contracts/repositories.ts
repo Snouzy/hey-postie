@@ -5,6 +5,7 @@ import type {
   Contact,
   Device,
   Message,
+  RegistrationForm,
   Room,
   RoomInfo,
   RoomMember,
@@ -83,6 +84,21 @@ export interface CryptoRepository {
   available(chatId: string): Promise<boolean>;
   setEncryption(chatId: string, enabled: boolean): Promise<void>;
   onDevicesChange(handler: (jid: string, devices: Device[]) => void): () => void;
+}
+
+/** In-band registration and account deletion (XEP-0077). Needs no signed-in account for `form`/`submit`. */
+export interface RegistrationRepository {
+  form(input: { domain: string; websocketUrl: string }): Promise<RegistrationForm>;
+  /** `values` keyed by field name; resolves once the server confirms the account. */
+  submit(input: {
+    domain: string;
+    websocketUrl: string;
+    values: Record<string, string>;
+  }): Promise<void>;
+  /** Deletes the signed-in account on its server. */
+  deleteCurrent(): Promise<void>;
+  /** Removes every local trace of an account: engine stores, caches. Not the keychain. */
+  wipeLocal(jid: string): Promise<void>;
 }
 
 export interface Notifier {

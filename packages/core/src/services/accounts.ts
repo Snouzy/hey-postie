@@ -7,7 +7,7 @@ import type { Account } from '../contracts/types';
 import { domainOf, normalizeJid } from './jid';
 
 export function createAccountsService(
-  deps: Pick<CoreDependencies, 'keychain' | 'transport' | 'xmpp'>,
+  deps: Pick<CoreDependencies, 'keychain' | 'transport' | 'xmpp' | 'registration'>,
   events: EventBus,
 ): AccountsService {
   let current: Account | null = null;
@@ -53,6 +53,39 @@ export function createAccountsService(
     },
 
     rememberedPassword: (jid) => deps.keychain.get(normalizeJid(jid)).catch(() => null),
+
+    async registrationForm(domain) {
+      const normalized = domainOf(normalizeJid(`a@${domain.trim()}`));
+      const websocketUrl = await deps.transport.websocketUrlFor(normalized);
+      return deps.registration.form({ domain: normalized, websocketUrl });
+    },
+
+    async register({ domain, username, password, extra }) {
+      const jid = normalizeJid(`${username.trim()}@${domain.trim()}`);
+      if (password.length < 8)
+        throw new DomainError('RegistrationRejected', 'RegistrationRejected: password too short');
+      const target = domainOf(jid);
+      const websocketUrl = await deps.transport.websocketUrlFor(target);
+      await deps.registration.submit({
+        domain: target,
+        websocketUrl,
+        values: { ...extra, username: jid.split('@')[0] ?? '', password },
+      });
+      return this.signIn({ jid, password, remember: true });
+    },
+
+    async deleteAccount() {
+      const account = current;
+      if (!account || account.state !== 'online') {
+        throw new DomainError('Unknown', 'Unknown: no account signed in');
+      }
+      await deps.registration.deleteCurrent();
+      await deps.xmpp.disconnect();
+      current = null;
+      events.emit('account.changed', { ...account, state: 'offline' });
+      await deps.registration.wipeLocal(account.jid);
+      await deps.keychain.delete(account.jid).catch(() => undefined);
+    },
   };
 }
 

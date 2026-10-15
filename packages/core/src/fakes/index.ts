@@ -3,6 +3,7 @@ import { FakeChat } from './chat';
 import { FakeCrypto } from './crypto';
 import { FakeKeychain } from './keychain';
 import { FakeNotifier } from './notifier';
+import { FakeRegistration } from './registration';
 import { FakeRoom } from './room';
 import { FakeRoster } from './roster';
 import { FakeTransport } from './transport';
@@ -13,6 +14,7 @@ export {
   FakeCrypto,
   FakeKeychain,
   FakeNotifier,
+  FakeRegistration,
   FakeRoom,
   FakeRoster,
   FakeTransport,
@@ -29,6 +31,7 @@ export interface FakeDependencies extends CoreDependencies {
     chat: FakeChat;
     room: FakeRoom;
     crypto: FakeCrypto;
+    registration: FakeRegistration;
     notifier: FakeNotifier;
   };
 }
@@ -42,6 +45,7 @@ export function createFakeDependencies(): FakeDependencies {
     chat: new FakeChat(),
     room: new FakeRoom(),
     crypto: new FakeCrypto(),
+    registration: new FakeRegistration(),
     notifier: new FakeNotifier(),
   };
   return { ...fakes, fakes };
