@@ -267,6 +267,23 @@ describe('react', () => {
     });
   });
 
+  it('refuses to react to a message without an id on the wire', async () => {
+    const [target] = await repositories.chat.messages(JULIET);
+    if (!target) throw new Error('no message');
+    const model = julietModel().messages.get(target.id);
+    const msgid = model?.get('msgid');
+    model?.save({ msgid: undefined });
+    try {
+      const sent = (await harness.connection()).sent_stanzas.length;
+      await expect(repositories.chat.react(JULIET, target.id, ['🎉'])).rejects.toMatchObject({
+        code: 'Unknown',
+      });
+      expect((await harness.connection()).sent_stanzas.length).toBe(sent);
+    } finally {
+      model?.save({ msgid });
+    }
+  });
+
   it('advertises the reactions feature', async () => {
     expect(await harness.ownFeatures()).toContain(REACTIONS);
   });
