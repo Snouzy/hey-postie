@@ -12,4 +12,73 @@ export const fr: Record<MessageKey, string> = {
   'postie.alt.sealed': 'Postie tenant une lettre scellée à la cire rouge',
   'postie.alt.oops': 'Postie, surpris, une lettre tombée à ses pieds',
   'postie.alt.asleep': 'Postie endormi sur sa sacoche',
+
+  'signIn.title': 'Se connecter',
+  'signIn.jid': 'Adresse',
+  'signIn.jidPlaceholder': 'nom@serveur',
+  'signIn.password': 'Mot de passe',
+  'signIn.remember': 'Se souvenir de moi',
+  'signIn.submit': 'Se connecter',
+  'signIn.connecting': 'Je frappe à la porte…',
+  'signIn.back': 'Retour',
+
+  'error.InvalidJid': 'Cette adresse ne me paraît pas bonne. Elle doit ressembler à nom@serveur.',
+  'error.InvalidCredentials': 'Le serveur n’a pas accepté ce mot de passe. Réessayons.',
+  'error.ServerUnreachable': 'Je n’arrive pas à joindre ce serveur. Réessayons dans un instant.',
+  'error.CertificateInvalid':
+    'Ce serveur présente un certificat auquel je ne peux pas faire confiance. Je m’arrête là.',
+  'error.KeychainUnavailable':
+    'Je n’arrive pas à ouvrir le trousseau, je ne garderai donc pas ce mot de passe.',
+  'error.EmptyMessage': 'Il n’y a encore rien à envoyer.',
+  'error.Unknown': 'Quelque chose a cloché pendant ma tournée. Réessayons.',
+
+  'main.tabs.chats': 'Discussions',
+  'main.tabs.contacts': 'Contacts',
+  'main.search': 'Rechercher une discussion',
+  'main.newChat': 'Nouvelle discussion',
+  'main.addContact': 'Ajouter un contact',
+  'main.signOut': 'Se déconnecter',
+  'main.empty': 'Aucune lettre ouverte. Choisissez une discussion, ou commencez-en une.',
+  'main.details': 'Détails',
+  'main.closeDetails': 'Fermer les détails',
+
+  'chatList.empty': 'Pas encore de discussion. Appuyez sur + pour écrire une première lettre.',
+  'chatList.unread': 'non lus',
+  'chatList.undecryptablePreview': 'Lettre scellée',
+
+  'contacts.empty': 'Personne dans le carnet d’adresses pour l’instant.',
+  'presence.online': 'En ligne',
+  'presence.away': 'Absent',
+  'presence.dnd': 'Ne pas déranger',
+  'presence.offline': 'Hors ligne',
+
+  'newChat.title': 'Nouvelle discussion',
+  'newChat.jid': 'Adresse',
+  'newChat.open': 'Ouvrir',
+  'addContact.title': 'Ajouter un contact',
+  'addContact.jid': 'Adresse',
+  'addContact.name': 'Nom (facultatif)',
+  'addContact.submit': 'Ajouter',
+  'dialog.cancel': 'Annuler',
+  'dialog.close': 'Fermer',
+
+  'details.jid': 'Adresse',
+  'details.removeContact': 'Retirer le contact',
+
+  'message.undecryptable':
+    'Cette lettre a été scellée pour un autre appareil. Je ne peux pas l’ouvrir ici.',
+  'message.loadOlder': 'Charger les plus anciens',
+  'message.retry': 'Réessayer',
+  'message.encrypted': 'Scellé',
+  'status.pending': 'En attente',
+  'status.sent': 'Envoyé',
+  'status.delivered': 'Livré',
+  'status.read': 'Lu',
+  'status.failed': 'Non livré',
+
+  'composer.placeholder': 'Écrire une lettre…',
+  'composer.send': 'Envoyer',
+
+  'date.today': 'Aujourd’hui',
+  'date.yesterday': 'Hier',
 };

@@ -10,6 +10,72 @@ export const en = {
   'postie.alt.sealed': 'Postie holding a letter with a red wax seal',
   'postie.alt.oops': 'Postie, surprised, a letter fallen at his feet',
   'postie.alt.asleep': 'Postie asleep on his satchel',
+
+  'signIn.title': 'Sign in',
+  'signIn.jid': 'Address',
+  'signIn.jidPlaceholder': 'name@server',
+  'signIn.password': 'Password',
+  'signIn.remember': 'Remember me',
+  'signIn.submit': 'Sign in',
+  'signIn.connecting': 'I am knocking at the door…',
+  'signIn.back': 'Back',
+
+  'error.InvalidJid': 'That address does not look right. It should read name@server.',
+  'error.InvalidCredentials': 'The server did not accept this password. Let us try again.',
+  'error.ServerUnreachable': 'I cannot reach this server right now. Let us try again in a moment.',
+  'error.CertificateInvalid': 'This server shows a certificate I cannot trust. I stopped here.',
+  'error.KeychainUnavailable': 'I cannot reach the keychain, so I will not keep this password.',
+  'error.EmptyMessage': 'There is nothing to send yet.',
+  'error.Unknown': 'Something went wrong on my round. Let us try again.',
+
+  'main.tabs.chats': 'Chats',
+  'main.tabs.contacts': 'Contacts',
+  'main.search': 'Search chats',
+  'main.newChat': 'New chat',
+  'main.addContact': 'Add a contact',
+  'main.signOut': 'Sign out',
+  'main.empty': 'No letter open. Pick a chat, or start a new one.',
+  'main.details': 'Details',
+  'main.closeDetails': 'Close details',
+
+  'chatList.empty': 'No chat yet. Press + to write a first letter.',
+  'chatList.unread': 'unread',
+  'chatList.undecryptablePreview': 'Sealed letter',
+
+  'contacts.empty': 'Nobody in the address book yet.',
+  'presence.online': 'Online',
+  'presence.away': 'Away',
+  'presence.dnd': 'Do not disturb',
+  'presence.offline': 'Offline',
+
+  'newChat.title': 'New chat',
+  'newChat.jid': 'Address',
+  'newChat.open': 'Open',
+  'addContact.title': 'Add a contact',
+  'addContact.jid': 'Address',
+  'addContact.name': 'Name (optional)',
+  'addContact.submit': 'Add',
+  'dialog.cancel': 'Cancel',
+  'dialog.close': 'Close',
+
+  'details.jid': 'Address',
+  'details.removeContact': 'Remove contact',
+
+  'message.undecryptable': 'This letter was sealed for another device. I cannot open it here.',
+  'message.loadOlder': 'Load older',
+  'message.retry': 'Retry',
+  'message.encrypted': 'Sealed',
+  'status.pending': 'Pending',
+  'status.sent': 'Sent',
+  'status.delivered': 'Delivered',
+  'status.read': 'Read',
+  'status.failed': 'Not delivered',
+
+  'composer.placeholder': 'Write a letter…',
+  'composer.send': 'Send',
+
+  'date.today': 'Today',
+  'date.yesterday': 'Yesterday',
 } as const;
 
 export type MessageKey = keyof typeof en;
