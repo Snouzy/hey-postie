@@ -42,13 +42,19 @@ export class ConverseChatRepository implements ChatRepository {
 
   /**
    * Opens the chat and hides the other ones: `num_unread` only counts for hidden chats (§4).
-   * A room is never created here: it must have been joined through `RoomRepository.join`.
+   * A room is never created here: it must have been joined through `RoomRepository.join`, so a
+   * room JID without a model (a bookmark, or a JID on a known conference service) is refused
+   * rather than turned into a direct chat.
    */
   async open(jid: string): Promise<Chat> {
     const { api, state } = await this.engine.ready();
-    this.openJid = jid;
-    const existing = state.chatboxes?.get(jid.toLowerCase());
-    const chat = existing && isRoom(existing) ? existing : await api.chats.open(jid);
+    const bare = jid.toLowerCase();
+    this.openJid = bare;
+    const existing = state.chatboxes?.get(bare);
+    if (!existing && (await this.isRoomJid(bare))) {
+      throw new DomainError('RoomNotFound', 'RoomNotFound: the room is not joined');
+    }
+    const chat = existing && isRoom(existing) ? existing : await api.chats.open(bare);
     if (!chat) throw new DomainError('Unknown', 'Unknown: the chat could not be opened');
     for (const other of state.chatboxes?.models ?? []) {
       if (other !== chat && isChat(other)) this.hideUnlessOpen(other);
@@ -80,7 +86,7 @@ export class ConverseChatRepository implements ChatRepository {
 
   async markRead(chatId: string): Promise<void> {
     const chat = await this.find(chatId);
-    chat.clearUnreadMsgCounter();
+    await chat.clearUnreadMsgCounter();
   }
 
   onMessage(handler: MessageHandler): () => void {
@@ -96,6 +102,16 @@ export class ConverseChatRepository implements ChatRepository {
   onChatChange(handler: ChatHandler): () => void {
     this.chatHandlers.add(handler);
     return () => this.chatHandlers.delete(handler);
+  }
+
+  /** A bookmarked room, or any JID on a domain already discovered as a conference service. */
+  private async isRoomJid(jid: string): Promise<boolean> {
+    const { api, state } = await this.engine.ready();
+    if (state.bookmarks?.get(jid)) return true;
+    const domain = jid.split('@')[1];
+    if (!domain) return false;
+    const entity = await api.disco.entities.get(domain);
+    return Boolean(entity?.identities.findWhere({ category: 'conference', type: 'text' }));
   }
 
   /**
@@ -181,7 +197,7 @@ export class ConverseChatRepository implements ChatRepository {
   }
 
   private hideUnlessOpen(chat: ChatModel): void {
-    const hidden = chat.get('jid') !== this.openJid;
+    const hidden = String(chat.get('jid')).toLowerCase() !== this.openJid;
     if (chat.get('hidden') !== hidden) chat.save({ hidden });
   }
 

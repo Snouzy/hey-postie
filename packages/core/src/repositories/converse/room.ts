@@ -5,7 +5,7 @@ import type { ConverseEngine, Loaded } from './engine';
 import { isMention, isRoom } from './mappers';
 import type { BookmarkModel, BookmarksCollection, ChatModel, RoomModel } from './models';
 import { browseRooms, findRoomService } from './room-browse';
-import { JoinWatch } from './room-join';
+import { attemptJoin, enterNewRoom } from './room-join';
 import { toRoom, toRoomMember } from './room-mappers';
 import { RoomNotifyStore } from './room-notify';
 
@@ -66,33 +66,35 @@ export class ConverseRoomRepository implements RoomRepository {
   }
 
   /**
-   * A new model joins by itself (`plugins/muc/muc.js:134-137`); an existing one is asked to. The
-   * model of a refused join is closed: Converse would otherwise rejoin it at the next sign-in.
+   * A new model joins by itself (`plugins/muc/muc.js:134-137`), an existing one is asked to. The
+   * password is only ever handed to `join()`: a model attribute would be persisted and published
+   * with the bookmark (`enteredNewRoom`), so a new room first joins without it and is asked again
+   * with it when the room wants one. A refused room is forgotten, since Converse would rejoin it
+   * at the next sign-in; an unreachable one is kept, with its bookmark's autojoin.
    */
   async join(input: { jid: string; nick: string; password?: string }): Promise<Room> {
     const loaded = await this.engine.ready();
     const { api } = loaded;
     const jid = input.jid.toLowerCase();
-    const watch = new JoinWatch(loaded, jid);
-    let chat: RoomModel | null | undefined;
+    const existing = await api.rooms.get(jid);
+    if (existing?.isEntered()) return this.room(existing);
     try {
-      chat = await api.rooms.get(jid);
-      if (chat?.isEntered()) return this.room(chat);
-      if (chat) await chat.join(input.nick, input.password);
-      else {
-        const attributes = { nick: input.nick, hidden: true, ...passwordAttribute(input) };
-        chat = await api.rooms.get(jid, attributes, true);
-      }
-      if (!chat) throw new DomainError('Unknown', 'Unknown: the room could not be created');
-      await watch.outcome(chat, this.joinTimeoutMs);
+      const chat = existing
+        ? await attemptJoin(loaded, existing, this.joinTimeoutMs, () =>
+            existing.join(input.nick, input.password),
+          )
+        : await enterNewRoom(loaded, jid, input, this.joinTimeoutMs);
       return this.room(chat);
     } catch (error) {
-      await chat?.close().catch(() => undefined);
-      throw error instanceof DomainError
-        ? error
-        : new DomainError('Unknown', 'Unknown: the join failed', error);
-    } finally {
-      watch.release();
+      const failure =
+        error instanceof DomainError
+          ? error
+          : new DomainError('Unknown', 'Unknown: the join failed', error);
+      if (failure.code !== 'ServerUnreachable') {
+        const created = existing ?? (await api.rooms.get(jid));
+        await created?.close().catch(() => undefined);
+      }
+      throw failure;
     }
   }
 
@@ -115,8 +117,12 @@ export class ConverseRoomRepository implements RoomRepository {
   }
 
   async setNotify(jid: string, rule: RoomNotify): Promise<void> {
+    const { api, state } = await this.engine.ready();
+    // The key is per account: without a session there is no account to store it for.
+    if (!state.session?.get('bare_jid')) {
+      throw new DomainError('Unknown', 'Unknown: not signed in');
+    }
     this.notify.set(jid.toLowerCase(), rule);
-    const { api } = await this.engine.ready();
     const chat = await api.rooms.get(jid.toLowerCase());
     const bookmark = this.bookmarks()?.get(jid.toLowerCase());
     if (chat || bookmark) this.emit(chat ?? undefined, bookmark);
@@ -125,34 +131,44 @@ export class ConverseRoomRepository implements RoomRepository {
   /**
    * Adding a bookmark with `autojoin` makes Converse join the room (`openBookmarkedRoom`).
    * Removing one through the collection would close it (`leaveRoom`): the model is removed
-   * silently and the retraction sent by hand, so that the room stays joined.
+   * silently and the retraction sent by hand, so that the room stays joined; a refused
+   * retraction puts the bookmark back.
    */
   async setBookmarked(jid: string, bookmarked: boolean): Promise<void> {
     const { api } = await this.engine.ready();
-    const bookmarks = await this.bookmarksReady();
     const roomJid = jid.toLowerCase();
     const chat = await api.rooms.get(roomJid);
-    try {
-      if (bookmarked) {
-        const name = String(chat?.get('name') ?? '');
-        const nick = String(chat?.get('nick') ?? '');
+    if (bookmarked) {
+      const bookmarks = await this.bookmarksReady();
+      const name = String(chat?.get('name') ?? '');
+      const nick = String(chat?.get('nick') ?? '');
+      try {
         await api.bookmarks.set({
           jid: roomJid,
           autojoin: true,
           ...(name && { name }),
           ...(nick && { nick }),
         });
-      } else {
-        const bookmark = bookmarks.get(roomJid);
-        if (!bookmark) return;
-        bookmarks.remove(bookmark, { silent: true });
-        await bookmarks.sendRemoveBookmarkStanza(bookmark);
-        chat?.save({ bookmarked: false });
-        this.emit(chat ?? undefined, undefined);
+      } catch (error) {
+        throw new DomainError('Unknown', 'Unknown: the server refused the bookmark', error);
       }
-    } catch (error) {
-      throw new DomainError('Unknown', 'Unknown: the server refused the bookmark change', error);
+      if (!bookmarks.get(roomJid)) this.emit(chat ?? undefined, undefined);
+      return;
     }
+    // Nothing to remove without a store (the server has no PEP) or without the bookmark.
+    const bookmark = this.bookmarks()?.get(roomJid);
+    const bookmarks = this.bookmarks();
+    if (!bookmarks || !bookmark) return;
+    bookmarks.remove(bookmark, { silent: true });
+    try {
+      await bookmarks.sendRemoveBookmarkStanza(bookmark);
+    } catch (error) {
+      bookmarks.add(bookmark, { silent: true });
+      throw new DomainError('Unknown', 'Unknown: the server refused the bookmark removal', error);
+    }
+    chat?.save({ bookmarked: false });
+    if (chat) this.emit(chat, undefined);
+    else this.emitRoom({ ...this.room(undefined, bookmark), bookmarked: false });
   }
 
   async browse(domain: string): Promise<RoomInfo[]> {
@@ -191,16 +207,21 @@ export class ConverseRoomRepository implements RoomRepository {
     const { api } = await this.engine.ready();
     const existing = this.bookmarks();
     if (existing) return existing;
-    const timeout = new Promise<never>((_, reject) =>
-      setTimeout(
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const timeout = new Promise<never>((_, reject) => {
+      timer = setTimeout(
         () => reject(new DomainError('Unknown', 'Unknown: the server has no bookmark storage')),
         BOOKMARKS_TIMEOUT_MS,
-      ),
-    );
-    return (await Promise.race([
-      api.waitUntil('bookmarksInitialized'),
-      timeout,
-    ])) as BookmarksCollection;
+      );
+    });
+    try {
+      return (await Promise.race([
+        api.waitUntil('bookmarksInitialized'),
+        timeout,
+      ])) as BookmarksCollection;
+    } finally {
+      clearTimeout(timer);
+    }
   }
 
   private roomModels(): RoomModel[] {
@@ -229,10 +250,14 @@ export class ConverseRoomRepository implements RoomRepository {
     room.isUserMentioned = (message) => isMention(message, String(room.get('nick')));
     for (const event of ROOM_EVENTS) room.on(event, () => this.emit(room));
     for (const event of OCCUPANT_EVENTS) room.occupants.on(event, () => this.scheduleMembers(room));
-    void Promise.resolve(room.initialized).then(() => {
-      room.session?.on('change:connection_status', () => this.emit(room));
-      this.emit(room);
-    });
+    // A `setup()` that fails (storage, disco) leaves the room not joined; it must not go unhandled.
+    void Promise.resolve(room.initialized).then(
+      () => {
+        room.session?.on('change:connection_status', () => this.emit(room));
+        this.emit(room);
+      },
+      () => this.emit(room),
+    );
   }
 
   private bindBookmarks(bookmarks: BookmarksCollection): void {
@@ -258,13 +283,14 @@ export class ConverseRoomRepository implements RoomRepository {
   }
 
   private emitLeft(room: RoomModel): void {
-    const left = { ...this.room(room), joined: false, unreadCount: 0, mentionsCount: 0 };
-    for (const handler of this.roomHandlers) handler(left);
+    this.emitRoom({ ...this.room(room), joined: false, unreadCount: 0, mentionsCount: 0 });
   }
 
   private emit(chat: RoomModel | undefined, bookmark?: BookmarkModel): void {
-    if (!chat && !bookmark) return;
-    const room = this.room(chat, bookmark);
+    if (chat || bookmark) this.emitRoom(this.room(chat, bookmark));
+  }
+
+  private emitRoom(room: Room): void {
     for (const handler of this.roomHandlers) handler(room);
   }
 
@@ -282,8 +308,4 @@ function membersOf(chat: RoomModel): RoomMember[] {
   return chat.occupants.models
     .filter((occupant) => occupant.get('presence') !== 'offline')
     .map(toRoomMember);
-}
-
-function passwordAttribute(input: { password?: string }): { password?: string } {
-  return input.password ? { password: input.password } : {};
 }

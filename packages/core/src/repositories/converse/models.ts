@@ -27,7 +27,8 @@ export interface ChatModel extends ModelLike {
   /** The queue through which parsed messages become models (`model-with-messages.js:268-272`). */
   msg_chain?: Promise<unknown>;
   sendMessage(attributes: { body: string }): Promise<MessageModel | undefined>;
-  clearUnreadMsgCounter(): void;
+  /** Synchronous on a direct chat, async on a room (`plugins/muc/muc.js` sends a marker first). */
+  clearUnreadMsgCounter(): Promise<unknown> | undefined;
   getDisplayName(): string | null | undefined;
 }
 
@@ -51,7 +52,13 @@ export interface OccupantModel extends ModelLike {
 
 export type BookmarkModel = ModelLike;
 
+/** `getIdentity()` would wait for the entity's items; the identities already known are read directly. */
+export interface DiscoEntityLike {
+  identities: { findWhere(attributes: { category: string; type: string }): unknown };
+}
+
 export interface BookmarksCollection extends CollectionLike<BookmarkModel> {
+  add(model: BookmarkModel, options?: { silent?: boolean }): unknown;
   remove(model: BookmarkModel, options?: { silent?: boolean }): unknown;
   sendRemoveBookmarkStanza(bookmark: BookmarkModel): Promise<unknown>;
 }
@@ -149,25 +156,27 @@ export interface ConverseApi {
     open(jid: string): Promise<ChatModel | undefined>;
   };
   rooms: {
+    /** Never pass `password` here: a model attribute is persisted and published with the bookmark. */
     get(
       jid: string,
-      attributes?: { nick?: string; password?: string; hidden?: boolean },
+      attributes?: { nick?: string; hidden?: boolean },
       create?: boolean,
     ): Promise<RoomModel | null | undefined>;
   };
   bookmarks: {
-    set(attributes: {
-      jid: string;
-      name?: string;
-      nick?: string;
-      autojoin?: boolean;
-    }): Promise<unknown>;
+    set(
+      attributes: { jid: string; name?: string; nick?: string; autojoin?: boolean },
+      create?: boolean,
+      options?: { silent?: boolean },
+    ): Promise<unknown>;
     get(jid: string): Promise<BookmarkModel | undefined>;
   };
   disco: {
     info(jid: string, node?: string | null, options?: { timeout?: number }): Promise<Element>;
     items(jid: string, node?: string): Promise<Element>;
     getIdentity(category: string, type: string, jid: string): Promise<ModelLike | undefined>;
+    /** The cached entity, or undefined when nothing was ever discovered about the JID. */
+    entities: { get(jid: string): Promise<DiscoEntityLike | undefined> };
   };
   alert?: Handler;
 }
