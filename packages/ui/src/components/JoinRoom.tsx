@@ -1,5 +1,5 @@
-import type { Account, DomainError, Room } from '@hey-postie/core';
-import { type FormEvent, useState } from 'react';
+import { type Account, DomainError, type Room } from '@hey-postie/core';
+import { type FormEvent, useEffect, useState } from 'react';
 import { useCore, useText } from '../core/CoreProvider';
 import type { MessageKey } from '../i18n';
 import { errorKey } from '../i18n/errors';
@@ -32,6 +32,19 @@ export function JoinRoom({ account, onJoined, onClose }: JoinRoomProps) {
   const [needsPassword, setNeedsPassword] = useState(false);
   const [error, setError] = useState<MessageKey | null>(null);
   const [joining, setJoining] = useState(false);
+  const [browseDomain, setBrowseDomain] = useState(`rooms.${domain ?? ''}`);
+
+  // The server says where its halls are; `rooms.<domain>` is the guess when it does not.
+  useEffect(() => {
+    let cancelled = false;
+    core.rooms
+      .roomService(domain ?? '')
+      .then((service) => service && !cancelled && setBrowseDomain(service))
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [core, domain]);
 
   async function submit(event: FormEvent) {
     event.preventDefault();
@@ -41,7 +54,9 @@ export function JoinRoom({ account, onJoined, onClose }: JoinRoomProps) {
       const room = await core.rooms.join(password ? { jid, nick, password } : { jid, nick });
       onJoined(room);
     } catch (caught) {
-      if ((caught as DomainError).code === 'RoomPasswordRequired') setNeedsPassword(true);
+      if (caught instanceof DomainError && caught.code === 'RoomPasswordRequired') {
+        setNeedsPassword(true);
+      }
       setError(errorKey(caught));
     } finally {
       setJoining(false);
@@ -69,7 +84,7 @@ export function JoinRoom({ account, onJoined, onClose }: JoinRoomProps) {
         ))}
       </div>
       {tab === 'browse' ? (
-        <RoomBrowser initialDomain={`rooms.${domain ?? ''}`} onPick={pick} />
+        <RoomBrowser domain={browseDomain} onDomainChange={setBrowseDomain} onPick={pick} />
       ) : (
         <form className={styles.form} onSubmit={submit}>
           <Field

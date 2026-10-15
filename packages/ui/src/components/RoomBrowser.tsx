@@ -1,4 +1,4 @@
-import type { RoomInfo } from '@hey-postie/core';
+import { DomainError, type RoomInfo } from '@hey-postie/core';
 import { Users } from 'lucide-react';
 import { type FormEvent, useState } from 'react';
 import { useCore, useText } from '../core/CoreProvider';
@@ -9,15 +9,15 @@ import { Field } from './Field';
 import styles from './RoomBrowser.module.css';
 
 interface RoomBrowserProps {
-  initialDomain: string;
+  domain: string;
+  onDomainChange: (domain: string) => void;
   onPick: (jid: string) => void;
 }
 
 /** The public halls of a server: a domain, "Browse", then a list to pick from. */
-export function RoomBrowser({ initialDomain, onPick }: RoomBrowserProps) {
+export function RoomBrowser({ domain, onDomainChange, onPick }: RoomBrowserProps) {
   const core = useCore();
   const text = useText();
-  const [domain, setDomain] = useState(initialDomain);
   const [rooms, setRooms] = useState<RoomInfo[] | null>(null);
   const [browsing, setBrowsing] = useState(false);
   const [error, setError] = useState<MessageKey | null>(null);
@@ -29,7 +29,9 @@ export function RoomBrowser({ initialDomain, onPick }: RoomBrowserProps) {
     try {
       setRooms(await core.rooms.browse(domain));
     } catch (caught) {
-      setError(errorKey(caught));
+      setRooms(null);
+      const badDomain = caught instanceof DomainError && caught.code === 'InvalidJid';
+      setError(badDomain ? 'joinRoom.badDomain' : errorKey(caught));
     } finally {
       setBrowsing(false);
     }
@@ -42,7 +44,7 @@ export function RoomBrowser({ initialDomain, onPick }: RoomBrowserProps) {
           label={text('joinRoom.domain')}
           type="text"
           value={domain}
-          onChange={(e) => setDomain(e.target.value)}
+          onChange={(e) => onDomainChange(e.target.value)}
           required
         />
         <Button type="submit" disabled={browsing || !domain.trim()}>
@@ -70,7 +72,7 @@ export function RoomBrowser({ initialDomain, onPick }: RoomBrowserProps) {
                 {room.membersCount !== undefined && (
                   <span className={styles.count}>
                     <Users size={12} aria-hidden />
-                    {`${room.membersCount} ${text('joinRoom.membersCount')}`}
+                    {text('joinRoom.membersCount').replace('{count}', String(room.membersCount))}
                   </span>
                 )}
               </button>
