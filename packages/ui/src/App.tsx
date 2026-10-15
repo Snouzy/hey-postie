@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { CoreProvider } from './core/CoreProvider';
 import { useAccount } from './core/useAccount';
 import type { Locale } from './i18n';
+import { CreateAccount } from './screens/CreateAccount';
 import { Main } from './screens/Main';
 import { SignIn } from './screens/SignIn';
 import { Welcome } from './screens/Welcome';
@@ -22,11 +23,12 @@ export function App({ core, locale, onOpenLink }: AppProps) {
   );
 }
 
-type Door = 'welcome' | 'signIn';
+type Door = 'welcome' | 'signIn' | 'createAccount';
 
 /**
  * The state machine. Before the first successful sign-in, the account state and the user's own
- * clicks ("Sign in", "Back") pick between Welcome and SignIn. Once the account has been online,
+ * clicks ("Sign in", "Create an account", "Back") pick between Welcome, SignIn and CreateAccount
+ * (a created account is signed in right away, so it enters Main the same way). Once the account has been online,
  * Main stays mounted through reconnections and drops (it shows a banner); only a sign out, from
  * Main itself, leaves it.
  */
@@ -51,7 +53,12 @@ function Screens({ onOpenLink }: { onOpenLink: (url: string) => void }) {
     );
   }
   if (door === 'signIn') return <SignIn onBack={() => setDoor('welcome')} />;
-  return <Welcome onSignIn={() => setDoor('signIn')} />;
+  if (door === 'createAccount') {
+    return <CreateAccount onBack={() => setDoor('welcome')} onOpenLink={onOpenLink} />;
+  }
+  return (
+    <Welcome onSignIn={() => setDoor('signIn')} onCreateAccount={() => setDoor('createAccount')} />
+  );
 }
 
 function openInNewWindow(url: string) {
