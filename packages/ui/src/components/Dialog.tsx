@@ -7,6 +7,8 @@ import styles from './Dialog.module.css';
 interface DialogProps {
   title: string;
   onClose: () => void;
+  /** False while an action is in flight: Esc and the X are ignored. Default true. */
+  closable?: boolean;
   children: ReactNode;
 }
 
@@ -16,7 +18,7 @@ const FOCUSABLE = 'input, textarea, button, a[href], [tabindex]:not([tabindex="-
  * A small modal card. Focus starts in its first field, Tab cycles inside it, Esc or the close
  * button closes it and focus goes back to whatever opened it.
  */
-export function Dialog({ title, onClose, children }: DialogProps) {
+export function Dialog({ title, onClose, closable = true, children }: DialogProps) {
   const text = useText();
   const titleId = useId();
   const card = useRef<HTMLDivElement>(null);
@@ -35,11 +37,11 @@ export function Dialog({ title, onClose, children }: DialogProps) {
     const onKeyDown = (event: globalThis.KeyboardEvent) => {
       if (event.key !== 'Escape') return;
       event.stopPropagation();
-      onClose();
+      if (closable) onClose();
     };
     window.addEventListener('keydown', onKeyDown, true);
     return () => window.removeEventListener('keydown', onKeyDown, true);
-  }, [onClose]);
+  }, [onClose, closable]);
 
   function cycleFocus(event: KeyboardEvent) {
     if (event.key !== 'Tab' || !card.current) return;
@@ -73,7 +75,12 @@ export function Dialog({ title, onClose, children }: DialogProps) {
           <h2 id={titleId} className={styles.title}>
             {title}
           </h2>
-          <Button variant="ghost" onClick={onClose} aria-label={text('dialog.close')}>
+          <Button
+            variant="ghost"
+            onClick={onClose}
+            disabled={!closable}
+            aria-label={text('dialog.close')}
+          >
             <X size={18} aria-hidden />
           </Button>
         </header>

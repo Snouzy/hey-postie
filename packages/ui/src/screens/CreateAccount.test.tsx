@@ -1,5 +1,5 @@
 import { DomainError, type RegistrationForm } from '@hey-postie/core';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { App } from '../App';
 import { setupCore } from '../test-utils';
@@ -128,6 +128,128 @@ describe('CreateAccount', () => {
       },
     ]);
     await waitFor(() => expect(deps.fakes.keychain.get('alice@b.org')).resolves.toBe('longenough'));
+  });
+
+  it('calls register once when the button is hit twice', async () => {
+    const { deps } = openCreateAccount();
+    deps.fakes.registration.forms.set('b.org', FORM);
+    await askServer();
+    fillWho('alice', 'longenough');
+    fireEvent.click(screen.getByRole('button', { name: 'Create my account' }));
+    await screen.findByRole('searchbox', { name: 'Search chats' });
+    expect(deps.fakes.registration.submitted).toHaveLength(1);
+  });
+
+  it('sends the user to Sign in, address filled, when the account exists but sign-in failed', async () => {
+    const { deps } = openCreateAccount();
+    deps.fakes.registration.forms.set('b.org', FORM);
+    deps.fakes.xmpp.failWith = new DomainError('ServerUnreachable');
+    await askServer();
+    fillWho('alice', 'longenough');
+    expect(await screen.findByRole('heading', { name: 'Sign in' })).toBeInTheDocument();
+    expect(screen.getByLabelText('Address')).toHaveValue('alice@b.org');
+    expect(screen.getByRole('alert')).toHaveTextContent('Your account exists now');
+    expect(deps.fakes.registration.submitted).toHaveLength(1);
+  });
+
+  it('never lets the server choose how the password is shown', async () => {
+    const { deps } = openCreateAccount();
+    deps.fakes.registration.forms.set('b.org', {
+      domain: 'b.org',
+      fields: [
+        { name: 'username', label: 'User', type: 'text', required: true },
+        { name: 'password', label: 'Pass', type: 'text', required: true },
+      ],
+    });
+    await askServer();
+    expect(screen.getByLabelText('Password')).toHaveAttribute('type', 'password');
+  });
+
+  it('shows no CAPTCHA image for anything but an image data URL', async () => {
+    const { deps } = openCreateAccount();
+    deps.fakes.registration.forms.set('b.org', {
+      ...FORM,
+      captchaImageDataUrl: 'https://evil.example/pixel.png',
+    });
+    await askServer();
+    expect(screen.queryByRole('img', { name: /puzzle image/ })).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('What does the image say?')).not.toBeInTheDocument();
+  });
+
+  it('clears the sentence as soon as the user edits, on both steps', async () => {
+    const { deps } = openCreateAccount();
+    deps.fakes.registration.forms.set('b.org', FORM);
+    fireEvent.change(screen.getByLabelText('Server'), { target: { value: 'closed.org' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Continue' }));
+    await screen.findByRole('alert');
+    fireEvent.change(screen.getByLabelText('Server'), { target: { value: 'b.org' } });
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Continue' }));
+    await screen.findByRole('heading', { name: 'Who?' });
+    fillWho('alice', 'longenough', 'other');
+    await screen.findByRole('alert');
+    fireEvent.change(screen.getByLabelText('Repeat password'), { target: { value: 'x' } });
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
+
+  it('never writes the password into the document, even after an error', async () => {
+    const { deps } = openCreateAccount();
+    deps.fakes.registration.forms.set('b.org', FORM);
+    deps.fakes.registration.taken.add('alice@b.org');
+    await askServer();
+    const password = 'S3cret-passw0rd!';
+    fillWho('alice', password);
+    await screen.findByRole('alert');
+    expect(screen.queryByText(password)).not.toBeInTheDocument();
+    expect(document.body.textContent).not.toContain(password);
+    // Only the two password inputs may hold it, and only as their value.
+    for (const element of document.body.querySelectorAll('*')) {
+      for (const attribute of element.attributes) {
+        const isOwnValue =
+          attribute.name === 'value' && element.getAttribute('type') === 'password';
+        if (!isOwnValue) expect(attribute.value, attribute.name).not.toContain(password);
+      }
+    }
+  });
+
+  it('keeps what was typed on "Who?" after going Back and forth', async () => {
+    const { deps } = openCreateAccount();
+    deps.fakes.registration.forms.set('b.org', FORM);
+    await askServer();
+    fireEvent.change(screen.getByLabelText('Username'), { target: { value: 'alice' } });
+    fireEvent.change(screen.getByLabelText('Email address'), { target: { value: 'a@b.org' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Back' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Continue' }));
+    await screen.findByRole('heading', { name: 'Who?' });
+    expect(screen.getByLabelText('Username')).toHaveValue('alice');
+    expect(screen.getByLabelText('Email address')).toHaveValue('a@b.org');
+  });
+
+  it('only sends the fields of the current form, not those typed for another server', async () => {
+    const { deps } = openCreateAccount();
+    deps.fakes.registration.forms.set('b.org', FORM);
+    deps.fakes.registration.forms.set('c.org', {
+      domain: 'c.org',
+      fields: [
+        { name: 'username', label: 'User', type: 'text', required: true },
+        { name: 'password', label: 'Pass', type: 'password', required: true },
+      ],
+    });
+    await askServer();
+    fireEvent.change(screen.getByLabelText('Email address'), { target: { value: 'a@b.org' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Back' }));
+    fireEvent.change(screen.getByLabelText('Server'), { target: { value: 'c.org' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Continue' }));
+    await screen.findByRole('heading', { name: 'Who?' });
+    fireEvent.change(screen.getByLabelText('Username'), { target: { value: 'alice' } });
+    fireEvent.change(screen.getByLabelText('Password'), { target: { value: 'longenough' } });
+    fireEvent.change(screen.getByLabelText('Repeat password'), { target: { value: 'longenough' } });
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Create my account' }));
+    });
+    expect(deps.fakes.registration.submitted).toEqual([
+      { domain: 'c.org', values: { username: 'alice', password: 'longenough' } },
+    ]);
   });
 
   it('goes back from "Who?" to "Where?" and from there to the welcome screen', async () => {

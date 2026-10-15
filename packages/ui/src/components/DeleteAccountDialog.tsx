@@ -42,7 +42,7 @@ export function DeleteAccountDialog({ jid, onClose, onDeleted }: DeleteAccountDi
   }
 
   return (
-    <Dialog title={text('deleteAccount.title')} onClose={onClose}>
+    <Dialog title={text('deleteAccount.title')} onClose={onClose} closable={!deleting}>
       <form className={styles.form} onSubmit={submit} aria-busy={deleting}>
         <p id={explainId} className={styles.explain}>
           {text('deleteAccount.explain')}

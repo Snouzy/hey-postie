@@ -36,6 +36,8 @@ function Screens({ onOpenLink }: { onOpenLink: (url: string) => void }) {
   const account = useAccount();
   const [door, setDoor] = useState<Door>('welcome');
   const [inside, setInside] = useState(false);
+  // An account created but not signed in: SignIn opens with its JID and says so.
+  const [createdJid, setCreatedJid] = useState<string | null>(null);
 
   // Derived during render rather than in an effect, so Main appears on the same frame.
   if (account?.state === 'online' && !inside) setInside(true);
@@ -52,12 +54,34 @@ function Screens({ onOpenLink }: { onOpenLink: (url: string) => void }) {
       />
     );
   }
-  if (door === 'signIn') return <SignIn onBack={() => setDoor('welcome')} />;
+  if (door === 'signIn') {
+    return (
+      <SignIn
+        onBack={() => setDoor('welcome')}
+        prefill={createdJid ? { jid: createdJid, error: 'error.AccountCreatedSignInFailed' } : null}
+      />
+    );
+  }
   if (door === 'createAccount') {
-    return <CreateAccount onBack={() => setDoor('welcome')} onOpenLink={onOpenLink} />;
+    return (
+      <CreateAccount
+        onBack={() => setDoor('welcome')}
+        onOpenLink={onOpenLink}
+        onCreatedButNotSignedIn={(jid) => {
+          setCreatedJid(jid);
+          setDoor('signIn');
+        }}
+      />
+    );
   }
   return (
-    <Welcome onSignIn={() => setDoor('signIn')} onCreateAccount={() => setDoor('createAccount')} />
+    <Welcome
+      onSignIn={() => {
+        setCreatedJid(null);
+        setDoor('signIn');
+      }}
+      onCreateAccount={() => setDoor('createAccount')}
+    />
   );
 }
 
