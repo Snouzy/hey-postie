@@ -57,6 +57,17 @@ describe('accounts.signIn', () => {
   });
 });
 
+describe('accounts.signIn, transport failure', () => {
+  it('ends in the error state instead of staying connecting', async () => {
+    deps.fakes.transport.failWith = new DomainError('ServerUnreachable');
+    const core = createCore(deps);
+    await expect(
+      core.accounts.signIn({ jid: 'a@b.org', password: 'pw', remember: false }),
+    ).rejects.toThrow(/ServerUnreachable/);
+    expect(core.accounts.current()?.state).toBe('error');
+  });
+});
+
 describe('accounts.signOut', () => {
   it('disconnects and clears the current account', async () => {
     const core = createCore(deps);
@@ -64,5 +75,14 @@ describe('accounts.signOut', () => {
     await core.accounts.signOut();
     expect(core.accounts.current()).toBeNull();
     expect(deps.fakes.xmpp.connected).toBe(false);
+  });
+
+  it('emits account.changed with the offline state', async () => {
+    const core = createCore(deps);
+    await core.accounts.signIn({ jid: 'a@b.org', password: 'pw', remember: false });
+    const seen: string[] = [];
+    core.events.on('account.changed', (a) => seen.push(a.state));
+    await core.accounts.signOut();
+    expect(seen.at(-1)).toBe('offline');
   });
 });

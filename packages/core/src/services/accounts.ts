@@ -31,9 +31,9 @@ export function createAccountsService(
         state: 'connecting',
       };
       events.emit('account.changed', current);
-      if (remember) await rememberQuietly(deps.keychain, normalized, password);
-      const websocketUrl = await deps.transport.websocketUrlFor(domainOf(normalized));
       try {
+        if (remember) await rememberQuietly(deps.keychain, normalized, password);
+        const websocketUrl = await deps.transport.websocketUrlFor(domainOf(normalized));
         await deps.xmpp.connect({ jid: normalized, password, websocketUrl });
       } catch (error) {
         const domainError =
@@ -46,8 +46,10 @@ export function createAccountsService(
     },
 
     async signOut() {
+      const signedOut = current;
       await deps.xmpp.disconnect();
       current = null;
+      if (signedOut) events.emit('account.changed', { ...signedOut, state: 'offline' });
     },
 
     rememberedPassword: (jid) => deps.keychain.get(normalizeJid(jid)).catch(() => null),
