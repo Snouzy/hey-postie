@@ -194,14 +194,24 @@ describe('toMessage in a room', () => {
     body: 'Romeo, where are you?',
   };
 
-  it('sets the nick, the room as sender and the mention', () => {
+  it('sets the nick, the occupant address as sender and the mention', () => {
     expect(toMessage(model(groupchat), room)).toMatchObject({
       chatId: 'hall@rooms.example.org',
-      fromJid: 'hall@rooms.example.org',
+      fromJid: 'hall@rooms.example.org/juliet',
       fromNick: 'juliet',
       direction: 'in',
       isMention: true,
     });
+  });
+
+  it('keeps the occupant address in an anonymous room, so two occupants never share a fromJid', () => {
+    expect(toMessage(model(groupchat), room).fromJid).toBe('hall@rooms.example.org/juliet');
+    expect(
+      toMessage(
+        model({ ...groupchat, nick: 'romeo', sender: 'me', from: 'hall@rooms.example.org/romeo' }),
+        room,
+      ).fromJid,
+    ).toBe('hall@rooms.example.org/romeo');
   });
 
   it('prefers the real JID when the room reveals it', () => {
@@ -237,6 +247,8 @@ describe('isMention', () => {
     expect(isMention(model({ body: 'x', references }), 'romeo')).toBe(true);
     const other = [{ type: 'mention', value: 'juliet', begin: 0, end: 6 }];
     expect(isMention(model({ body: 'romeo', references: other }), 'romeo')).toBe(false);
+    const cased = [{ type: 'mention', value: 'Romeo', begin: 0, end: 5 }];
+    expect(isMention(model({ body: 'Romeo', references: cased }), 'romeo')).toBe(true);
   });
 });
 
