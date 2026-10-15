@@ -1,5 +1,14 @@
 import type { EventBus } from './events';
-import type { Account, Chat, Contact, Message } from './types';
+import type {
+  Account,
+  Chat,
+  Contact,
+  Message,
+  Room,
+  RoomInfo,
+  RoomMember,
+  RoomNotify,
+} from './types';
 
 export interface AccountsService {
   current(): Account | null;
@@ -27,6 +36,18 @@ export interface ChatsService {
   markRead(chatId: string): Promise<void>;
 }
 
+export interface RoomsService {
+  list(): Promise<Room[]>;
+  /** Validates the JID and the nick (non-empty, trimmed), joins, bookmarks on success. */
+  join(input: { jid: string; nick: string; password?: string }): Promise<Room>;
+  /** Leaves and removes the bookmark. */
+  leave(jid: string): Promise<void>;
+  members(jid: string): Promise<RoomMember[]>;
+  setNotify(jid: string, rule: RoomNotify): Promise<void>;
+  /** Lists the public rooms of a domain; the domain is validated like a JID's domain. */
+  browse(domain: string): Promise<RoomInfo[]>;
+}
+
 /** Decides when a system notification is shown. The UI tells it what the user is looking at. */
 export interface NotificationsService {
   setWindowFocused(focused: boolean): void;
@@ -37,6 +58,7 @@ export interface Core {
   accounts: AccountsService;
   contacts: ContactsService;
   chats: ChatsService;
+  rooms: RoomsService;
   notifications: NotificationsService;
   events: EventBus;
 }

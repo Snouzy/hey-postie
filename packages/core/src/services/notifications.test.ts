@@ -60,3 +60,43 @@ describe('notifications', () => {
     expect(deps.fakes.notifier.shown[1]?.body).not.toContain('secret');
   });
 });
+
+describe('notifications in rooms', () => {
+  const hall = async () => {
+    core.notifications.setWindowFocused(false);
+    return core.rooms.join({ jid: 'hall@rooms.localhost', nick: 'alice' });
+  };
+  const roomMessage = (body: string, isMention: boolean) =>
+    deps.fakes.chat.receive({
+      chatId: 'hall@rooms.localhost',
+      fromJid: 'hall@rooms.localhost/bob',
+      fromNick: 'bob',
+      body,
+      isMention,
+    });
+
+  it('notifies on a mention only, by default', async () => {
+    await hall();
+    roomMessage('hello all', false);
+    roomMessage('alice: hi', true);
+    await tick();
+    expect(deps.fakes.notifier.shown).toHaveLength(1);
+    expect(deps.fakes.notifier.shown[0]?.title).toBe('bob · hall');
+  });
+
+  it('notifies on everything when the rule is all', async () => {
+    await hall();
+    await core.rooms.setNotify('hall@rooms.localhost', 'all');
+    roomMessage('hello all', false);
+    await tick();
+    expect(deps.fakes.notifier.shown).toHaveLength(1);
+  });
+
+  it('stays quiet when the rule is none, even on a mention', async () => {
+    await hall();
+    await core.rooms.setNotify('hall@rooms.localhost', 'none');
+    roomMessage('alice: hi', true);
+    await tick();
+    expect(deps.fakes.notifier.shown).toHaveLength(0);
+  });
+});

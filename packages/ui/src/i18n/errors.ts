@@ -13,6 +13,11 @@ const SENTENCES: Record<ErrorCode, MessageKey> = {
   FileTooLarge: 'error.FileTooLarge',
   EmptyMessage: 'error.EmptyMessage',
   EncryptionUnavailable: 'error.EncryptionUnavailable',
+  InvalidNick: 'error.InvalidNick',
+  RoomPasswordRequired: 'error.RoomPasswordRequired',
+  RoomNotFound: 'error.RoomNotFound',
+  RoomBanned: 'error.RoomBanned',
+  NickTaken: 'error.NickTaken',
   Unknown: 'error.Unknown',
 };
 

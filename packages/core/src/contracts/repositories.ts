@@ -1,5 +1,14 @@
 import type { DomainError } from './errors';
-import type { AccountState, Chat, Contact, Message } from './types';
+import type {
+  AccountState,
+  Chat,
+  Contact,
+  Message,
+  Room,
+  RoomInfo,
+  RoomMember,
+  RoomNotify,
+} from './types';
 
 export interface KeychainRepository {
   get(jid: string): Promise<string | null>;
@@ -37,6 +46,24 @@ export interface ChatRepository {
   onMessage(handler: (message: Message) => void): () => void;
   onMessageUpdate(handler: (message: Message) => void): () => void;
   onChatChange(handler: (chat: Chat) => void): () => void;
+}
+
+/**
+ * Group chats (XEP-0045). Messages of a room flow through `ChatRepository` with `chatId` = the
+ * room's bare JID and `kind: 'room'`; the repository sets `isMention` and `fromNick`.
+ */
+export interface RoomRepository {
+  /** Bookmarked and joined rooms. */
+  list(): Promise<Room[]>;
+  join(input: { jid: string; nick: string; password?: string }): Promise<Room>;
+  leave(jid: string): Promise<void>;
+  members(jid: string): Promise<RoomMember[]>;
+  setNotify(jid: string, rule: RoomNotify): Promise<void>;
+  setBookmarked(jid: string, bookmarked: boolean): Promise<void>;
+  /** The rooms a server (or its conference component) lists publicly. */
+  browse(domain: string): Promise<RoomInfo[]>;
+  onChange(handler: (room: Room) => void): () => void;
+  onMembersChange(handler: (jid: string, members: RoomMember[]) => void): () => void;
 }
 
 export interface Notifier {

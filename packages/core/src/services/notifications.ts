@@ -1,14 +1,15 @@
 import type { CoreDependencies } from '../container';
 import type { EventBus } from '../contracts/events';
 import type { NotificationsService } from '../contracts/services';
-import type { Message } from '../contracts/types';
+import type { Message, Room } from '../contracts/types';
 
 /**
  * Shows a system notification for an incoming message unless the user is already looking at it:
- * window focused and that chat open. Rooms (milestone 2) will add the mention rule here.
+ * window focused and that chat open. In a room, the room's rule decides: every message, mentions
+ * only (the default), or never.
  */
 export function createNotificationsService(
-  deps: Pick<CoreDependencies, 'notifier' | 'chat'>,
+  deps: Pick<CoreDependencies, 'notifier' | 'chat' | 'room'>,
   events: EventBus,
 ): NotificationsService {
   let focused = true;
@@ -21,13 +22,14 @@ export function createNotificationsService(
   });
 
   async function notify(message: Message) {
-    const chats = await deps.chat.list();
+    const [chats, rooms] = await Promise.all([deps.chat.list(), deps.room.list()]);
     const chat = chats.find((c) => c.id === message.chatId);
-    await deps.notifier.show({
-      title: chat?.title ?? message.fromJid.split('@')[0] ?? message.fromJid,
-      body: preview(message),
-      chatId: message.chatId,
-    });
+    const room = rooms.find((r) => r.jid === message.chatId);
+    if (room && !roomWants(room, message)) return;
+    const title = room
+      ? `${message.fromNick ?? ''} · ${room.name}`.replace(/^ · /, '')
+      : (chat?.title ?? message.fromJid.split('@')[0] ?? message.fromJid);
+    await deps.notifier.show({ title, body: preview(message), chatId: message.chatId });
   }
 
   return {
@@ -38,6 +40,12 @@ export function createNotificationsService(
       openChat = chatId;
     },
   };
+}
+
+function roomWants(room: Room, message: Message): boolean {
+  if (room.notify === 'none') return false;
+  if (room.notify === 'all') return true;
+  return message.isMention;
 }
 
 function preview(message: Message): string {

@@ -17,13 +17,35 @@ export interface Contact {
   subscription: 'both' | 'to' | 'from' | 'none';
 }
 
+/** When a room's messages raise a system notification. Default: on mentions only. */
+export type RoomNotify = 'all' | 'mentions' | 'none';
+
 export interface Room {
   jid: string;
   name: string;
   nick: string;
   joined: boolean;
+  bookmarked: boolean;
+  topic?: string;
+  notify: RoomNotify;
   unreadCount: number;
   mentionsCount: number;
+}
+
+export interface RoomMember {
+  nick: string;
+  /** Known only in non-anonymous rooms. */
+  jid?: string;
+  role: 'moderator' | 'participant' | 'visitor';
+  affiliation: 'owner' | 'admin' | 'member' | 'none' | 'outcast';
+}
+
+/** A room found by browsing a server's room list. */
+export interface RoomInfo {
+  jid: string;
+  name: string;
+  membersCount?: number;
+  description?: string;
 }
 
 export interface Chat {

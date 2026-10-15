@@ -8,6 +8,11 @@ export type ErrorCode =
   | 'KeychainUnavailable'
   | 'FileTooLarge'
   | 'EmptyMessage'
+  | 'InvalidNick'
+  | 'RoomPasswordRequired'
+  | 'RoomNotFound'
+  | 'RoomBanned'
+  | 'NickTaken'
   | 'EncryptionUnavailable'
   | 'Unknown';
 

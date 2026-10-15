@@ -35,6 +35,11 @@ export const fr: Record<MessageKey, string> = {
   'error.AccountConflict': 'Quelqu’un porte déjà ce nom à cette adresse.',
   'error.FileTooLarge': 'Ce colis est trop lourd pour le serveur.',
   'error.EncryptionUnavailable': 'Je ne peux pas sceller cette lettre pour le moment.',
+  'error.InvalidNick': 'Ce pseudo ne convient pas : quelques lettres, sans barre oblique.',
+  'error.RoomPasswordRequired': 'Ce salon est fermé à clé. Il lui faut son mot de passe.',
+  'error.RoomNotFound': 'Personne ne répond à ce salon. Vérifiez son adresse.',
+  'error.RoomBanned': 'Ce salon vous a fermé sa porte.',
+  'error.NickTaken': 'Quelqu’un porte déjà ce pseudo dans ce salon.',
   'error.Unknown': 'Quelque chose a cloché pendant ma tournée. Réessayons.',
 
   'main.tabs.chats': 'Discussions',

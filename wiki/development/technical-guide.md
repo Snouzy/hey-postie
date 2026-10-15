@@ -25,7 +25,8 @@ tasks/             agents' plans and lessons, untracked
   the password, asks the transport for a URL and the XMPP repository to connect, and translates
   failures into `DomainError`s. `chats.ts` trims and sanitizes message bodies and keeps the paging
   cursor for older history; `contacts.ts` sorts the roster; `notifications.ts` decides when a
-  system notification is shown (window not focused, or another chat open).
+  system notification is shown (window not focused, or another chat open; in a room, the room's
+  rule: all, mentions only, none); `rooms.ts` validates room JIDs and nicks, bookmarks on join.
 - **Persistence**: `apps/desktop/app/repositories/keychain.ts` calls the Rust `keychain_*` commands;
   `packages/core/src/fakes/keychain.ts` keeps a `Map` in memory for tests.
   `packages/core/src/repositories/converse/` wraps `@converse/headless`: `engine.ts` owns the one

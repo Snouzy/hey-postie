@@ -31,6 +31,11 @@ export const en = {
   'error.AccountConflict': 'Somebody already has this name at this address.',
   'error.FileTooLarge': 'This parcel is too heavy for the server.',
   'error.EncryptionUnavailable': 'I cannot seal this letter right now.',
+  'error.InvalidNick': 'That nickname will not do: a few letters, no slash.',
+  'error.RoomPasswordRequired': 'This hall is locked. It needs its password.',
+  'error.RoomNotFound': 'Nobody answers at this hall. Check its address.',
+  'error.RoomBanned': 'This hall has shut its door on you.',
+  'error.NickTaken': 'Someone in this hall already goes by that nickname.',
   'error.Unknown': 'Something went wrong on my round. Let us try again.',
 
   'main.tabs.chats': 'Chats',
