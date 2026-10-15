@@ -13,6 +13,7 @@ export type ErrorCode =
   | 'RoomNotFound'
   | 'RoomBanned'
   | 'NickTaken'
+  | 'DeviceNotFound'
   | 'EncryptionUnavailable'
   | 'Unknown';
 

@@ -36,6 +36,7 @@ export const en = {
   'error.RoomNotFound': 'Nobody answers at this hall. Check its address.',
   'error.RoomBanned': 'This hall has shut its door on you.',
   'error.NickTaken': 'Someone in this hall already goes by that nickname.',
+  'error.DeviceNotFound': 'I do not know this device any more.',
   'error.Unknown': 'Something went wrong on my round. Let us try again.',
 
   'main.tabs.chats': 'Chats',

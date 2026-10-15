@@ -3,11 +3,13 @@ import type {
   AccountState,
   Chat,
   Contact,
+  Device,
   Message,
   Room,
   RoomInfo,
   RoomMember,
   RoomNotify,
+  Trust,
 } from './types';
 
 export interface KeychainRepository {
@@ -64,6 +66,23 @@ export interface RoomRepository {
   browse(domain: string): Promise<RoomInfo[]>;
   onChange(handler: (room: Room) => void): () => void;
   onMembersChange(handler: (jid: string, members: RoomMember[]) => void): () => void;
+}
+
+/**
+ * End-to-end encryption (OMEMO, XEP-0384). The engine encrypts and decrypts; this repository
+ * exposes the devices, their trust, and the per-chat switch.
+ */
+export interface CryptoRepository {
+  /** The devices of a contact (or of a room's members), with their trust. */
+  devices(jid: string): Promise<Device[]>;
+  ownDevices(): Promise<Device[]>;
+  ownDeviceId(): Promise<number>;
+  setTrust(jid: string, deviceId: number, trust: Trust): Promise<void>;
+  removeOwnDevice(deviceId: number): Promise<void>;
+  /** True when every party of the chat has at least one usable device. */
+  available(chatId: string): Promise<boolean>;
+  setEncryption(chatId: string, enabled: boolean): Promise<void>;
+  onDevicesChange(handler: (jid: string, devices: Device[]) => void): () => void;
 }
 
 export interface Notifier {

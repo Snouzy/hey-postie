@@ -3,6 +3,7 @@ import type {
   Account,
   Chat,
   Contact,
+  Device,
   Message,
   Room,
   RoomInfo,
@@ -48,6 +49,25 @@ export interface RoomsService {
   browse(domain: string): Promise<RoomInfo[]>;
 }
 
+/**
+ * Trust rules (spec 3.6): a new device is used but shown `untrusted` (blind trust before
+ * verification); the user can mark it `verified` after comparing fingerprints, or `blocked`.
+ */
+export interface CryptoService {
+  devices(jid: string): Promise<Device[]>;
+  ownDevices(): Promise<Device[]>;
+  verify(jid: string, deviceId: number): Promise<void>;
+  block(jid: string, deviceId: number): Promise<void>;
+  /** Back to the blind-trust state. */
+  unblock(jid: string, deviceId: number): Promise<void>;
+  removeOwnDevice(deviceId: number): Promise<void>;
+  available(chatId: string): Promise<boolean>;
+  /** Refuses with `EncryptionUnavailable` when the other side has no device. */
+  setEncryption(chatId: string, enabled: boolean): Promise<void>;
+  /** A fingerprint as the user compares it: groups of 8 hex characters. */
+  formatFingerprint(fingerprint: string): string;
+}
+
 /** Decides when a system notification is shown. The UI tells it what the user is looking at. */
 export interface NotificationsService {
   setWindowFocused(focused: boolean): void;
@@ -59,6 +79,7 @@ export interface Core {
   contacts: ContactsService;
   chats: ChatsService;
   rooms: RoomsService;
+  crypto: CryptoService;
   notifications: NotificationsService;
   events: EventBus;
 }
