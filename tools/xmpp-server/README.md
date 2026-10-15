@@ -29,7 +29,8 @@ What it does, in order:
    `prosody/`. The `--ostype=macosx` preset is not used because it overwrites `LDFLAGS` and loses
    the `-L` paths to ICU and OpenSSL; the script passes the preset's link flags itself.
 5. `luarocks --tree rocks/ install luasocket luaexpat luafilesystem luasec`.
-6. `mkcert localhost 127.0.0.1 ::1` into `certs/` if no certificate is there yet.
+6. `mkcert localhost upload.localhost rooms.localhost 127.0.0.1 ::1` into `certs/` (file names fixed
+   to `localhost+2.pem` / `localhost+2-key.pem`, regenerated on every run).
 
 `prosody/`, `rocks/`, `certs/` and `data/` are git-ignored.
 
@@ -40,7 +41,12 @@ ICU 78.3, luarocks 3.13.0, mkcert 1.4.4.
 ## Certificates
 
 `mkcert` creates a local certificate authority in `~/Library/Application Support/mkcert/` and signs
-`certs/localhost+2.pem` with it (valid for `localhost`, `127.0.0.1`, `::1`). For the system, browsers
+`certs/localhost+2.pem` with it, valid for `localhost`, `upload.localhost`, `rooms.localhost`,
+`127.0.0.1` and `::1`. The component names matter: `http_file_share` returns upload URLs on
+`https://upload.localhost:5281/...` and Prosody routes HTTP by `Host` header, so a client must be
+able to verify that name (macOS resolves `*.localhost` to loopback by itself, checked on
+2026-10-15). A running server picks up a regenerated certificate on `kill -HUP $(cat data/prosody.pid)`,
+no restart needed. For the system, browsers
 and the app to trust it, the CA must be in the macOS System keychain, which `mkcert -install` does
 once (it asks for your password; `install.sh` tells you when it is still needed):
 
