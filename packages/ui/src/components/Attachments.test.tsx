@@ -1,4 +1,4 @@
-import { DomainError } from '@hey-postie/core';
+import { DomainError, type Message } from '@hey-postie/core';
 import { act, fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { CHAT, parcel, renderConversation, stubObjectUrls } from './parcel-test-helpers';
@@ -26,7 +26,9 @@ describe('Receiving a parcel', () => {
     const image = await screen.findByRole('img', { name: 'cat.png' });
     expect(image).toHaveAttribute('src', 'blob:cat');
     expect(urls.createObjectURL).toHaveBeenCalledWith(blob);
-    expect(document.querySelector('img[src^="https://"]')).toBeNull();
+    for (const element of document.body.querySelectorAll('*')) {
+      for (const attribute of element.attributes) expect(attribute.value).not.toContain(sealed.url);
+    }
     expect(screen.getByTitle('Sealed parcel')).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'View cat.png' }));
@@ -35,6 +37,32 @@ describe('Receiving a parcel', () => {
     expect(onSaveFile).toHaveBeenCalledWith(blob, 'cat.png');
     fireEvent.click(within(dialog).getByRole('button', { name: 'Close' }));
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+
+  it('fetches once for the same parcel, and keeps the lightbox open through a reaction', async () => {
+    const { deps } = renderConversation();
+    const attachment = parcel();
+    let received!: Message;
+    act(() => {
+      received = deps.fakes.chat.receive({
+        chatId: CHAT.id,
+        fromJid: 'bob@example.org',
+        body: '',
+        attachments: [attachment],
+      });
+    });
+    fireEvent.click(await screen.findByRole('button', { name: 'View cat.png' }));
+    expect(screen.getByRole('dialog', { name: 'cat.png' })).toBeInTheDocument();
+    act(() => {
+      deps.fakes.chat.update({
+        ...received,
+        reactions: [{ emoji: '👍', fromJids: ['bob@example.org'] }],
+        attachments: [{ ...attachment }],
+      });
+    });
+    expect(await screen.findByRole('button', { name: '👍 1' })).toBeInTheDocument();
+    expect(screen.getByRole('dialog', { name: 'cat.png' })).toBeInTheDocument();
+    expect(deps.fakes.file.fetched).toEqual([attachment.url]);
   });
 
   it('revokes the object URL when the image leaves the screen', async () => {

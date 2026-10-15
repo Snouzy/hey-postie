@@ -85,7 +85,8 @@ export function Composer({
   function onPaste(event: ClipboardEvent<HTMLTextAreaElement>) {
     const images = pastedImages(event.clipboardData);
     if (images.length === 0 || !onAttach) return;
-    event.preventDefault();
+    // A screenshot alone leaves as a parcel; text that came with it still lands in the letter.
+    if (!event.clipboardData.getData('text')) event.preventDefault();
     onAttach(images);
   }
 

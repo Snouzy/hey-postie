@@ -50,7 +50,10 @@ export function ParcelCard({ attachment, onSaveFile }: ParcelCardProps) {
       <div className={styles.about}>
         <span className={styles.name} title={attachment.name}>
           {attachment.encryption === 'aesgcm' && (
-            <Lock size={12} className={styles.lock} aria-label={text('parcel.sealed')} />
+            <>
+              <Lock size={12} className={styles.lock} aria-hidden />
+              <span className={styles.srOnly}>{text('parcel.sealed')}</span>
+            </>
           )}
           {attachment.name}
         </span>

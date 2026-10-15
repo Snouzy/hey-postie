@@ -38,9 +38,16 @@ interface Day {
 
 const BOTTOM_TOLERANCE = 8;
 
+/** The oldest message on screen when older ones were asked for, and where it sat. */
+interface Anchor {
+  id: string;
+  top: number;
+}
+
 /**
  * Messages grouped by day, then by consecutive sender. Stays glued to the bottom while the user
- * is there; keeps the viewport still when older messages are prepended.
+ * is there; keeps the viewport still when older messages are prepended, by holding the message
+ * that was first before the load at the same place on screen.
  */
 export function MessageList({
   messages,
@@ -59,17 +66,20 @@ export function MessageList({
   const locale = useLocale();
   const scroller = useRef<HTMLDivElement>(null);
   const atBottom = useRef(true);
-  const heightBeforeOlder = useRef<number | null>(null);
+  const anchor = useRef<Anchor | null>(null);
   const [loading, setLoading] = useState(false);
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: re-pins the scroll after every change of the list or its footer
   useLayoutEffect(() => {
     const element = scroller.current;
     if (!element) return;
-    if (heightBeforeOlder.current !== null) {
-      element.scrollTop += element.scrollHeight - heightBeforeOlder.current;
-      heightBeforeOlder.current = null;
-    } else if (atBottom.current) {
+    const held = anchor.current;
+    // Only once something sits above the anchor: a letter arriving meanwhile does not consume it.
+    if (held && messages[0]?.id !== held.id) {
+      const bubble = bubbleOf(element, held.id);
+      if (bubble) element.scrollTop += topOf(element, bubble) - held.top;
+      anchor.current = null;
+    } else if (!held && atBottom.current) {
       element.scrollTop = element.scrollHeight;
     }
   }, [messages, footer]);
@@ -82,11 +92,15 @@ export function MessageList({
   }
 
   async function loadOlder() {
-    heightBeforeOlder.current = scroller.current?.scrollHeight ?? 0;
+    const element = scroller.current;
+    const first = messages[0];
+    const bubble = element && first ? bubbleOf(element, first.id) : null;
+    anchor.current =
+      first && element && bubble ? { id: first.id, top: topOf(element, bubble) } : null;
     setLoading(true);
     try {
-      // Nothing prepended: nothing to compensate, or the next new message would jump.
-      if (!(await onLoadOlder())) heightBeforeOlder.current = null;
+      // Nothing prepended: nothing to hold.
+      if (!(await onLoadOlder())) anchor.current = null;
     } finally {
       setLoading(false);
     }
@@ -134,6 +148,17 @@ export function MessageList({
       ))}
       {footer}
     </div>
+  );
+}
+
+function bubbleOf(scroller: HTMLElement, id: string): HTMLElement | null {
+  return scroller.querySelector<HTMLElement>(`[data-message-id="${CSS.escape(id)}"]`);
+}
+
+/** Where a bubble sits relative to the top of the scroller's content. */
+function topOf(scroller: HTMLElement, bubble: HTMLElement): number {
+  return (
+    bubble.getBoundingClientRect().top - scroller.getBoundingClientRect().top + scroller.scrollTop
   );
 }
 

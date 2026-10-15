@@ -53,13 +53,18 @@ describe('EmojiPicker', () => {
 
   it('moves with the arrows in the grid and closes on Esc with the focus back', () => {
     const { smile, search } = openPicker();
+    const cells = screen.getAllByRole('button', { name: /^[a-z0-9_]+$/ });
+    // One Tab stop: the first cell, the others are reached with the arrows.
+    expect(cells.filter((cell) => cell.tabIndex === 0)).toEqual([cells[0]]);
     fireEvent.keyDown(search, { key: 'ArrowDown' });
     const first = screen.getByRole('button', { name: 'smiley' });
     expect(first).toHaveFocus();
     fireEvent.keyDown(first, { key: 'ArrowRight' });
-    expect(screen.getByRole('button', { name: 'smile' })).toHaveFocus();
+    const second = screen.getByRole('button', { name: 'smile' });
+    expect(second).toHaveFocus();
+    expect(second.tabIndex).toBe(0);
+    expect(first.tabIndex).toBe(-1);
     fireEvent.keyDown(document.activeElement as Element, { key: 'ArrowDown' });
-    const cells = screen.getAllByRole('button', { name: /^[a-z0-9_]+$/ });
     expect(cells[9]).toHaveFocus();
     fireEvent.keyDown(document.activeElement as Element, { key: 'ArrowUp' });
     fireEvent.keyDown(document.activeElement as Element, { key: 'ArrowLeft' });

@@ -64,8 +64,11 @@
   transition: width var(--motion-fast);
 }
 
-.error {
+.sentence {
   margin: 0;
+}
+
+.error {
   display: flex;
   flex-wrap: wrap;
   align-items: center;

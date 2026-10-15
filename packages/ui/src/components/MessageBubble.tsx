@@ -48,7 +48,7 @@ export function MessageBubble({
   ].join(' ');
 
   return (
-    <div className={classes} data-status={message.status}>
+    <div className={classes} data-status={message.status} data-message-id={message.id}>
       {mention && <span className={styles.srOnly}>{text('message.mention')}</span>}
       {wax && (
         <span className={styles.wax} title={text('message.encrypted')}>

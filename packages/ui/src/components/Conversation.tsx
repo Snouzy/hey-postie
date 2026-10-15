@@ -1,11 +1,12 @@
 import type { Chat, Contact, Room } from '@hey-postie/core';
 import { Info, Users } from 'lucide-react';
+import { useEffect } from 'react';
 import { useCore, useText } from '../core/CoreProvider';
 import { useEncryption } from '../core/useEncryption';
 import { useFileDrop } from '../core/useFileDrop';
 import { useMessages } from '../core/useMessages';
 import { useRoomMembers } from '../core/useRoomMembers';
-import { useUploads } from '../core/useUploads';
+import type { ChatUploads } from '../core/useUploads';
 import { errorKey } from '../i18n/errors';
 import type { SaveFile } from './Attachments';
 import { Button } from './Button';
@@ -30,6 +31,8 @@ interface ConversationProps {
   onOpenLink: (url: string) => void;
   /** Where a saved parcel goes. The desktop app routes it to a file dialog. */
   onSaveFile: SaveFile;
+  /** This chat's parcels on their way, held by `Main` so a chat switch loses none. */
+  uploads: ChatUploads;
 }
 
 /** The center column: header, messages, composer. Owns the messages of the open chat. */
@@ -42,12 +45,12 @@ export function Conversation({
   onOpenEncryption,
   onOpenLink,
   onSaveFile,
+  uploads,
 }: ConversationProps) {
   const core = useCore();
   const text = useText();
   const letters = useMessages(chat);
   const seal = useEncryption(chat);
-  const uploads = useUploads(chat.id, letters.add);
   const members = useRoomMembers(room?.jid ?? '');
   const nicks = room
     ? members.map((member) => member.nick).filter((nick) => nick !== room.nick)
@@ -56,8 +59,17 @@ export function Conversation({
   const outside = chat.kind === 'room' && !room?.joined;
   // The details pane exists for a direct chat, or for a hall the app has a record of.
   const hasDetails = chat.kind === 'direct' || room !== undefined;
-  const drop = useFileDrop((files) => !outside && uploads.add(files));
+  const drop = useFileDrop(uploads.add, !outside);
   const myJid = core.accounts.current()?.jid.split('/')[0] ?? null;
+
+  // A parcel that landed: its message joins the list and the pending bubble goes.
+  useEffect(() => {
+    for (const upload of uploads.list) {
+      if (!upload.sent) continue;
+      letters.add(upload.sent);
+      uploads.dismiss(upload.id);
+    }
+  }, [uploads, letters.add]);
 
   async function joinAgain() {
     if (!room) return;
@@ -122,7 +134,7 @@ export function Conversation({
         onSaveFile={onSaveFile}
         showSenders={chat.kind === 'room'}
         onShowDevices={hasDetails ? onOpenEncryption : undefined}
-        footer={uploads.uploads.map((upload) => (
+        footer={uploads.list.map((upload) => (
           <PendingParcel
             key={upload.id}
             upload={upload}

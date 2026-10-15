@@ -1,5 +1,7 @@
-import { fireEvent, screen } from '@testing-library/react';
+import type { Message } from '@hey-postie/core';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
+import { CoreProvider } from '../core/CoreProvider';
 import { mergeById } from '../core/useMessages';
 import { message, renderWithCore, setupCore } from '../test-utils';
 import { groupByDay, MessageList } from './MessageList';
@@ -115,5 +117,52 @@ describe('mergeById', () => {
     const loaded = [message({ id: 'a' }), message({ id: 'b' })];
     const arrived = [message({ id: 'b' }), message({ id: 'c' })];
     expect(mergeById(loaded, arrived).map((m) => m.id)).toEqual(['a', 'b', 'c']);
+  });
+});
+
+describe('MessageList scroll anchor', () => {
+  /** Bubbles 50px apart, in DOM order; the scroller itself at the top of the page. */
+  function stubLayout() {
+    return vi.spyOn(Element.prototype, 'getBoundingClientRect').mockImplementation(function (
+      this: Element,
+    ) {
+      const bubbles = [...document.querySelectorAll('[data-message-id]')];
+      const top = bubbles.includes(this) ? bubbles.indexOf(this) * 50 : 0;
+      return { top, bottom: top + 40, left: 0, right: 100, width: 100, height: 40 } as DOMRect;
+    });
+  }
+
+  it('holds the first message in place when older ones land, even if a letter arrived meanwhile', async () => {
+    const layout = stubLayout();
+    const m = (n: number) => message({ id: `m${n}`, body: `m${n}` });
+    const [m1, m2, m3, m4, m5] = [m(1), m(2), m(3), m(4), m(5)] as const;
+    let prepend!: (ok: boolean) => void;
+    const { core } = setupCore();
+    const list = (messages: Message[]) => (
+      <CoreProvider core={core} locale="en">
+        <MessageList
+          messages={messages}
+          hasOlder
+          onLoadOlder={() => new Promise<boolean>((done) => (prepend = done))}
+          myJid={null}
+          onRetry={() => {}}
+          onOpenLink={() => {}}
+          onReact={() => {}}
+          onSaveFile={() => {}}
+        />
+      </CoreProvider>
+    );
+    const { rerender } = render(list([m3, m4]));
+    const log = screen.getByRole('log');
+    log.scrollTop = 0;
+    fireEvent.click(screen.getByRole('button', { name: 'Load older' }));
+    // A letter arrives at the bottom while the page is on its way: nothing to compensate yet.
+    rerender(list([m3, m4, m5]));
+    expect(log.scrollTop).toBe(0);
+    // The page lands: m3 moved from the first row to the third, the viewport follows it.
+    rerender(list([m1, m2, m3, m4, m5]));
+    prepend(true);
+    expect(log.scrollTop).toBe(100);
+    layout.mockRestore();
   });
 });

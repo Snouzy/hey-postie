@@ -45,8 +45,10 @@ export function PendingParcel({ upload, onRetry, onDismiss }: PendingParcelProps
         </div>
       </div>
       {sentence && (
-        <p className={styles.error} role="alert">
-          {sentence}
+        <div className={styles.error}>
+          <p className={styles.sentence} role="alert">
+            {sentence}
+          </p>
           {upload.error !== 'error.FileTooLarge' && (
             <Button variant="danger" className={styles.action} onClick={onRetry}>
               {text('message.retry')}
@@ -60,7 +62,7 @@ export function PendingParcel({ upload, onRetry, onDismiss }: PendingParcelProps
           >
             <X size={14} aria-hidden />
           </Button>
-        </p>
+        </div>
       )}
     </div>
   );

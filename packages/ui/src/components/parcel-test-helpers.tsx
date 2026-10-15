@@ -1,6 +1,7 @@
-import type { Attachment, Chat } from '@hey-postie/core';
+import type { Attachment, Chat, Core } from '@hey-postie/core';
 import { fireEvent, screen } from '@testing-library/react';
 import { vi } from 'vitest';
+import { useUploads } from '../core/useUploads';
 import { renderWithCore, setupCore } from '../test-utils';
 import { Conversation } from './Conversation';
 
@@ -14,13 +15,18 @@ export const CHAT: Chat = {
 };
 const noop = () => {};
 
-/** A direct chat with bob, on fakes, with a spy where saved parcels go. */
-export function renderConversation() {
-  const { deps, core } = setupCore();
-  const onSaveFile = vi.fn();
-  const view = renderWithCore(
+/** `Conversation` with the uploads store `Main` would hold above it. */
+export function TestConversation({
+  chat = CHAT,
+  onSaveFile = noop,
+}: {
+  chat?: Chat;
+  onSaveFile?: (blob: Blob, name: string) => void;
+}) {
+  const uploads = useUploads();
+  return (
     <Conversation
-      chat={CHAT}
+      chat={chat}
       contact={undefined}
       room={undefined}
       detailsOpen={false}
@@ -28,9 +34,23 @@ export function renderConversation() {
       onOpenEncryption={noop}
       onOpenLink={noop}
       onSaveFile={onSaveFile}
-    />,
-    core,
+      uploads={uploads.forChat(chat.id)}
+    />
   );
+}
+
+/** A direct chat with bob, on fakes (or the given core), with a spy where saved parcels go. */
+export function renderConversation(
+  { deps, core } = setupCore(),
+  chat = CHAT,
+): {
+  deps: typeof deps;
+  core: Core;
+  onSaveFile: ReturnType<typeof vi.fn>;
+  view: ReturnType<typeof renderWithCore>;
+} {
+  const onSaveFile = vi.fn();
+  const view = renderWithCore(<TestConversation chat={chat} onSaveFile={onSaveFile} />, core);
   return { deps, core, onSaveFile, view };
 }
 

@@ -16,6 +16,7 @@ import { useChats } from '../core/useChats';
 import { useContacts } from '../core/useContacts';
 import { useCoreEvent } from '../core/useCoreEvent';
 import { roomChat, useRooms, withRooms } from '../core/useRooms';
+import { useUploads } from '../core/useUploads';
 import type { MessageKey } from '../i18n';
 import { errorKey } from '../i18n/errors';
 import { Postie } from '../illustrations/Postie';
@@ -46,6 +47,7 @@ export function Main({ account, onOpenLink, onSaveFile, onLeave }: MainProps) {
   const { chats: directChats, refresh } = useChats();
   const { rooms, refresh: refreshRooms } = useRooms();
   const contacts = useContacts();
+  const uploads = useUploads();
   const [selected, setSelected] = useState<Chat | null>(null);
   const [dialog, setDialog] = useState<OpenDialog>(null);
   const [backFromLicenses, setBackFromLicenses] = useState(false);
@@ -164,6 +166,7 @@ export function Main({ account, onOpenLink, onSaveFile, onLeave }: MainProps) {
           onOpenEncryption={() => showDetails(true)}
           onOpenLink={onOpenLink}
           onSaveFile={onSaveFile}
+          uploads={uploads.forChat(chat.id)}
         />
       ) : (
         <section className={styles.empty}>

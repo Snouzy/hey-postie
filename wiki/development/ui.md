@@ -158,9 +158,14 @@ What `Main` tells the core: `notifications.setOpenChat(id)` and `chats.markRead(
 selection changes; `notifications.setWindowFocused` on window `focus` / `blur`. `useMessages(chat)`
 (`core/useMessages.ts`, the state behind `Conversation`) marks a message read as it arrives in the
 open chat only while `document.hasFocus()`, and again when the window regains focus. Messages are
-merged by id (`mergeById`), so one that arrives while the history is loading is kept; it also
-holds `send`, `retry`, `loadOlder` and `react` (`chats.toggleReaction`), so `Conversation` is
-layout only. `useChats` numbers its requests so an older `list()` answer never
+merged by id (`mergeById`), so one that arrives while the history is loading is kept, and the
+hook remembers the latest version each event brought (`fromEvents`): a page that lands after an
+update (`messages()` or `loadOlder()` still pending) takes the event's version, never the older
+snapshot. It also holds `send` (clears the chat's error on success), `retry` (sets it on
+failure), `loadOlder` and `react` (`chats.toggleReaction`), so `Conversation` is layout only.
+`MessageList` keeps the viewport still when an older page lands by anchoring on the message that
+was first before the load (`data-message-id`) and restoring its offset once something sits above
+it; a letter arriving at the bottom meanwhile does not consume the anchor. `useChats` numbers its requests so an older `list()` answer never
 overwrites a newer one.
 
 ## Rooms (halls)
@@ -283,24 +288,31 @@ core's `files` service; the UI only shows and asks._
 
 - **Three ways in**: the paperclip of the `Composer` (a visually hidden `<input type="file"
   multiple>` labelled "Attach a parcel", the button is its visible face), files dropped on the
-  conversation (`useFileDrop`: only drags that carry `Files` are taken, a `DropOverlay` with Postie
-  `delivering` and "Drop your parcel here" covers the column meanwhile; nothing is taken while
-  outside a hall), and an image pasted in the composer (`pastedImages`: only `image/*` files, a
-  text paste is left to the textarea).
-- **On their way** (`useUploads(chatId, onSent)`): every file becomes an `Upload` and a call to
+  conversation (`useFileDrop(onFiles, enabled)`: only drags that carry `Files` are taken, an
+  enter/leave depth counter so crossing a child does not blink the `DropOverlay` with Postie
+  `delivering` and "Drop your parcel here"; with `enabled` false, outside a hall, nothing is
+  prevented and no overlay shows), and an image pasted in the composer (`pastedImages`: only
+  `image/*` files; the default is prevented only when the clipboard carries no text, so text that
+  came with the picture still lands in the letter).
+- **On their way** (`useUploads()`, held by `Main` above the conversations so that switching
+  chats neither loses an upload in flight nor hides a refusal; `Conversation` receives
+  `uploads.forChat(chat.id)`): every file becomes an `Upload` and a call to
   `files.send(chatId, file, onProgress)`. A `PendingParcel` bubble (navy, like an outgoing letter)
   shows the name, the size (`formatBytes`, `Intl.NumberFormat` with `style: 'unit'`) and a
-  `role="progressbar"` labelled "Sending <name>" until the service hands back the message, which
-  `useMessages.add` puts in the list and the bubble goes. Pending bubbles render as the `footer` of
+  `role="progressbar"` labelled "Sending <name>" until the service hands back the message: the
+  upload keeps it as `sent`, and the chat's `Conversation` (now or when it is opened again) puts
+  it in its list through `useMessages.add` and dismisses the bubble. Pending bubbles render as the `footer` of
   `MessageList`, inside the scroller, so they sit under the last message and the list stays
   pinned to the bottom. `FileTooLarge` keeps the bubble with the sentence and the limit
   (`files.maxFileSize()` formatted: "The server takes up to 5 MB."), and only "Dismiss": a heavier
   parcel will not get lighter. Any other error shows its sentence with "Retry" (the same `File`
-  again) and "Dismiss".
+  again) and "Dismiss"; the sentence alone is the `role="alert"`, the buttons sit beside it.
 - **Received** (`Attachments`, in `MessageBubble`; a message that is a parcel alone has no body
   line): `files.isInlineImage(att)` decides between `InlineImage` and `ParcelCard`. The raw URL
   never reaches an `<img src>`: `useAttachment(att)` asks `files.fetch` (which decrypts an
-  `aesgcm` parcel), makes an object URL, revokes it on unmount, and exposes `loading` (a kraft
+  `aesgcm` parcel), makes an object URL, revokes it on unmount, re-fetches only when `url`,
+  `encryption` or `decryptionKey` change (a `message.updated` for a reaction brings a new
+  `Attachment` object for the same bytes, and an open lightbox survives it), and exposes `loading` (a kraft
   skeleton, `role="status"`), `ready` or `error` ("I could not fetch this parcel." with Retry,
   through `RetryNotice`). A sealed parcel wears a small lock badge ("Sealed parcel"). A click on the
   picture opens `Lightbox`, a `Dialog` titled with the file name (so Esc, the focus trap and the
@@ -308,7 +320,8 @@ core's `files` service; the UI only shows and asks._
   "Save": then `files.fetch`, and the bytes go to `onSaveFile(blob, name)`.
 - `onSaveFile` is a prop of `App`, drilled like `onOpenLink` (`Main` → `Conversation` →
   `MessageList` → `MessageBubble` → `Attachments`). Default: `downloadBlob` (an anchor with
-  `download`); the desktop app will route it to a native save dialog.
+  `download`, the object URL revoked a minute later); the desktop app routes it to a native save
+  dialog.
 
 ## Emoji
 
@@ -327,12 +340,14 @@ _Added 2026-10-15. Sources: `scripts/trim-emoji.mjs`, `data/emoji.json`, `data/e
   [dependencies.md](dependencies.md) for Converse.
 - **Popover** (`Popover`): a `role="dialog"` card with `position: fixed`, placed above its
   `anchor` (below when there is no room, clamped to the viewport), so neither the message
-  scroller nor the composer clips it. Esc and a click outside call `onClose`; the opener gives the
-  focus back. Decision of 2026-10-15: no portal, no library; a fixed card measured once on mount
+  scroller nor the composer clips it, and re-placed on every scroll (capture phase on the
+  document) and window resize. Esc, heard at the document level wherever the focus is, and a
+  click outside call `onClose`; the opener gives the focus back. Decision of 2026-10-15: no portal, no library; a fixed card measured once on mount
   is enough for a desktop window.
 - **Picker** (`EmojiPicker`): a search field that takes the focus on open, category toggle
   buttons (`aria-pressed`, hidden while searching), then a grid of `<button>`s whose content is
-  the emoji and whose accessible name is the shortname. Arrows move in the grid by one or by
+  the emoji and whose accessible name is the shortname. The grid is one Tab stop (roving
+  `tabindex`: the active cell at 0, the others at -1); arrows move in the grid by one or by
   `COLUMNS` (8, matching the stylesheet); Down from the search enters the grid; Esc closes. The
   smile button of the `Composer` opens it; a pick runs `insertAt` on the textarea's selection,
   closes the picker and focuses the text with the caret after the emoji (the same
@@ -345,7 +360,8 @@ _Added 2026-10-15. Sources: `components/ReactionBar.tsx`, `Reactions.tsx`, `core
 
 - Every bubble that is not `pending` has a hover / focus toolbar with one button, "React"
   (lucide `smile-plus`), at the top corner away from the edge. It opens a `Popover` with the
-  `QUICK_EMOJIS` row and "More emojis" (the whole `EmojiPicker`). Picking calls
+  `QUICK_EMOJIS` row (each button named by its shortname, the first one takes the focus) and
+  "More emojis" (the whole `EmojiPicker`). Picking calls
   `chats.toggleReaction(chat.id, message.id, emoji)` through `useMessages.react`, closes and gives
   the focus back to "React"; an error shows as the conversation's sentence.
 - The pills (`Reactions`, a `<ul aria-label="Reactions">`) show each emoji with its count as a
@@ -437,11 +453,16 @@ device", confirm / cancel / remove with the focus following, confirmation droppe
 goes away, failed load with Retry; a hall's devices by member, known members without any key),
 `Parcels.test.tsx` (attach through the input → `uploaded` and the card, the pending bubble with
 its progress, the too-heavy sentence with the limit and no Retry, Retry on another failure, drop
-with the overlay, an image paste taken and a text paste left alone), `Attachments.test.tsx` (a
-sealed inline image from the fetched blob with a mocked `URL.createObjectURL`, never the raw URL,
-lightbox and Save, the object URL revoked on unmount, fetch failure with Retry, a file card whose
-Save fetches), `EmojiPicker.test.tsx` (focus on the search, shortname and keyword filtering,
-categories, insertion at the caret with the focus back on the text, arrows in the grid, Esc with
-the focus back on the smile, click outside), `Reactions.test.tsx` (quick row → service call and
-my pressed pill with the names in `title`, toggling off from the pill, "More emojis" → picker,
-the row's label).
+with the overlay and the depth counter, drags left alone outside a hall, an image paste taken and
+a text paste left alone with its default), `Uploads.test.tsx` (an upload in flight and a refusal
+survive a chat switch), `Attachments.test.tsx` (a sealed inline image from the fetched blob with a
+mocked `URL.createObjectURL`, the raw URL in no attribute of the DOM, lightbox and Save, one fetch
+per parcel and the lightbox kept through a reaction, the object URL revoked on unmount, fetch
+failure with Retry, a file card whose Save fetches), `useMessages.test.tsx` (an update during the
+first load and during an older page wins), `MessageList.test.tsx` also (the scroll anchor holds
+through a letter arriving mid-load), `Popover.test.tsx` (placement follows a scroll, clicks
+inside and on the anchor keep it), `EmojiPicker.test.tsx` (focus on the search, shortname and keyword filtering,
+categories, insertion at the caret with the focus back on the text, one Tab stop and arrows in
+the grid, Esc with the focus back on the smile, click outside), `Reactions.test.tsx` (quick row →
+service call and my pressed pill with the names in `title`, toggling off from the pill, "More
+emojis" → picker, focus on the first quick emoji and Esc from anywhere, the row's label).

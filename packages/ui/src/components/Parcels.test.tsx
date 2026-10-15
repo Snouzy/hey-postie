@@ -1,6 +1,7 @@
 import { DomainError } from '@hey-postie/core';
 import { act, fireEvent, screen, waitFor } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
+import { setupCore } from '../test-utils';
 import { attach, CHAT, renderConversation } from './parcel-test-helpers';
 
 describe('Sending a parcel', () => {
@@ -58,8 +59,16 @@ describe('Sending a parcel', () => {
   it('takes files dropped on the conversation', async () => {
     const { deps } = renderConversation();
     const region = screen.getByRole('region', { name: 'bob' });
-    fireEvent.dragOver(region, { dataTransfer: { types: ['Files'], files: [] } });
+    const files = { dataTransfer: { types: ['Files'], files: [] } };
+    fireEvent.dragEnter(region, files);
     expect(screen.getByRole('status')).toHaveTextContent('Drop your parcel here');
+    // Crossing a child fires enter then leave: the overlay stays until the last leave.
+    fireEvent.dragEnter(screen.getByRole('textbox'), files);
+    fireEvent.dragLeave(screen.getByRole('textbox'), files);
+    expect(screen.getByRole('status')).toBeInTheDocument();
+    fireEvent.dragLeave(region, files);
+    expect(screen.queryByRole('status')).not.toBeInTheDocument();
+    fireEvent.dragEnter(region, files);
     const file = new File(['hello'], 'dropped.txt');
     fireEvent.drop(region, { dataTransfer: { types: ['Files'], files: [file] } });
     expect(screen.queryByText('Drop your parcel here')).not.toBeInTheDocument();
@@ -68,13 +77,36 @@ describe('Sending a parcel', () => {
     );
   });
 
+  it('leaves drags alone outside a hall', () => {
+    renderConversation(setupCore(), {
+      ...CHAT,
+      id: 'hall@rooms.x.org',
+      kind: 'room',
+      title: 'hall',
+    });
+    const region = screen.getByRole('region', { name: 'hall' });
+    const event = fireEvent.dragEnter(region, { dataTransfer: { types: ['Files'], files: [] } });
+    expect(event).toBe(true); // not defaultPrevented
+    expect(screen.queryByRole('status', { name: '' })).not.toHaveTextContent(
+      'Drop your parcel here',
+    );
+  });
+
   it('takes an image pasted in the composer, and leaves text pastes alone', async () => {
     const { deps } = renderConversation();
     const area = screen.getByRole('textbox');
-    fireEvent.paste(area, { clipboardData: { files: [new File(['t'], 'x.txt')] } });
-    fireEvent.paste(area, {
-      clipboardData: { files: [new File(['png'], 'shot.png', { type: 'image/png' })] },
+    const textPaste = fireEvent.paste(area, {
+      clipboardData: { files: [new File(['t'], 'x.txt')], getData: () => 'hello' },
     });
+    expect(textPaste).toBe(true); // the textarea keeps the paste
+    expect(deps.fakes.chat.uploaded).toEqual([]);
+    const imagePaste = fireEvent.paste(area, {
+      clipboardData: {
+        files: [new File(['png'], 'shot.png', { type: 'image/png' })],
+        getData: () => '',
+      },
+    });
+    expect(imagePaste).toBe(false);
     await waitFor(() => expect(deps.fakes.chat.uploaded.map((u) => u.name)).toEqual(['shot.png']));
   });
 });

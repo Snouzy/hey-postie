@@ -1,5 +1,5 @@
 import { SmilePlus } from 'lucide-react';
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useText } from '../core/CoreProvider';
 import { QUICK_EMOJIS } from '../data/emoji';
 import { Button } from './Button';
@@ -13,12 +13,18 @@ interface ReactionBarProps {
 
 /**
  * The "React" button of a bubble's hover toolbar: a quick row of six, and "More emojis" for the
- * whole picker. Picking closes the popover and gives the focus back to the button.
+ * whole picker. The first quick emoji takes the focus; picking closes the popover and gives the
+ * focus back to the button.
  */
 export function ReactionBar({ onReact }: ReactionBarProps) {
   const text = useText();
   const [open, setOpen] = useState<'quick' | 'picker' | null>(null);
   const trigger = useRef<HTMLButtonElement>(null);
+  const quick = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (open === 'quick') quick.current?.querySelector('button')?.focus();
+  }, [open]);
 
   function close() {
     setOpen(null);
@@ -45,15 +51,17 @@ export function ReactionBar({ onReact }: ReactionBarProps) {
       </Button>
       {open === 'quick' && (
         <Popover anchor={trigger.current} label={text('reaction.add')} onClose={close}>
-          <div className={styles.quick}>
-            {QUICK_EMOJIS.map((emoji) => (
+          <div ref={quick} className={styles.quick}>
+            {QUICK_EMOJIS.map((entry) => (
               <button
-                key={emoji}
+                key={entry.shortname}
                 type="button"
                 className={styles.emoji}
-                onClick={() => pick(emoji)}
+                aria-label={entry.shortname}
+                title={entry.shortname}
+                onClick={() => pick(entry.emoji)}
               >
-                {emoji}
+                {entry.emoji}
               </button>
             ))}
             <Button

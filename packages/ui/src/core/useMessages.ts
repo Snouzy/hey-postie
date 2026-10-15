@@ -1,5 +1,5 @@
 import type { Chat, Message } from '@hey-postie/core';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { MessageKey } from '../i18n';
 import { errorKey } from '../i18n/errors';
 import { useCore } from './CoreProvider';
@@ -15,13 +15,20 @@ export function useMessages(chat: Chat) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [hasOlder, setHasOlder] = useState(true);
   const [error, setError] = useState<MessageKey | null>(null);
+  // The latest version of each message the events brought: a page loaded from the server may be
+  // older than an event that arrived while it was on its way, and the event wins.
+  const fromEvents = useRef(new Map<string, Message>());
 
   useEffect(() => {
     let cancelled = false;
     core.chats
       .messages(chat.id)
       // Messages received while loading are already in the list: keep them.
-      .then((loaded) => !cancelled && setMessages((current) => mergeById(loaded, current)))
+      .then(
+        (loaded) =>
+          !cancelled &&
+          setMessages((current) => mergeById(fresh(loaded, fromEvents.current), current)),
+      )
       .catch((caught: unknown) => !cancelled && setError(errorKey(caught)));
     return () => {
       cancelled = true;
@@ -30,6 +37,7 @@ export function useMessages(chat: Chat) {
 
   useCoreEvent('message.received', (message) => {
     if (message.chatId !== chat.id) return;
+    fromEvents.current.set(message.id, message);
     setMessages((current) => mergeById(current, [message]));
     // Only a reader who can see the window has read it.
     if (document.hasFocus()) void core.chats.markRead(chat.id).catch(() => {});
@@ -37,6 +45,7 @@ export function useMessages(chat: Chat) {
 
   useCoreEvent('message.updated', (message) => {
     if (message.chatId !== chat.id) return;
+    fromEvents.current.set(message.id, message);
     setMessages((current) => current.map((m) => (m.id === message.id ? message : m)));
   });
 
@@ -55,7 +64,7 @@ export function useMessages(chat: Chat) {
     try {
       const older = await core.chats.loadOlder(chat.id);
       if (older.length === 0) setHasOlder(false);
-      else setMessages((current) => mergeById(older, current));
+      else setMessages((current) => mergeById(fresh(older, fromEvents.current), current));
       return older.length > 0;
     } catch (caught) {
       setError(errorKey(caught));
@@ -65,11 +74,15 @@ export function useMessages(chat: Chat) {
 
   async function send(body: string) {
     add(await core.chats.send(chat.id, body));
+    setError(null);
   }
 
   function retry(failed: Message) {
     setMessages((current) => current.filter((m) => m.id !== failed.id));
-    send(failed.body).catch(() => add(failed));
+    send(failed.body).catch((caught: unknown) => {
+      add(failed);
+      setError(errorKey(caught));
+    });
   }
 
   function react(message: Message, emoji: string) {
@@ -79,6 +92,11 @@ export function useMessages(chat: Chat) {
   }
 
   return { messages, hasOlder, error, setError, add, loadOlder, send, retry, react };
+}
+
+/** The loaded page, with every message the events already brought in its newer version. */
+function fresh(loaded: Message[], fromEvents: Map<string, Message>): Message[] {
+  return loaded.map((message) => fromEvents.get(message.id) ?? message);
 }
 
 /** `first` then whatever in `second` is not already there, by id. Order within each is kept. */
