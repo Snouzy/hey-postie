@@ -40,6 +40,8 @@ export interface ConnectionLike {
   connected?: boolean;
   jid?: string;
   _proto?: { _onClose?: (event: CloseEvent) => void };
+  xmlInput(body: Element): void;
+  xmlOutput(body: Element): void;
   _changeConnectStatus(status: number, condition?: string): void;
   _doDisconnect(): void;
 }

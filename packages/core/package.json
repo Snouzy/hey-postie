@@ -11,7 +11,8 @@
   "scripts": {
     "check": "tsc --noEmit",
     "test": "vitest run",
-    "build": "tsc --noEmit"
+    "build": "tsc --noEmit",
+    "test:contract": "XMPP_TEST_SERVER=wss://localhost:5281/xmpp-websocket vitest run src/repositories/converse/contract.test.ts"
   },
   "devDependencies": {
     "jsdom": "30.1.3",

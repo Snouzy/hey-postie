@@ -81,6 +81,22 @@ source tools/xmpp-server/env.sh
 longer than macOS's 104-byte limit for socket paths in a normal checkout ("Notify failed"). For the
 same reason the admin socket is at `/tmp/hey-postie-prosody.sock`.
 
+## Contract tests
+
+`packages/core/src/repositories/converse/contract.test.ts` drives the Converse repositories against
+this server as `alice`, with `bob` as a raw WebSocket client. It is skipped unless `XMPP_TEST_SERVER`
+is set; the `test:contract` script of `@hey-postie/core` sets it to the WebSocket URL above. The test
+runs in Node (jsdom), whose TLS does not read the keychain: pass the mkcert CA explicitly.
+
+```sh
+tools/xmpp-server/start.sh -d && tools/xmpp-server/users.sh
+NODE_EXTRA_CA_CERTS="$(mkcert -CAROOT)/rootCA.pem" pnpm --filter @hey-postie/core test:contract
+```
+
+Without `NODE_EXTRA_CA_CERTS` the suite fails in `beforeAll` with `bob: WebSocket error` (the TLS
+handshake rejects the mkcert certificate; observed on 2026-10-15). The server keeps the roster and the message archive between runs; the test
+tolerates that (unique ids per run, cleanup of bob's roster), so wiping `data/` is not needed.
+
 ## Ports and features
 
 | Port | What |

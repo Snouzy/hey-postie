@@ -71,7 +71,9 @@ export class ConverseXmppRepository implements XmppRepository {
       subscriptions.push(
         this.engine.on('connectionInitialized', () => {
           const connection = api.connection.get();
-          if (connection) captureCloseReason(connection, Status, closeReason);
+          if (!connection) return;
+          silenceStanzaLog(connection);
+          captureCloseReason(connection, Status, closeReason);
         }),
         this.engine.on('connfeedback', () => {
           const status = state.connfeedback.get('connection_status');
@@ -108,6 +110,17 @@ export class ConverseXmppRepository implements XmppRepository {
   private notify(state: AccountState, error?: DomainError): void {
     for (const handler of this.handlers) handler(state, error);
   }
+}
+
+/**
+ * Converse's `xmlInput`/`xmlOutput` serialize every stanza (`body.outerHTML`) for a debug line
+ * that `loglevel: 'warn'` then drops (`shared/connection/index.js:32-39`). We never log stanzas,
+ * and jsdom's strict XML serializer throws on Strophe's `xmlns` attributes, which aborts the
+ * connection before the stream opens. So neither hook does anything.
+ */
+function silenceStanzaLog(connection: ConnectionLike): void {
+  connection.xmlInput = () => undefined;
+  connection.xmlOutput = () => undefined;
 }
 
 /**

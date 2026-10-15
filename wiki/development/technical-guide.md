@@ -52,6 +52,17 @@ A local Prosody 13 server, bound to `localhost` only, for development and for th
 gated by `XMPP_TEST_SERVER`: see [`tools/xmpp-server/README.md`](../../tools/xmpp-server/README.md)
 (install, start/stop, test accounts `alice@localhost` and `bob@localhost`, ports, certificates).
 
+The contract test of the Converse repositories (`packages/core/src/repositories/converse/contract.test.ts`,
+described in [converse.md](converse.md#contract-test)) runs against it:
+
+```sh
+tools/xmpp-server/start.sh -d && tools/xmpp-server/users.sh
+NODE_EXTRA_CA_CERTS="$(mkcert -CAROOT)/rootCA.pem" pnpm --filter @hey-postie/core test:contract
+```
+
+`NODE_EXTRA_CA_CERTS` is required: the test opens the `wss://` socket from Node, which does not read
+the macOS keychain where `mkcert -install` put the CA. Plain `pnpm test` skips the file.
+
 ## Add a service
 
 1. Write its interface in `contracts/services.ts` and the repository interfaces it needs in

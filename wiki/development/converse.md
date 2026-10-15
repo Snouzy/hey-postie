@@ -171,6 +171,22 @@ sending while disconnected. Our wrapper keeps `warn` in production and never for
 - Test hook: `bosh_service_url: 'montague.lit/http-bind'` makes `isTestEnv()` true and swaps in a
   `MockConnection` with `sent_stanzas` / `IQ_stanzas`.
 - `_converse` is a Proxy: use `_converse.state.*`.
+- Real WebSocket under Vitest + jsdom (`contract.test.ts`, checked on 2026-10-15 with jsdom 30.1.3,
+  Node 26.11): jsdom's `WebSocket` wraps undici's and fires `new Event('open')` with the *global*
+  `Event`, which Vitest's jsdom environment has replaced by jsdom's; Node's `EventTarget` rejects
+  it and no socket ever opens. The test restores Node's `Event` on `globalThis` (taken from a
+  native `MessageChannel` message, since no module exports it any more).
+- jsdom's `outerHTML` on an XML element is a strict serialization: it throws
+  `Invalid attribute localName value` on Strophe's `xmlns` attributes (set with `setAttribute`, so
+  in no namespace). Converse's `Connection.xmlInput/xmlOutput` evaluate `body.outerHTML` for every
+  stanza before `log.debug` drops it, which aborted the connection in `<open/>`. See §12, `xmpp.ts`.
+- libomemo's emscripten glue detects Node (`typeof process`), loads the wasm with `fs` when `fetch`
+  fails, and registers `process.on('unhandledRejection', throw)` **per key pair**: an unhandled
+  rejection anywhere kills the Vitest worker (exit code 7), and Node warns about more than ten
+  listeners. The test serves `dist/curve25519_compiled.wasm` and `dist/emoji.json` through a
+  `fetch` stub so that OMEMO initializes normally (it publishes its device list and bundle to PEP).
+- RFC 7395 framing: a stanza sent over the WebSocket has no `<stream>` parent, so it must carry
+  `xmlns="jabber:client"` itself or Prosody closes the stream (`test-support/bobClient.ts`).
 
 ## 12. What the repository actually does
 
@@ -193,7 +209,10 @@ installed package and by `repositories.test.ts`, which drives the real headless 
   `CertificateInvalid` when the WebSocket close reason says so. The close reason is read by wrapping
   `connection._proto._onClose` at `connectionInitialized`: Strophe discards `event.reason` and does
   nothing at all for a clean close before the stream opened (`strophe.js/src/websocket.js:360-378`),
-  so the wrapper also turns that case into a CONNFAIL. `onStateChange`: `connected`/`reconnected`
+  so the wrapper also turns that case into a CONNFAIL. The same hook replaces the connection's
+  `xmlInput`/`xmlOutput` with no-ops: Converse serializes every stanza for a debug line that
+  `loglevel: 'warn'` drops (`shared/connection/index.js:32-39`), we never log stanzas, and jsdom's
+  serializer throws on them (§11). `onStateChange`: `connected`/`reconnected`
   → `online`, `will-reconnect` → `connecting`, `disconnected` → `offline` (with the last
   AUTHFAIL/CONNFAIL as error), only after having been online: a failed sign-in and the logout
   cascade below also fire `disconnected`.
@@ -202,14 +221,45 @@ installed package and by `repositories.test.ts`, which drives the real headless 
   `contactRequest` come from `api.listen`. `remove` on the collection is reported with
   `subscription: 'none'`, like the fake.
 - `chat.ts`: the `chatboxes` collection is created once at `pluginsInitialized` and only emptied on
-  logout, so it is bound once (`engine.onReady`). `onMessage` fires for live stanzas only: not for
+  logout, so it is bound once (`engine.onReady`). Every direct chat added to it is hidden
+  (`chat.save({ hidden: true })`) unless it is the one `open()` is showing: Converse creates chats
+  visible (`plugins/chat/model.js:30`) and `handleUnreadMessage` only counts `num_unread` while
+  `isHidden()` (`shared/model-with-messages.js:862-880`), otherwise it sends a displayed marker as
+  if the user were reading; a conversation started by an incoming message would never be unread
+  (found by the contract test, 2026-10-15). `onMessage` fires for live stanzas only: not for
   `is_archived` (MAM) results, which would notify a chat's whole history on first open, and not for
   our own messages unless they are carbons. Archived messages reach the UI through `messages()`,
   `chat.updated` and the unread counter. `open(jid)` hides the other direct chats: `num_unread` is
   only counted while a chat `isHidden()` (§4). `messages({ before })` pages with
   `u.mam.fetchArchivedMessages(chat, { rsm: { before: <stanza_id>, max } }, false)` and returns the
-  models added meanwhile; a message without `stanza_id <bare_jid>` yields `[]`.
+  models added meanwhile; a message without `stanza_id <bare_jid>` yields `[]`. Both paths sort
+  by `time` themselves: the collection sorts at insertion only, and one contract run (fixtures
+  colliding with an older run's archived copies) returned the collection out of order.
 - `mappers.ts`: pure functions, unit-tested with plain `{ get }` objects.
+
+### Contract test
+
+`contract.test.ts` (run with `pnpm --filter @hey-postie/core test:contract`, see
+[technical-guide.md](technical-guide.md#test-server)) drives `createConverseRepositories()` as
+`alice@localhost` through a real `wss://` WebSocket to the local Prosody 13
+([tools/xmpp-server](../../tools/xmpp-server/README.md)); `bob@localhost` is a hand-written
+XMPP-over-WebSocket client (`test-support/bobClient.ts`: `<open/>`, SASL PLAIN, bind, raw stanzas)
+so that the two sides are independent. Six scenarios in order, all passing on 2026-10-15: wrong
+password → `InvalidCredentials` then sign-in → `online`; `roster.add` → bob accepts and subscribes
+back → `subscription: 'both'`, bob's presence → `online`; bob's message → `onMessage`, `unreadCount`
+1, `markRead` → 0; `send` → bob receives it with `<request/>`, his receipt → `delivered`; three
+messages while alice is signed out → MAM catch-up after sign-in, `messages({ before })` answers;
+sign-out and sign-in again. Observed along the way:
+
+- Prosody's `mod_mam` archives messages to an offline user and swallows the bounce (no
+  `mod_offline` is loaded): the test synchronizes on an IQ ping instead.
+- The server keeps the archive and the roster between runs. Fixture ids carry a run token:
+  Converse dedupes by `{ from, msgid, body }` (`getMessageBodyQueryAttrs`), so a reused stanza id
+  makes an old archived copy swallow the new message. Bob removes alice from his roster at start
+  and end, alice removes bob before adding him again.
+- `roster.add` ends in `both` without any repository code for the request: Converse authorizes an
+  incoming `subscribe` by itself when the contact has `ask="subscribe"` or `subscription="to"`
+  (`plugins/roster/contacts.js:405-431`).
 
 ### Corrections to the map above
 
