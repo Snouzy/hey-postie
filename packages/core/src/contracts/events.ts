@@ -1,4 +1,4 @@
-import type { Account, Chat, Contact, Message, Room, RoomMember } from './types';
+import type { Account, Chat, Contact, Device, Message, Room, RoomMember } from './types';
 
 export interface CoreEvents {
   'account.changed': Account;
@@ -8,6 +8,7 @@ export interface CoreEvents {
   'contact.updated': Contact;
   'room.updated': Room;
   'room.members': { jid: string; members: RoomMember[] };
+  'devices.changed': { jid: string; devices: Device[] };
   /** The UI asks to show a chat (a click on a notification, an `xmpp:` link). */
   'chat.requested': { chatId: string };
 }

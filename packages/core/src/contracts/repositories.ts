@@ -3,11 +3,14 @@ import type {
   AccountState,
   Chat,
   Contact,
+  Device,
   Message,
+  RegistrationForm,
   Room,
   RoomInfo,
   RoomMember,
   RoomNotify,
+  Trust,
 } from './types';
 
 export interface KeychainRepository {
@@ -66,6 +69,38 @@ export interface RoomRepository {
   roomService(domain: string): Promise<string | null>;
   onChange(handler: (room: Room) => void): () => void;
   onMembersChange(handler: (jid: string, members: RoomMember[]) => void): () => void;
+}
+
+/**
+ * End-to-end encryption (OMEMO, XEP-0384). The engine encrypts and decrypts; this repository
+ * exposes the devices, their trust, and the per-chat switch.
+ */
+export interface CryptoRepository {
+  /** The devices of a contact (or of a room's members), with their trust. */
+  devices(jid: string): Promise<Device[]>;
+  ownDevices(): Promise<Device[]>;
+  ownDeviceId(): Promise<number>;
+  setTrust(jid: string, deviceId: number, trust: Trust): Promise<void>;
+  removeOwnDevice(deviceId: number): Promise<void>;
+  /** True when every party of the chat has at least one usable device. */
+  available(chatId: string): Promise<boolean>;
+  setEncryption(chatId: string, enabled: boolean): Promise<void>;
+  onDevicesChange(handler: (jid: string, devices: Device[]) => void): () => void;
+}
+
+/** In-band registration and account deletion (XEP-0077). Needs no signed-in account for `form`/`submit`. */
+export interface RegistrationRepository {
+  form(input: { domain: string; websocketUrl: string }): Promise<RegistrationForm>;
+  /** `values` keyed by field name; resolves once the server confirms the account. */
+  submit(input: {
+    domain: string;
+    websocketUrl: string;
+    values: Record<string, string>;
+  }): Promise<void>;
+  /** Deletes the signed-in account on its server. */
+  deleteCurrent(): Promise<void>;
+  /** Removes every local trace of an account: engine stores, caches. Not the keychain. */
+  wipeLocal(jid: string): Promise<void>;
 }
 
 export interface Notifier {

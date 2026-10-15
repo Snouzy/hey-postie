@@ -1,13 +1,25 @@
 import type { CoreDependencies } from '../container';
 import { FakeChat } from './chat';
+import { FakeCrypto } from './crypto';
 import { FakeKeychain } from './keychain';
 import { FakeNotifier } from './notifier';
+import { FakeRegistration } from './registration';
 import { FakeRoom } from './room';
 import { FakeRoster } from './roster';
 import { FakeTransport } from './transport';
 import { FakeXmpp } from './xmpp';
 
-export { FakeChat, FakeKeychain, FakeNotifier, FakeRoom, FakeRoster, FakeTransport, FakeXmpp };
+export {
+  FakeChat,
+  FakeCrypto,
+  FakeKeychain,
+  FakeNotifier,
+  FakeRegistration,
+  FakeRoom,
+  FakeRoster,
+  FakeTransport,
+  FakeXmpp,
+};
 
 export interface FakeDependencies extends CoreDependencies {
   /** The same instances, typed as fakes so tests can inspect and configure them. */
@@ -18,6 +30,8 @@ export interface FakeDependencies extends CoreDependencies {
     roster: FakeRoster;
     chat: FakeChat;
     room: FakeRoom;
+    crypto: FakeCrypto;
+    registration: FakeRegistration;
     notifier: FakeNotifier;
   };
 }
@@ -30,6 +44,8 @@ export function createFakeDependencies(): FakeDependencies {
     roster: new FakeRoster(),
     chat: new FakeChat(),
     room: new FakeRoom(),
+    crypto: new FakeCrypto(),
+    registration: new FakeRegistration(),
     notifier: new FakeNotifier(),
   };
   return { ...fakes, fakes };

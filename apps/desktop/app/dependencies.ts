@@ -1,4 +1,10 @@
-import { type CoreDependencies, createConverseRepositories, FakeRoom } from '@hey-postie/core';
+import {
+  type CoreDependencies,
+  createConverseRepositories,
+  FakeCrypto,
+  FakeRegistration,
+  FakeRoom,
+} from '@hey-postie/core';
 import { TauriKeychain } from './repositories/keychain';
 import { TauriNotifier } from './repositories/notifier';
 import { TauriTransport } from './repositories/transport';
@@ -18,6 +24,10 @@ export function createTauriDependencies(): CoreDependencies {
     chat,
     // Milestone 2 replaces the fake with the Converse MUC repository.
     room: new FakeRoom(),
+    // Milestone 3 replaces the fake with the Converse OMEMO repository.
+    crypto: new FakeCrypto(),
+    // Milestone 5 replaces the fake with the Converse registration repository.
+    registration: new FakeRegistration(),
     notifier: new TauriNotifier(),
   };
 }

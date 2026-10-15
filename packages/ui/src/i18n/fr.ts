@@ -40,6 +40,8 @@ export const fr: Record<MessageKey, string> = {
   'error.RoomNotFound': 'Personne ne répond à ce salon. Vérifiez son adresse.',
   'error.RoomBanned': 'Ce salon vous a fermé sa porte.',
   'error.NickTaken': 'Quelqu’un porte déjà ce pseudo dans ce salon.',
+  'error.RegistrationRejected': 'Le serveur n’a pas accepté ces informations.',
+  'error.DeviceNotFound': 'Je ne connais plus cet appareil.',
   'error.Unknown': 'Quelque chose a cloché pendant ma tournée. Réessayons.',
 
   'main.tabs.chats': 'Discussions',
