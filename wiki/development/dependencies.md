@@ -29,3 +29,12 @@ Milestone 1 adds `tokio`, `tokio-tungstenite`, `tokio-rustls`, `rustls-native-ce
 
 TypeScript 6, Biome 2, Vitest 5, Vite 8, `@vitejs/plugin-react`, Testing Library, jsdom,
 `@tauri-apps/cli` 2.12. All MIT or Apache-2.0.
+
+### Local XMPP test server (`tools/xmpp-server/`, dev only, never shipped)
+
+| Tool | Version | License | Why |
+|---|---|---|---|
+| Prosody | 13.0.7, built from source by `install.sh` | MIT | XMPP server on `localhost` for development and contract tests. Not in Homebrew (checked on 2026-10-15). |
+| Lua rocks: luasocket, luaexpat, luafilesystem, luasec | 3.1.0, 1.5.2, 1.9.0, 1.3.2 | MIT | Prosody's runtime libraries, installed in a local tree. |
+| mkcert | 1.4.4 (Homebrew) | BSD-3-Clause | Locally trusted TLS certificate for `localhost`. |
+| Homebrew: `lua@5.4`, `luarocks`, `openssl@3`, `icu4c@78` | 5.4.9, 3.13, 3.5, 78 | MIT, MIT, Apache-2.0, ICU | Build and runtime dependencies of Prosody. |
