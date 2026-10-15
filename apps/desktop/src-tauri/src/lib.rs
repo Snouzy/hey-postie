@@ -1,7 +1,10 @@
 //! The Rust side of Hey Postie: plugins, commands, and the `--smoke` self-check.
 
 mod keychain;
+mod relay;
 mod smoke;
+
+use tauri::Manager;
 
 #[tauri::command]
 fn keychain_get(jid: String) -> Result<Option<String>, String> {
@@ -18,6 +21,12 @@ fn keychain_delete(jid: String) -> Result<(), String> {
     keychain::delete(&jid).map_err(|error| error.to_string())
 }
 
+/// Where the webview connects for XMPP: `ws://127.0.0.1:<port>/xmpp/<token>`.
+#[tauri::command]
+fn relay_url(relay: tauri::State<relay::Handle>) -> String {
+    relay.url().to_owned()
+}
+
 pub fn run() {
     let smoke = std::env::args().any(|argument| argument == "--smoke");
     keychain::install_platform_store();
@@ -28,9 +37,11 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             keychain_get,
             keychain_set,
-            keychain_delete
+            keychain_delete,
+            relay_url
         ])
         .setup(move |app| {
+            app.manage(relay::start()?);
             if smoke {
                 smoke::arm(app.handle().clone());
             }
