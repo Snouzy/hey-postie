@@ -35,3 +35,6 @@ listed at the end. Checked on 2026-10-15.
 
 TypeScript 6, Biome 2, Vitest 5, Vite 8, `@vitejs/plugin-react`, Testing Library, jsdom,
 `@tauri-apps/cli` 2.12. All MIT or Apache-2.0.
+
+Rust, `[dev-dependencies]`: `rcgen` 0.14.10 (MIT or Apache-2.0), a self-signed certificate for the
+relay's certificate-rejection test.

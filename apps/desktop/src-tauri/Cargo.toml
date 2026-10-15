@@ -32,3 +32,6 @@ quick-xml = "0.42.0"
 rand = "0.10.3"
 log = "0.4.34"
 futures-util = { version = "0.3.34", default-features = false, features = ["std", "sink"] }
+
+[dev-dependencies]
+rcgen = "0.14"
