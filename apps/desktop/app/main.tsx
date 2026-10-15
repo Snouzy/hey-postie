@@ -26,9 +26,13 @@ function SmokeSignal() {
 const root = document.getElementById('root');
 if (!root) throw new Error('No #root element');
 
-createRoot(root).render(
+const reactRoot = createRoot(root);
+reactRoot.render(
   <StrictMode>
     <App core={core} locale={locale} />
     <SmokeSignal />
   </StrictMode>,
 );
+
+// Vite hot reload re-runs this module: unmount first, or React warns about a second root.
+import.meta.hot?.dispose(() => reactRoot.unmount());
