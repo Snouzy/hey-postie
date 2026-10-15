@@ -163,6 +163,10 @@ STARTTLS negotiations and a self-signed certificate rejection against local fake
 - The webview reaches Rust through the repositories in `apps/desktop/app/repositories/` and the
   small modules in `apps/desktop/app/`, started once by `app/desktop.ts` when the page runs inside
   Tauri (`isTauri()`); in a plain browser (`pnpm app:dev`) none of this runs.
+- **A browser on `http://localhost:1420` renders the interface but cannot sign in**: there is no
+  relay and no keychain there. `TauriTransport` answers `ServerUnreachable` and `TauriKeychain`
+  `KeychainUnavailable` at once (observed on 2026-10-15: before that guard, the failed `invoke`
+  read as `Unknown`, "Something went wrong on my round"). Use the Tauri window (`pnpm desktop:dev`).
 
 ### End-to-end smoke sign-in (`src-tauri/src/smoke.rs`, `app/smoke.ts`)
 
@@ -190,6 +194,10 @@ pnpm --filter @hey-postie/desktop smoke:login
   (`pnpm tauri dev -- -- --smoke` with the same variable): `relay DEBUG: trying port 5223 with
   DirectTls`, `server opens the stream`, `client restarts the stream`, `server opens the stream`,
   then `smoke: signed in, the account is online`. The same with `remember: true`.
+- Why it exists: on 2026-10-15 a manual sign-in reported "Unknown". The smoke run cleared the
+  relay, TLS trust, keychain, dev-server and Converse paths one by one; the cause was a browser
+  tab on `localhost:1420` instead of the Tauri window (see the note above). The run stays as the
+  regression gate for the whole sign-in path.
 
 ### Transport (`app/repositories/transport.ts`)
 
