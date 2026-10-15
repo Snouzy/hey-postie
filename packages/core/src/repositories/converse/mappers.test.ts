@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { toChat, toContact, toMessage } from './mappers';
+import { isMention, toChat, toContact, toMessage } from './mappers';
 import type { ChatModel, ContactModel, MessageModel } from './models';
 
 /** A skeletor model is just `get()` for the mappers. */
@@ -182,5 +182,89 @@ describe('toContact', () => {
     expect(toContact(contact('dnd', 'both')).presence).toBe('dnd');
     expect(toContact(contact('offline', 'both')).presence).toBe('offline');
     expect(toContact(contact('offline')).subscription).toBe('none');
+  });
+});
+
+describe('toMessage in a room', () => {
+  const room = { ...context, chatId: 'hall@rooms.example.org', ownNick: 'romeo' };
+  const groupchat = {
+    ...incoming,
+    from: 'hall@rooms.example.org/juliet',
+    nick: 'juliet',
+    body: 'Romeo, where are you?',
+  };
+
+  it('sets the nick, the room as sender and the mention', () => {
+    expect(toMessage(model(groupchat), room)).toMatchObject({
+      chatId: 'hall@rooms.example.org',
+      fromJid: 'hall@rooms.example.org',
+      fromNick: 'juliet',
+      direction: 'in',
+      isMention: true,
+    });
+  });
+
+  it('prefers the real JID when the room reveals it', () => {
+    const known = { ...groupchat, from_real_jid: 'juliet@example.org/balcony' };
+    expect(toMessage(model(known), room).fromJid).toBe('juliet@example.org');
+  });
+
+  it('never flags our own messages, nor direct ones, as mentions', () => {
+    expect(toMessage(model({ ...groupchat, sender: 'me' }), room).isMention).toBe(false);
+    expect(toMessage(model(groupchat), context).isMention).toBe(false);
+  });
+});
+
+describe('isMention', () => {
+  const body = (text: string) => model({ body: text });
+
+  it('matches the nick as a whole word, ignoring case', () => {
+    expect(isMention(body('hey Romeo!'), 'romeo')).toBe(true);
+    expect(isMention(body('@romeo look'), 'romeo')).toBe(true);
+    expect(isMention(body('romeo'), 'romeo')).toBe(true);
+    expect(isMention(body('romeos are many'), 'romeo')).toBe(false);
+    expect(isMention(body('hi'), 'romeo')).toBe(false);
+    expect(isMention(body('hi'), '')).toBe(false);
+  });
+
+  it('escapes regex characters in the nick', () => {
+    expect(isMention(body('ping r.o (me)'), 'r.o (me)')).toBe(true);
+    expect(isMention(body('ping rxo (me)'), 'r.o (me)')).toBe(false);
+  });
+
+  it('trusts XEP-0372 mention references when the message has any', () => {
+    const references = [{ type: 'mention', value: 'romeo', begin: 0, end: 5 }];
+    expect(isMention(model({ body: 'x', references }), 'romeo')).toBe(true);
+    const other = [{ type: 'mention', value: 'juliet', begin: 0, end: 6 }];
+    expect(isMention(model({ body: 'romeo', references: other }), 'romeo')).toBe(false);
+  });
+});
+
+describe('toChat for a room', () => {
+  it('uses the kind room and the general unread counter', () => {
+    const chat = toChat({
+      ...model({
+        jid: 'hall@rooms.example.org',
+        type: 'chatroom',
+        num_unread: 1,
+        num_unread_general: 3,
+      }),
+      messages: {
+        models: [],
+        length: 0,
+        get: () => undefined,
+        on: () => undefined,
+        off: () => undefined,
+      },
+      sendMessage: async () => undefined,
+      clearUnreadMsgCounter: () => undefined,
+      getDisplayName: () => 'The Hall',
+    });
+    expect(chat).toMatchObject({
+      id: 'hall@rooms.example.org',
+      kind: 'room',
+      title: 'The Hall',
+      unreadCount: 3,
+    });
   });
 });

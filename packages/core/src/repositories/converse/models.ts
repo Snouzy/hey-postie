@@ -31,6 +31,44 @@ export interface ChatModel extends ModelLike {
   getDisplayName(): string | null | undefined;
 }
 
+/** A MUC (`plugins/muc/muc.js`); `session.connection_status` holds a `RoomStatus` value. */
+export interface RoomModel extends ChatModel {
+  /** Undefined until `setup()` restored it; `initialized` resolves after that. */
+  session?: ModelLike;
+  occupants: CollectionLike<OccupantModel>;
+  /** Resolves once `setup()` is done, that is once the join presence of a new room is sent. */
+  initialized?: Promise<unknown>;
+  isEntered(): boolean;
+  /** Converse's mention rule (case-sensitive): replaced per model by `mappers.isMention`. */
+  isUserMentioned(message: MessageModel): boolean;
+  join(nick?: string, password?: string): Promise<void>;
+  close(): Promise<unknown>;
+}
+
+export interface OccupantModel extends ModelLike {
+  getDisplayName(): string | null | undefined;
+}
+
+export type BookmarkModel = ModelLike;
+
+export interface BookmarksCollection extends CollectionLike<BookmarkModel> {
+  remove(model: BookmarkModel, options?: { silent?: boolean }): unknown;
+  sendRemoveBookmarkStanza(bookmark: BookmarkModel): Promise<unknown>;
+}
+
+/** `ROOMSTATUS` (`plugins/muc/constants.js:70`), exposed as `converse.ROOMSTATUS`. */
+export interface RoomStatus {
+  CONNECTED: number;
+  CONNECTING: number;
+  NICKNAME_REQUIRED: number;
+  PASSWORD_REQUIRED: number;
+  DISCONNECTED: number;
+  ENTERED: number;
+  DESTROYED: number;
+  BANNED: number;
+  CLOSING: number;
+}
+
 export interface ContactModel extends ModelLike {
   getDisplayName(): string | null | undefined;
   getStatus(): string;
@@ -44,6 +82,16 @@ export interface ConnectionLike {
   _proto?: { _onClose?: (event: CloseEvent) => void };
   xmlInput(body: Element): void;
   xmlOutput(body: Element): void;
+  addHandler(
+    handler: (stanza: Element) => boolean,
+    ns: string | null,
+    name: string,
+    type?: string | null,
+    id?: string | null,
+    from?: string | null,
+    options?: { matchBareFromJid?: boolean },
+  ): unknown;
+  deleteHandler(reference: unknown): void;
   _changeConnectStatus(status: number, condition?: string): void;
   _doDisconnect(): void;
 }
@@ -100,6 +148,27 @@ export interface ConverseApi {
     get(jid: string): Promise<ChatModel | null | undefined>;
     open(jid: string): Promise<ChatModel | undefined>;
   };
+  rooms: {
+    get(
+      jid: string,
+      attributes?: { nick?: string; password?: string; hidden?: boolean },
+      create?: boolean,
+    ): Promise<RoomModel | null | undefined>;
+  };
+  bookmarks: {
+    set(attributes: {
+      jid: string;
+      name?: string;
+      nick?: string;
+      autojoin?: boolean;
+    }): Promise<unknown>;
+    get(jid: string): Promise<BookmarkModel | undefined>;
+  };
+  disco: {
+    info(jid: string, node?: string | null, options?: { timeout?: number }): Promise<Element>;
+    items(jid: string, node?: string): Promise<Element>;
+    getIdentity(category: string, type: string, jid: string): Promise<ModelLike | undefined>;
+  };
   alert?: Handler;
 }
 
@@ -108,6 +177,8 @@ export interface ConverseState {
   session?: ModelLike;
   roster?: CollectionLike<ContactModel>;
   chatboxes?: CollectionLike<ChatModel>;
+  /** Only once the server advertised PEP with publish-options (`plugins/bookmarks/plugin.js:138`). */
+  bookmarks?: BookmarksCollection;
 }
 
 export interface ConverseEnv {
@@ -129,7 +200,11 @@ export interface ConverseEnv {
 }
 
 export interface ConverseHeadless {
-  converse: { initialize(settings: Record<string, unknown>): Promise<unknown>; env: ConverseEnv };
+  converse: {
+    initialize(settings: Record<string, unknown>): Promise<unknown>;
+    env: ConverseEnv;
+    ROOMSTATUS: RoomStatus;
+  };
   api: ConverseApi;
   _converse: { state: ConverseState; storage: { persistent?: PersistentStorageLike } };
   MAMPlaceholderMessage: new (...args: never[]) => unknown;

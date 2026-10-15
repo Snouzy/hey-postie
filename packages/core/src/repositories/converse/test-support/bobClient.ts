@@ -8,6 +8,8 @@ const NS = {
   framing: 'urn:ietf:params:xml:ns:xmpp-framing',
   sasl: 'urn:ietf:params:xml:ns:xmpp-sasl',
   bind: 'urn:ietf:params:xml:ns:xmpp-bind',
+  muc: 'http://jabber.org/protocol/muc',
+  mucUser: 'http://jabber.org/protocol/muc#user',
 };
 
 export interface BobClient {
@@ -17,6 +19,9 @@ export interface BobClient {
   waitFor(predicate: (stanza: Element) => boolean, timeoutMs?: number): Promise<Element>;
   /** Drops the stanzas received so far, so that `waitFor` only sees new ones. */
   forget(): void;
+  /** XEP-0045 §7.2: sends the join presence and resolves on the self-presence (code 110). */
+  joinRoom(roomJid: string, nick: string): Promise<Element>;
+  leaveRoom(roomJid: string, nick: string): void;
   close(): Promise<void>;
 }
 
@@ -58,6 +63,22 @@ export async function connectBob(input: {
         waiters.add(waiter);
       }),
     forget: () => backlog.splice(0),
+    joinRoom: async (roomJid, nick) => {
+      socket.send(qualify(`<presence to="${roomJid}/${nick}"><x xmlns="${NS.muc}"/></presence>`));
+      const self = await client.waitFor(isSelfPresenceFrom(roomJid));
+      // A room bob just created is locked (status 201) until its owner accepts the instant
+      // configuration: other users get `item-not-found` until then (XEP-0045 §10.1.1).
+      if (hasStatusCode(self, '201')) {
+        const id = `instant-${Date.now().toString(36)}`;
+        client.send(
+          `<iq type="set" to="${roomJid}" id="${id}"><query xmlns="${NS.muc}#owner"><x xmlns="jabber:x:data" type="submit"/></query></iq>`,
+        );
+        await client.waitFor((st) => st.localName === 'iq' && st.getAttribute('id') === id);
+      }
+      return self;
+    },
+    leaveRoom: (roomJid, nick) =>
+      socket.send(qualify(`<presence to="${roomJid}/${nick}" type="unavailable"/>`)),
     close: () =>
       new Promise<void>((resolve) => {
         if (socket.readyState === WebSocket.CLOSED) return resolve();
@@ -127,4 +148,22 @@ export function isPresenceFrom(bareJid: string, type: string | null) {
     stanza.localName === 'presence' &&
     (stanza.getAttribute('from') ?? '').split('/')[0] === bareJid &&
     stanza.getAttribute('type') === type;
+}
+
+/** The room presence about ourselves (status code 110). */
+function isSelfPresenceFrom(roomJid: string) {
+  return (stanza: Element): boolean =>
+    isPresenceFrom(roomJid, null)(stanza) && hasStatusCode(stanza, '110');
+}
+
+function hasStatusCode(stanza: Element, code: string): boolean {
+  return Array.from(stanza.getElementsByTagNameNS(NS.mucUser, 'status')).some(
+    (status) => status.getAttribute('code') === code,
+  );
+}
+
+/** The `groupchat` messages with a body from a room, whichever occupant sent them. */
+export function isGroupchatMessageFrom(roomJid: string) {
+  return (stanza: Element): boolean =>
+    isChatMessageFrom(roomJid)(stanza) && stanza.getAttribute('type') === 'groupchat';
 }
