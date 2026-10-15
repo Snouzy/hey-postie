@@ -22,7 +22,9 @@ export class FakeXmpp implements XmppRepository {
     this.notify('online');
   }
 
+  /** Like the real repository: signing out of nothing is silent. */
   async disconnect(): Promise<void> {
+    if (!this.connected) return;
     this.connected = false;
     this.notify('offline');
   }

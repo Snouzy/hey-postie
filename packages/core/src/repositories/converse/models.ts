@@ -24,6 +24,8 @@ export type MessageModel = ModelLike;
 
 export interface ChatModel extends ModelLike {
   messages: CollectionLike<MessageModel> & { fetched?: Promise<unknown> };
+  /** The queue through which parsed messages become models (`model-with-messages.js:268-272`). */
+  msg_chain?: Promise<unknown>;
   sendMessage(attributes: { body: string }): Promise<MessageModel | undefined>;
   clearUnreadMsgCounter(): void;
   getDisplayName(): string | null | undefined;

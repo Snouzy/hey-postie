@@ -73,29 +73,43 @@ describe('toMessage', () => {
     expect(message.encryption).toBe('omemo');
   });
 
-  it('turns an http URL body or oob_url into one attachment', () => {
+  it('turns an http(s) oob_url into one attachment, a bare link in the body does not', () => {
     const url = 'https://files.example.org/upload/abc/photo%20one.JPG?x=1';
-    const [attachment] = toMessage(model({ ...incoming, body: url }), context).attachments;
-    expect(attachment).toEqual({
-      url,
-      name: 'photo one.JPG',
-      size: 0,
-      mimeType: 'image/jpeg',
-      encryption: 'none',
-    });
-    const oob = toMessage(model({ ...incoming, body: 'see file', oob_url: url }), context);
-    expect(oob.attachments).toHaveLength(1);
-    expect(oob.body).toBe('see file');
+    const oob = toMessage(model({ ...incoming, body: url, oob_url: url }), context);
+    expect(oob.attachments).toEqual([
+      { url, name: 'photo one.JPG', size: 0, mimeType: 'image/jpeg', encryption: 'none' },
+    ]);
+    expect(toMessage(model({ ...incoming, body: url }), context).attachments).toEqual([]);
   });
 
-  it('marks aesgcm URLs as encrypted attachments and guesses unknown types', () => {
+  it('keeps a malformed file name as is instead of throwing', () => {
+    const url = 'https://files.example.org/upload/bad%E0name.png';
+    const [attachment] = toMessage(model({ ...incoming, oob_url: url }), context).attachments;
+    expect(attachment?.name).toBe('bad%E0name.png');
+  });
+
+  it('marks aesgcm bodies as encrypted attachments and keeps the key out of the URL', () => {
     const url = 'aesgcm://files.example.org/upload/abc/report.bin#0123abcd';
     const [attachment] = toMessage(model({ ...incoming, body: url }), context).attachments;
-    expect(attachment).toMatchObject({
+    expect(attachment).toEqual({
+      url: 'aesgcm://files.example.org/upload/abc/report.bin',
       name: 'report.bin',
+      size: 0,
       mimeType: 'application/octet-stream',
       encryption: 'aesgcm',
+      decryptionKey: '0123abcd',
     });
+  });
+
+  it('empties a retracted message and flags corrections', () => {
+    const url = 'https://files.example.org/f.png';
+    const gone = toMessage(
+      model({ ...incoming, body: url, oob_url: url, retracted: true }),
+      context,
+    );
+    expect(gone).toMatchObject({ body: '', attachments: [], retracted: true, edited: false });
+    const fixed = toMessage(model({ ...incoming, edited: '2026-10-15T10:01:00Z' }), context);
+    expect(fixed).toMatchObject({ body: 'hello', retracted: false, edited: true });
   });
 
   it('does not treat text with a URL inside as an attachment', () => {

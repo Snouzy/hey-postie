@@ -24,7 +24,7 @@ export class ConverseChatRepository implements ChatRepository {
   private readonly chatHandlers = new Set<ChatHandler>();
   private readonly bound = new WeakSet<ChatModel>();
   private loaded: Loaded | null = null;
-  /** The chat `open()` is showing: the only one Converse must not count unread messages for. */
+  /** The chat the user looks at. Every other direct chat is hidden so that `num_unread` counts (§4). */
   private openJid: string | null = null;
 
   constructor(private readonly engine: ConverseEngine) {
@@ -44,9 +44,9 @@ export class ConverseChatRepository implements ChatRepository {
     const chat = await api.chats.open(jid);
     if (!chat) throw new DomainError('Unknown', 'Unknown: the chat could not be opened');
     for (const other of state.chatboxes?.models ?? []) {
-      if (other !== chat && isDirect(other) && !other.get('hidden')) other.save({ hidden: true });
+      if (other !== chat && isDirect(other)) this.hideUnlessOpen(other);
     }
-    chat.save({ hidden: false });
+    this.hideUnlessOpen(chat);
     return this.chat(chat);
   }
 
@@ -58,7 +58,7 @@ export class ConverseChatRepository implements ChatRepository {
     const limit = options?.limit ?? DEFAULT_LIMIT;
     await chat.messages.fetched;
     if (!options?.before) {
-      const models = this.displayable(chat.messages.models).sort(byTime).slice(-limit);
+      const models = this.displayable(chat.messages.models).slice(-limit);
       return models.map((model) => this.message(model, chat));
     }
     return this.olderThan(chat, options.before, limit);
@@ -91,7 +91,7 @@ export class ConverseChatRepository implements ChatRepository {
     return () => this.chatHandlers.delete(handler);
   }
 
-  /** One MAM page before a message, through its stanza id (§5); the new models, oldest first. */
+  /** One MAM page before a message, through its stanza id (§5); the archived models, oldest first. */
   private async olderThan(chat: ChatModel, before: string, limit: number): Promise<Message[]> {
     const { env, state } = await this.engine.ready();
     const stanzaId = chat.messages.get(before)?.get(`stanza_id ${state.session?.get('bare_jid')}`);
@@ -101,10 +101,15 @@ export class ConverseChatRepository implements ChatRepository {
     chat.messages.on('add', collect);
     try {
       await env.u.mam.fetchArchivedMessages(chat, { rsm: { before: stanzaId, max: limit } }, false);
+      // The results are queued, not awaited, by `handleMAMResult`: wait for the queue to drain.
+      await chat.msg_chain;
     } finally {
       chat.messages.off('add', collect);
     }
-    return this.displayable(added)
+    const byTime = (a: MessageModel, b: MessageModel) =>
+      String(a.get('time')).localeCompare(String(b.get('time')));
+    // A live message arriving meanwhile is also added to the collection: it is not history.
+    return this.displayable(added.filter((model) => model.get('is_archived')))
       .sort(byTime)
       .map((model) => this.message(model, chat));
   }
@@ -127,15 +132,12 @@ export class ConverseChatRepository implements ChatRepository {
     }
   }
 
-  /**
-   * Converse creates every chat visible (`hidden: false`, `plugins/chat/model.js:30`) and only
-   * counts `num_unread` while a chat `isHidden()`: a conversation started by an incoming message
-   * would never be unread. Hidden is the right state for any chat the user has not opened.
-   */
   private bindChat(chat: ChatModel): void {
     if (!isDirect(chat) || this.bound.has(chat)) return;
     this.bound.add(chat);
-    if (chat.get('jid') !== this.openJid && !chat.get('hidden')) chat.save({ hidden: true });
+    // In overlayed mode a new chat is born visible (`plugins/chat/model.js:30`): hide it unless
+    // it is the open one, otherwise its unread messages would never be counted.
+    this.hideUnlessOpen(chat);
     chat.messages.on('add', (model) => this.onAdded(chat, model as MessageModel));
     for (const event of UPDATE_EVENTS) {
       chat.messages.on(event, (model) => {
@@ -153,10 +155,15 @@ export class ConverseChatRepository implements ChatRepository {
    */
   private onAdded(chat: ChatModel, model: MessageModel): void {
     if (!this.isDisplayable(model) || model.get('is_archived')) return;
-    if (model.get('sender') === 'me' && !model.get('is_carbon')) return;
     this.emitChat(chat);
+    if (model.get('sender') === 'me' && !model.get('is_carbon')) return;
     const message = this.message(model, chat);
     for (const handler of this.messageHandlers) handler(message);
+  }
+
+  private hideUnlessOpen(chat: ChatModel): void {
+    const hidden = chat.get('jid') !== this.openJid;
+    if (chat.get('hidden') !== hidden) chat.save({ hidden });
   }
 
   private emitChat(chat: ChatModel): void {
@@ -180,21 +187,16 @@ export class ConverseChatRepository implements ChatRepository {
     return models.filter((model) => this.isDisplayable(model));
   }
 
-  /** Drops MAM gap placeholders, orphan reactions and transient notices; keeps decryption errors. */
+  /**
+   * Drops MAM gap placeholders, orphan reactions and retractions (§6, `model-with-messages.js:985`)
+   * and transient notices; keeps decryption errors.
+   */
   private isDisplayable(model: MessageModel): boolean {
     const placeholder = this.loaded?.MAMPlaceholderMessage;
     if (placeholder && model instanceof placeholder) return false;
-    if (model.get('dangling_reaction')) return false;
+    if (model.get('dangling_reaction') || model.get('dangling_retraction')) return false;
     return !model.get('is_ephemeral') || model.get('error_type') === 'Decryption';
   }
-}
-
-/**
- * The collection sorts on `time` at insertion, which is not always the final order against a real
- * archive (seen once in the contract test, with a MAM page overlapping live messages).
- */
-function byTime(a: MessageModel, b: MessageModel): number {
-  return String(a.get('time')).localeCompare(String(b.get('time')));
 }
 
 /** `PRIVATE_CHAT_TYPE` (`shared/constants.js:66`); rooms are `chatroom`, feeds `headline`. */

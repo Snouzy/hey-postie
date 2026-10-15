@@ -7,6 +7,8 @@ export interface EngineOptions {
   persistentStore?: PersistentStore;
   /** Converse's own test hook (§11): a `MockConnection` that never opens a socket. */
   mockConnection?: boolean;
+  /** Converse at `loglevel: 'debug'`: every stanza, bodies included (§10). Never in production. */
+  debug?: boolean;
 }
 
 export interface Loaded {
@@ -31,8 +33,19 @@ export class ConverseEngine {
 
   constructor(private readonly options: EngineOptions = {}) {}
 
+  /** What `ready()` resolved to, for handlers of Converse events (which only fire once loaded). */
+  get current(): Loaded | null {
+    return this.loaded;
+  }
+
   ready(): Promise<Loaded> {
-    if (!this.loading) this.loading = this.load();
+    if (!this.loading) {
+      // A failed load (missing DOM, broken asset) must not be cached: the next call retries.
+      this.loading = this.load().catch((error: unknown) => {
+        this.loading = null;
+        throw error;
+      });
+    }
     return this.loading;
   }
 
@@ -86,7 +99,9 @@ export class ConverseEngine {
       enable_smacks: !mock,
       archived_messages_page_size: 50,
       mam_request_all_pages: false,
-      loglevel: 'warn',
+      send_chat_markers: ['received', 'displayed', 'acknowledged'],
+      // At 'warn' and above Converse still logs whole stanzas on parse errors (§10): 'fatal' only.
+      loglevel: this.options.debug ? 'debug' : 'fatal',
       assets_path: '',
       ...(mock ? { bosh_service_url: 'montague.lit/http-bind' } : {}),
     };

@@ -13,8 +13,12 @@ import { createConverseRepositories } from './index';
 interface Mock {
   api: {
     connection: { get(): MockConnection | undefined };
-    listen: { once(name: string, handler: (...args: never[]) => void): void };
+    listen: {
+      on(name: string, handler: (...args: never[]) => void): void;
+      once(name: string, handler: (...args: never[]) => void): void;
+    };
     user: { logout(): Promise<void>; settings: { clear(): Promise<unknown> } };
+    waitUntil(name: string): Promise<unknown> | null;
   };
   _converse: {
     state: { chatboxes: { get(jid: string): { get(key: string): unknown } | undefined } };
@@ -23,7 +27,8 @@ interface Mock {
     env: {
       Strophe: {
         Status: Record<string, number>;
-        NS: { ROSTER: string };
+        NS: { ROSTER: string; DISCO_INFO: string; MAM: string };
+        Bosh: { prototype: { _onClose?: (event: { code: number; reason: string }) => void } };
         Request: new (stanza: Element, callback: () => void) => { getResponse(): Element };
         Builder: new (name: string, attrs: Record<string, string>) => { tree(): Element };
       };
@@ -78,6 +83,9 @@ beforeAll(async () => {
   // runs `clearUserSettings` concurrently, which races on its module variable (converse.md §12).
   const clear = mock.api.user.settings.clear.bind(mock.api.user.settings);
   mock.api.user.settings.clear = () => clear().catch(() => undefined);
+  // The mock transport is BOSH, which has no `_onClose`: this stub stands in for Strophe's WebSocket
+  // one, so that the repository can wrap it. The real close path is not reachable without a socket.
+  mock.converse.env.Strophe.Bosh.prototype._onClose = () => undefined;
 });
 
 async function connection(): Promise<MockConnection> {
@@ -122,16 +130,13 @@ function failNextConnectionWith(outcome: (connection: MockConnection) => void): 
   });
 }
 
-/**
- * Simulates the relay closing the WebSocket before the stream opened. The mock transport is BOSH,
- * so a stub stands in for Strophe's WebSocket `_onClose` before the repository wraps it.
- */
+/** Simulates the relay closing the WebSocket before the stream opened (see `beforeAll`). */
 function closeNextSocketWith(code: number, reason: string): void {
-  mock.api.listen.once('connectionInitialized', () => {
-    const connection = mock.api.connection.get();
-    if (connection && !connection._proto._onClose) connection._proto._onClose = () => undefined;
-  });
   failNextConnectionWith((connection) => connection._proto._onClose({ code, reason }));
+}
+
+function nextEvent(name: string): Promise<void> {
+  return new Promise((resolve) => mock.api.listen.once(name, () => resolve()));
 }
 
 async function connectAndLoadRoster(password = 'secret'): Promise<void> {
@@ -252,10 +257,76 @@ describe('ConverseChatRepository', () => {
     const hidden = (jid: string) => mock._converse.state.chatboxes.get(jid)?.get('hidden');
     expect([hidden(MERCUTIO), hidden(JULIET)]).toEqual([false, true]);
     expect((await repositories.chat.list()).map((c) => c.id).sort()).toEqual([JULIET, MERCUTIO]);
+    expect(chats.filter((c) => c.id === JULIET).at(-1)?.unreadCount).toBe(1);
     await repositories.chat.markRead(JULIET);
+    expect(chats.at(-1)).toMatchObject({ id: JULIET, unreadCount: 0 });
     await expect(repositories.chat.messages('nobody@montague.lit')).rejects.toMatchObject({
       code: 'Unknown',
     });
+  });
+
+  it('counts unread messages for every chat but the open one', async () => {
+    const { stx, u } = mock.converse.env;
+    const message = (from: string, id: string) =>
+      stx`<message from="${from}/r" to="${JID}/orchard" type="chat" id="${id}" xmlns="jabber:client">
+        <body>${id}</body></message>`;
+    inject(message(JULIET, 'u1'));
+    await u.waitUntil(() => chats.some((c) => c.id === JULIET && c.unreadCount === 1));
+    inject(message(MERCUTIO, 'u2'));
+    await u.waitUntil(() => received.some((m) => m.body === 'u2'));
+    expect((await repositories.chat.list()).map((c) => [c.id, c.unreadCount])).toEqual(
+      expect.arrayContaining([
+        [JULIET, 1],
+        [MERCUTIO, 0],
+      ]),
+    );
+  });
+
+  it('reports a sent message through onChatChange', async () => {
+    const before = chats.length;
+    const sent = await repositories.chat.send(MERCUTIO, 'from me');
+    const change = chats.slice(before).find((c) => c.id === MERCUTIO);
+    expect(change?.lastMessage?.id).toBe(sent.id);
+    expect(received.find((m) => m.id === sent.id)).toBeUndefined();
+  });
+
+  it('pages history with MAM and ignores live messages arriving meanwhile', async () => {
+    const { stx, u, sizzle, Strophe } = mock.converse.env;
+    const conn = await connection();
+    inject(stx`<message from="${JULIET}/r" to="${JID}/orchard" type="chat" id="anchor" xmlns="jabber:client">
+        <body>anchor</body><stanza-id xmlns="urn:xmpp:sid:0" id="sid-anchor" by="${JID}"/></message>`);
+    const anchor = await u.waitUntil(() => received.find((m) => m.body === 'anchor'));
+    const paging = repositories.chat.messages(JULIET, { before: anchor?.id ?? '', limit: 10 });
+    // Converse only queries the archive once the account advertises MAM (disco#info on the bare JID).
+    const disco = await u.waitUntil(() =>
+      conn.IQ_stanzas.filter(
+        (iq) =>
+          iq.getAttribute('to') === JID &&
+          sizzle(`query[xmlns="${Strophe.NS.DISCO_INFO}"]`, iq).length,
+      ).pop(),
+    );
+    inject(stx`<iq type="result" from="${JID}" to="${conn.jid}" id="${disco?.getAttribute('id')}" xmlns="jabber:client">
+        <query xmlns="${Strophe.NS.DISCO_INFO}"><feature var="${Strophe.NS.MAM}"/></query></iq>`);
+    const query = await u.waitUntil(() =>
+      conn.IQ_stanzas.filter((iq) => sizzle(`query[xmlns="${Strophe.NS.MAM}"]`, iq).length).pop(),
+    );
+    const queryId = sizzle(`query[xmlns="${Strophe.NS.MAM}"]`, query as Element)[0]?.getAttribute(
+      'queryid',
+    );
+    inject(stx`<message to="${conn.jid}" xmlns="jabber:client">
+        <result xmlns="${Strophe.NS.MAM}" queryid="${queryId}" id="sid-old">
+          <forwarded xmlns="urn:xmpp:forward:0">
+            <delay xmlns="urn:xmpp:delay" stamp="2026-10-14T10:00:00Z"/>
+            <message from="${JULIET}/r" to="${JID}" type="chat" id="old" xmlns="jabber:client"><body>old</body></message>
+          </forwarded></result></message>`);
+    inject(stx`<message from="${JULIET}/r" to="${JID}/orchard" type="chat" id="live" xmlns="jabber:client">
+        <body>live</body></message>`);
+    inject(stx`<iq type="result" to="${conn.jid}" id="${query?.getAttribute('id')}" xmlns="jabber:client">
+        <fin xmlns="${Strophe.NS.MAM}" complete="true"><set xmlns="http://jabber.org/protocol/rsm">
+          <first>sid-old</first><last>sid-old</last></set></fin></iq>`);
+    const page = await paging;
+    expect(page.map((m) => m.body)).toEqual(['old']);
+    await u.waitUntil(() => received.some((m) => m.body === 'live'));
   });
 });
 
@@ -266,6 +337,46 @@ describe('sign out and sign in again', () => {
     await connectAndLoadRoster();
     expect(states.at(-1)).toEqual(['online', undefined]);
     expect(await repositories.roster.list()).toHaveLength(2);
+  });
+
+  it('reports an authentication failure after being online as offline with the error', async () => {
+    const { Status } = mock.converse.env.Strophe;
+    const conn = await connection();
+    // Dropping while `initializeDisco` still runs crashes Converse (its `clearSession` races it).
+    await mock.api.waitUntil('discoInitialized');
+    const dropped = nextEvent('disconnected');
+    conn._changeConnectStatus(Status.AUTHFAIL ?? 4, 'not-authorized');
+    await dropped;
+    expect(states.at(-1)).toEqual(['offline', 'InvalidCredentials']);
+  });
+
+  it('rejects, and reports error, when the connection drops after connected', async () => {
+    const { Status } = mock.converse.env.Strophe;
+    const before = states.length;
+    const connected = nextEvent('connected');
+    const connecting = repositories.xmpp.connect({
+      jid: JID,
+      password: 'secret',
+      websocketUrl: '',
+    });
+    await connected;
+    await mock.api.waitUntil('discoInitialized');
+    const conn = mock.api.connection.get();
+    conn?._changeConnectStatus(Status.DISCONNECTED ?? 6, 'remote-connection-failed');
+    await expect(connecting).rejects.toMatchObject({ code: 'ServerUnreachable' });
+    expect(states.slice(before)).toEqual([['error', 'ServerUnreachable']]);
+  });
+
+  it('serializes two sign-ins into one connection', async () => {
+    let initialized = 0;
+    mock.api.listen.on('connectionInitialized', () => {
+      initialized += 1;
+    });
+    const first = repositories.xmpp.connect({ jid: JID, password: 'secret', websocketUrl: '' });
+    const second = repositories.xmpp.connect({ jid: JID, password: 'secret', websocketUrl: '' });
+    await answerRoster();
+    await Promise.all([first, second]);
+    expect(initialized).toBe(1);
     await repositories.xmpp.disconnect();
   });
 });

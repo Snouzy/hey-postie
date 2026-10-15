@@ -22,7 +22,9 @@ export interface MessageContext {
 export function toMessage(model: MessageModel, context: MessageContext): Message {
   const direction = model.get('sender') === 'me' ? 'out' : 'in';
   const undecryptable = model.get('error_type') === 'Decryption';
-  const body = undecryptable ? '' : string(model.get('plaintext')) || string(model.get('body'));
+  const retracted = Boolean(model.get('retracted'));
+  const body =
+    undecryptable || retracted ? '' : string(model.get('plaintext')) || string(model.get('body'));
   const message: Message = {
     id: string(model.get('id')),
     chatId: context.chatId,
@@ -32,9 +34,11 @@ export function toMessage(model: MessageModel, context: MessageContext): Message
     direction,
     status: status(model, direction, context),
     encryption: undecryptable ? 'undecryptable' : model.get('is_encrypted') ? 'omemo' : 'none',
-    attachments: attachments(string(model.get('oob_url')) || body),
+    attachments: retracted ? [] : attachments(string(model.get('oob_url')), body),
     reactions: reactions(model.get('reactions')),
     isMention: false,
+    retracted,
+    edited: Boolean(model.get('edited')),
   };
   const nick = model.get('nick');
   return typeof nick === 'string' && nick ? { ...message, fromNick: nick } : message;
@@ -71,20 +75,38 @@ function status(model: ModelLike, direction: 'in' | 'out', context: MessageConte
   return context.authenticated ? 'sent' : 'pending';
 }
 
-/** A body that is nothing but an http(s) or aesgcm URL is a file (XEP-0066 and §7). */
-function attachments(candidate: string): Attachment[] {
-  if (!/^(https?|aesgcm):\/\/\S+$/i.test(candidate)) return [];
-  const path = candidate.replace(/^[a-z]+:\/\//i, '').split(/[?#]/)[0] ?? '';
-  const name = decodeURIComponent(path.split('/').pop() || 'file');
-  return [
-    {
-      url: candidate,
-      name,
-      size: 0,
-      mimeType: mimeType(name),
-      encryption: candidate.toLowerCase().startsWith('aesgcm://') ? 'aesgcm' : 'none',
-    },
-  ];
+/**
+ * A file is an XEP-0066 `oob_url` (http or https), or a body that is nothing but an `aesgcm://`
+ * URL (§7: an encrypted upload has no `oob_url`). A plain link in a body stays a link.
+ */
+function attachments(oobUrl: string, body: string): Attachment[] {
+  if (/^https?:\/\/\S+$/i.test(oobUrl)) return [attachment(oobUrl)];
+  if (/^aesgcm:\/\/\S+$/i.test(body)) return [attachment(body)];
+  return [];
+}
+
+function attachment(url: string): Attachment {
+  const encrypted = url.toLowerCase().startsWith('aesgcm://');
+  const [location = '', fragment] = url.split('#', 2);
+  const path = location.replace(/^[a-z]+:\/\//i, '').split('?')[0] ?? '';
+  const name = decodeName(path.split('/').pop() || 'file');
+  const base: Attachment = {
+    url: encrypted ? location : url,
+    name,
+    size: 0,
+    mimeType: mimeType(name),
+    encryption: encrypted ? 'aesgcm' : 'none',
+  };
+  return encrypted && fragment ? { ...base, decryptionKey: fragment } : base;
+}
+
+/** A malformed escape (`%E0`) must not take the whole chat list down with it. */
+function decodeName(raw: string): string {
+  try {
+    return decodeURIComponent(raw);
+  } catch {
+    return raw;
+  }
 }
 
 const MIME_BY_EXTENSION: Record<string, string> = {
