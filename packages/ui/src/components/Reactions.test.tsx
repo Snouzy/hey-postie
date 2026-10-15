@@ -63,7 +63,7 @@ describe('Reactions', () => {
 
   it('toggles my reaction off from its pill', async () => {
     const { deps } = await signedInConversation([
-      { emoji: '❤️', fromJids: ['bob@example.org', 'alice@x.org'] },
+      { emoji: '❤️', fromJids: ['bob@example.org', 'alice@x.org'], mine: true },
     ]);
     const pill = screen.getByRole('button', { name: '❤️ 2' });
     expect(pill).toHaveAttribute('aria-pressed', 'true');
@@ -89,7 +89,7 @@ describe('Reactions', () => {
   });
 
   it('lists the reactions row under its label', async () => {
-    await signedInConversation([{ emoji: '🙏', fromJids: ['bob@example.org'] }]);
+    await signedInConversation([{ emoji: '🙏', fromJids: ['bob@example.org'], mine: false }]);
     expect(screen.getByRole('list', { name: 'Reactions' })).toBeInTheDocument();
   });
 });

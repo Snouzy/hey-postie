@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { createCore } from '../container';
 import type { Message } from '../contracts/types';
 import { createFakeDependencies } from '../fakes';
+import { sanitizeReactions } from './chats';
 
 let deps: ReturnType<typeof createFakeDependencies>;
 let core: ReturnType<typeof createCore>;
@@ -114,7 +115,7 @@ describe('chats.toggleReaction', () => {
       chatId: chat.id,
       fromJid: 'bob@x.org',
       body: 'hi',
-      reactions: [{ emoji: '👍', fromJids: ['carol@x.org'] }],
+      reactions: [{ emoji: '👍', fromJids: ['carol@x.org'], mine: false }],
     });
     const seen: string[][] = [];
     core.events.on('message.updated', (m) =>
@@ -131,5 +132,35 @@ describe('chats.toggleReaction', () => {
 
   it('refuses an empty emoji', async () => {
     await expect(core.chats.toggleReaction('c', 'm', ' ')).rejects.toThrow(/EmptyMessage/);
+  });
+});
+
+describe('sanitizeReactions', () => {
+  const r = (emoji: string, fromJids: string[], mine = false) => ({ emoji, fromJids, mine });
+
+  it('drops empty, oversized and whitespace emojis, merges duplicates, keeps mine', () => {
+    const clean = sanitizeReactions([
+      r('👍', ['a@x.org']),
+      r('👍', ['b@x.org', 'a@x.org'], true),
+      r('', ['c@x.org']),
+      r('x'.repeat(17), ['c@x.org']),
+      r('a b', ['c@x.org']),
+    ]);
+    expect(clean).toEqual([{ emoji: '👍', fromJids: ['a@x.org', 'b@x.org'], mine: true }]);
+  });
+
+  it('caps the number of reactions and of reactors', () => {
+    const many = Array.from({ length: 50 }, (_, i) => r(`e${i}`, ['a@x.org']));
+    expect(sanitizeReactions(many)).toHaveLength(32);
+    const crowd = r(
+      '👍',
+      Array.from({ length: 100 }, (_, i) => `u${i}@x.org`),
+    );
+    expect(sanitizeReactions([crowd])[0]?.fromJids).toHaveLength(64);
+  });
+
+  it('returns the same array when nothing changes', () => {
+    const reactions = [r('👍', ['a@x.org'])];
+    expect(sanitizeReactions(reactions)).toBe(reactions);
   });
 });
