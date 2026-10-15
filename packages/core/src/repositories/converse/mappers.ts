@@ -143,7 +143,7 @@ function attachment(url: string): Attachment {
   const encrypted = url.toLowerCase().startsWith('aesgcm://');
   const [location = '', fragment] = url.split('#', 2);
   const path = location.replace(/^[a-z]+:\/\//i, '').split('?')[0] ?? '';
-  const name = decodeName(path.split('/').pop() || 'file');
+  const name = safeName(decodeName(path.split('/').pop() ?? ''));
   const base: Attachment = {
     url: encrypted ? location : url,
     name,
@@ -152,6 +152,22 @@ function attachment(url: string): Attachment {
     encryption: encrypted ? 'aesgcm' : 'none',
   };
   return encrypted && fragment ? { ...base, decryptionKey: fragment } : base;
+}
+
+const NAME_MAX_LENGTH = 120;
+
+/**
+ * The name comes from a URL someone else chose: it is shown and used as a download file name, so
+ * path separators, control characters and leading dots go, and it stays short.
+ */
+function safeName(raw: string): string {
+  const cleaned = raw
+    // biome-ignore lint/suspicious/noControlCharactersInRegex: that is the point
+    .replace(/[\u0000-\u001F\u007F/\\]/g, '')
+    .replace(/^\.+/, '')
+    .trim()
+    .slice(0, NAME_MAX_LENGTH);
+  return cleaned || 'file';
 }
 
 /** A malformed escape (`%E0`) must not take the whole chat list down with it. */

@@ -6,6 +6,8 @@
 export class FakeXmlHttpRequest {
   static readonly DONE = 4;
   static nextStatus = 201;
+  /** When set, the request is recorded but never progresses nor completes. */
+  static hang = false;
   static last: { method: string; url: string; headers: Record<string, string> } | null = null;
 
   readonly upload = new EventTarget();
@@ -31,6 +33,7 @@ export class FakeXmlHttpRequest {
 
   send(body: Blob): void {
     FakeXmlHttpRequest.last = this.request;
+    if (FakeXmlHttpRequest.hang) return;
     const total = body.size;
     setTimeout(() => {
       this.progress(total / 2, total);
