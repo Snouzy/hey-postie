@@ -1,5 +1,5 @@
 // Generates packages/ui/src/data/licenses.json: every shipped dependency with its license, for
-// the "Licenses" dialog. Run with `pnpm licenses` after adding or upgrading a dependency.
+// the "Licenses" dialog. Run with `pnpm run licenses` after adding or upgrading a dependency.
 //
 // Sources: `pnpm -r licenses list --prod --json` (npm, runtime dependencies of every workspace
 // package), `cargo metadata` (Rust, normal dependencies of the desktop crate for the three

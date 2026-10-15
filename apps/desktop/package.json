@@ -1,6 +1,6 @@
 {
   "name": "@hey-postie/desktop",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "private": true,
   "license": "SEE LICENSE IN ../../LICENSING.md",
   "type": "module",
@@ -21,7 +21,9 @@
     "@tauri-apps/api": "2.12.4",
     "@tauri-apps/plugin-notification": "2.7.0",
     "@tauri-apps/plugin-opener": "2.7.2",
+    "@tauri-apps/plugin-process": "2.4.0",
     "@tauri-apps/plugin-store": "2.5.0",
+    "@tauri-apps/plugin-updater": "2.14.0",
     "react": "19.3.1",
     "react-dom": "19.3.1"
   },

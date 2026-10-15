@@ -1,7 +1,7 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "Hey Postie",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "identifier": "com.snouzylabs.heypostie",
   "build": {
     "beforeDevCommand": "pnpm app:dev",
@@ -28,11 +28,22 @@
       "desktop": {
         "schemes": ["xmpp"]
       }
+    },
+    "updater": {
+      "endpoints": ["https://hey-postie.com/releases/latest.json"],
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEIzMTExNDdBNzc5MDIxQzUKUldURklaQjNlaFFSczQ2MXJEL0d5aTk5L2RqWTBVUDdwYStIR0k0TWhnTDFYaW9qUU5oVXVuN0sK"
     }
   },
   "bundle": {
     "active": true,
-    "targets": "all",
+    "targets": ["app", "dmg", "nsis", "msi", "appimage", "deb"],
+    "createUpdaterArtifacts": true,
+    "publisher": "Snouzylabs S.R.L.",
+    "category": "SocialNetworking",
+    "shortDescription": "A friendly XMPP chat client, end-to-end encrypted.",
+    "longDescription": "Hey Postie is a modern replacement for Pidgin: one-to-one chats and rooms, OMEMO encryption, files and images, reactions, system notifications, and the history of your server. XMPP only: it works with any XMPP server and with the other clients (Conversations, Gajim, Monal, Dino...). Free software.",
+    "copyright": "Copyright (C) 2026 Snouzylabs S.R.L. and the Hey Postie contributors",
+    "licenseFile": "../../../LICENSE",
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
@@ -42,7 +53,18 @@
     ],
     "macOS": {
       "entitlements": "Entitlements.plist",
-      "minimumSystemVersion": "12.0"
+      "minimumSystemVersion": "12.0",
+      "hardenedRuntime": true,
+      "signingIdentity": null
+    },
+    "windows": {
+      "certificateThumbprint": null,
+      "webviewInstallMode": { "type": "downloadBootstrapper" }
+    },
+    "linux": {
+      "deb": {
+        "depends": ["libwebkit2gtk-4.1-0"]
+      }
     }
   }
 }

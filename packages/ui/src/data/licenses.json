@@ -64,8 +64,22 @@
   },
   {
     "source": "npm",
+    "name": "@tauri-apps/plugin-process",
+    "version": "2.4.0",
+    "license": "MIT OR Apache-2.0",
+    "repository": "https://github.com/tauri-apps/plugins-workspace"
+  },
+  {
+    "source": "npm",
     "name": "@tauri-apps/plugin-store",
     "version": "2.5.0",
+    "license": "MIT OR Apache-2.0",
+    "repository": "https://github.com/tauri-apps/plugins-workspace"
+  },
+  {
+    "source": "npm",
+    "name": "@tauri-apps/plugin-updater",
+    "version": "2.14.0",
     "license": "MIT OR Apache-2.0",
     "repository": "https://github.com/tauri-apps/plugins-workspace"
   },
@@ -437,6 +451,13 @@
     "source": "cargo",
     "name": "base64",
     "version": "0.21.7",
+    "license": "MIT OR Apache-2.0",
+    "repository": "https://github.com/marshallpierce/rust-base64"
+  },
+  {
+    "source": "cargo",
+    "name": "base64",
+    "version": "0.22.1",
     "license": "MIT OR Apache-2.0",
     "repository": "https://github.com/marshallpierce/rust-base64"
   },
@@ -1079,6 +1100,13 @@
   },
   {
     "source": "cargo",
+    "name": "filetime",
+    "version": "0.2.29",
+    "license": "MIT/Apache-2.0",
+    "repository": "https://github.com/alexcrichton/filetime"
+  },
+  {
+    "source": "cargo",
     "name": "flate2",
     "version": "1.1.10",
     "license": "MIT OR Apache-2.0",
@@ -1429,6 +1457,20 @@
   },
   {
     "source": "cargo",
+    "name": "http-body",
+    "version": "1.1.0",
+    "license": "MIT",
+    "repository": "https://github.com/hyperium/http-body"
+  },
+  {
+    "source": "cargo",
+    "name": "http-body-util",
+    "version": "0.1.5",
+    "license": "MIT",
+    "repository": "https://github.com/hyperium/http-body"
+  },
+  {
+    "source": "cargo",
     "name": "httparse",
     "version": "1.10.1",
     "license": "MIT OR Apache-2.0",
@@ -1440,6 +1482,27 @@
     "version": "0.4.15",
     "license": "MIT OR Apache-2.0",
     "repository": "https://github.com/RustCrypto/hybrid-array"
+  },
+  {
+    "source": "cargo",
+    "name": "hyper",
+    "version": "1.12.0",
+    "license": "MIT",
+    "repository": "https://github.com/hyperium/hyper"
+  },
+  {
+    "source": "cargo",
+    "name": "hyper-rustls",
+    "version": "0.27.10",
+    "license": "Apache-2.0 OR ISC OR MIT",
+    "repository": "https://github.com/rustls/hyper-rustls"
+  },
+  {
+    "source": "cargo",
+    "name": "hyper-util",
+    "version": "0.1.21",
+    "license": "MIT",
+    "repository": "https://github.com/hyperium/hyper-util"
   },
   {
     "source": "cargo",
@@ -1765,6 +1828,13 @@
   },
   {
     "source": "cargo",
+    "name": "minisign-verify",
+    "version": "0.3.0",
+    "license": "MIT",
+    "repository": "https://github.com/jedisct1/rust-minisign-verify"
+  },
+  {
+    "source": "cargo",
     "name": "miniz_oxide",
     "version": "0.8.9",
     "license": "MIT OR Zlib OR Apache-2.0",
@@ -1926,6 +1996,13 @@
   },
   {
     "source": "cargo",
+    "name": "objc2-osa-kit",
+    "version": "0.3.2",
+    "license": "Zlib OR Apache-2.0 OR MIT",
+    "repository": "https://github.com/madsmtm/objc2"
+  },
+  {
+    "source": "cargo",
     "name": "objc2-quartz-core",
     "version": "0.3.2",
     "license": "Zlib OR Apache-2.0 OR MIT",
@@ -1979,6 +2056,13 @@
     "version": "0.2.0",
     "license": "MIT OR Apache-2.0",
     "repository": "https://github.com/danieldg/ordered-stream"
+  },
+  {
+    "source": "cargo",
+    "name": "osakit",
+    "version": "0.3.1",
+    "license": "MIT OR Apache-2.0",
+    "repository": "https://github.com/mdevils/rust-osakit"
   },
   {
     "source": "cargo",
@@ -2269,6 +2353,13 @@
   },
   {
     "source": "cargo",
+    "name": "reqwest",
+    "version": "0.13.5",
+    "license": "MIT OR Apache-2.0",
+    "repository": "https://github.com/seanmonstar/reqwest"
+  },
+  {
+    "source": "cargo",
     "name": "resolv-conf",
     "version": "0.7.6",
     "license": "MIT OR Apache-2.0",
@@ -2329,6 +2420,13 @@
     "version": "1.15.1",
     "license": "MIT OR Apache-2.0",
     "repository": "https://github.com/rustls/pki-types"
+  },
+  {
+    "source": "cargo",
+    "name": "rustls-platform-verifier",
+    "version": "0.7.1",
+    "license": "MIT OR Apache-2.0",
+    "repository": "https://github.com/rustls/rustls-platform-verifier"
   },
   {
     "source": "cargo",
@@ -2661,6 +2759,13 @@
   },
   {
     "source": "cargo",
+    "name": "sync_wrapper",
+    "version": "1.0.2",
+    "license": "Apache-2.0",
+    "repository": "https://github.com/Actyx/sync_wrapper"
+  },
+  {
+    "source": "cargo",
     "name": "synstructure",
     "version": "0.14.0",
     "license": "MIT",
@@ -2700,6 +2805,13 @@
     "version": "0.37.1",
     "license": "Apache-2.0",
     "repository": "https://github.com/tauri-apps/tao"
+  },
+  {
+    "source": "cargo",
+    "name": "tar",
+    "version": "0.4.46",
+    "license": "MIT OR Apache-2.0",
+    "repository": "https://github.com/composefs/tar-rs"
   },
   {
     "source": "cargo",
@@ -2759,6 +2871,13 @@
   },
   {
     "source": "cargo",
+    "name": "tauri-plugin-process",
+    "version": "2.4.0",
+    "license": "Apache-2.0 OR MIT",
+    "repository": "https://github.com/tauri-apps/plugins-workspace"
+  },
+  {
+    "source": "cargo",
     "name": "tauri-plugin-single-instance",
     "version": "2.5.4",
     "license": "Apache-2.0 OR MIT",
@@ -2768,6 +2887,13 @@
     "source": "cargo",
     "name": "tauri-plugin-store",
     "version": "2.5.0",
+    "license": "Apache-2.0 OR MIT",
+    "repository": "https://github.com/tauri-apps/plugins-workspace"
+  },
+  {
+    "source": "cargo",
+    "name": "tauri-plugin-updater",
+    "version": "2.14.0",
     "license": "Apache-2.0 OR MIT",
     "repository": "https://github.com/tauri-apps/plugins-workspace"
   },
@@ -2913,6 +3039,13 @@
   },
   {
     "source": "cargo",
+    "name": "tokio-util",
+    "version": "0.7.20",
+    "license": "MIT",
+    "repository": "https://github.com/tokio-rs/tokio"
+  },
+  {
+    "source": "cargo",
     "name": "toml",
     "version": "1.1.8+spec-1.1.0",
     "license": "MIT OR Apache-2.0",
@@ -2969,6 +3102,34 @@
   },
   {
     "source": "cargo",
+    "name": "tower",
+    "version": "0.5.3",
+    "license": "MIT",
+    "repository": "https://github.com/tower-rs/tower"
+  },
+  {
+    "source": "cargo",
+    "name": "tower-http",
+    "version": "0.6.11",
+    "license": "MIT",
+    "repository": "https://github.com/tower-rs/tower-http"
+  },
+  {
+    "source": "cargo",
+    "name": "tower-layer",
+    "version": "0.3.3",
+    "license": "MIT",
+    "repository": "https://github.com/tower-rs/tower"
+  },
+  {
+    "source": "cargo",
+    "name": "tower-service",
+    "version": "0.3.3",
+    "license": "MIT",
+    "repository": "https://github.com/tower-rs/tower"
+  },
+  {
+    "source": "cargo",
     "name": "tracing",
     "version": "0.1.44",
     "license": "MIT",
@@ -2994,6 +3155,13 @@
     "version": "0.25.1",
     "license": "MIT OR Apache-2.0",
     "repository": "https://github.com/tauri-apps/tray-icon"
+  },
+  {
+    "source": "cargo",
+    "name": "try-lock",
+    "version": "0.2.5",
+    "license": "MIT",
+    "repository": "https://github.com/seanmonstar/try-lock"
   },
   {
     "source": "cargo",
@@ -3078,6 +3246,13 @@
     "version": "2.5.0",
     "license": "Unlicense/MIT",
     "repository": "https://github.com/BurntSushi/walkdir"
+  },
+  {
+    "source": "cargo",
+    "name": "want",
+    "version": "0.3.2",
+    "license": "MIT",
+    "repository": "https://github.com/seanmonstar/want"
   },
   {
     "source": "cargo",
@@ -3333,6 +3508,13 @@
   },
   {
     "source": "cargo",
+    "name": "xattr",
+    "version": "1.6.1",
+    "license": "MIT OR Apache-2.0",
+    "repository": "https://github.com/Stebalien/xattr"
+  },
+  {
+    "source": "cargo",
     "name": "yoke",
     "version": "0.8.3",
     "license": "Unicode-3.0",
@@ -3428,6 +3610,13 @@
     "version": "0.11.6",
     "license": "Unicode-3.0",
     "repository": "https://github.com/unicode-org/icu4x"
+  },
+  {
+    "source": "cargo",
+    "name": "zip",
+    "version": "4.6.1",
+    "license": "MIT",
+    "repository": "https://github.com/zip-rs/zip2.git"
   },
   {
     "source": "cargo",
