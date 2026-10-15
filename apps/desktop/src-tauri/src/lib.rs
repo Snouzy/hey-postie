@@ -32,6 +32,12 @@ fn relay_url(relay: tauri::State<relay::Handle>) -> String {
     relay.url().to_owned()
 }
 
+/// The credentials of the `--smoke` sign-in, when the run asks for one (see `smoke.rs`).
+#[tauri::command]
+fn smoke_login(login: tauri::State<smoke::Login>) -> Option<(String, String)> {
+    login.0.clone()
+}
+
 #[tauri::command]
 fn set_unread_count(app: AppHandle, count: u32) -> Result<(), String> {
     tray::set_unread(&app, count).map_err(|error| error.to_string())
@@ -43,6 +49,8 @@ const CLOSE_HIDES: bool = cfg!(any(target_os = "macos", windows));
 
 pub fn run() {
     let smoke = std::env::args().any(|argument| argument == "--smoke");
+    let login = smoke::login_from_env(smoke);
+    let with_login = login.0.is_some();
     keychain::install_platform_store();
 
     let app = tauri::Builder::default()
@@ -54,6 +62,7 @@ pub fn run() {
             keychain_set,
             keychain_delete,
             relay_url,
+            smoke_login,
             set_unread_count
         ])
         .on_window_event(|window, event| {
@@ -67,12 +76,13 @@ pub fn run() {
                 }
             }
         })
+        .manage(login)
         .setup(move |app| {
             app.manage(relay::start()?);
             tray::install(app.handle())?;
             links::arm(app.handle());
             if smoke {
-                smoke::arm(app.handle().clone());
+                smoke::arm(app.handle().clone(), with_login);
             }
             Ok(())
         })
