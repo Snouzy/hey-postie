@@ -13,6 +13,11 @@ interface AppProps {
   locale: Locale;
   /** Where links in messages go. The desktop app routes them to the system browser. */
   onOpenLink?: (url: string) => void;
+  /**
+   * "Save" on an attachment. The desktop app shows the OS save panel and writes the file; without
+   * it the interface falls back to a browser download.
+   */
+  onSaveFile?: (blob: Blob, name: string) => Promise<void>;
 }
 
 export function App({ core, locale, onOpenLink }: AppProps) {
