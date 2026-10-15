@@ -88,9 +88,9 @@ export function createAccountsService(
       await deps.xmpp.disconnect();
       current = null;
       events.emit('account.changed', { ...account, state: 'offline' });
-      // The server deletion is what matters; local cleanup is best effort.
-      await deps.registration.wipeLocal(account.jid).catch(() => undefined);
+      // The server deletion is what matters; local cleanup is best effort, the password first.
       await deps.keychain.delete(account.jid).catch(() => undefined);
+      await deps.registration.wipeLocal(account.jid).catch(() => undefined);
     },
   };
 }
