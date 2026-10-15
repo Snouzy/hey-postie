@@ -79,7 +79,7 @@ export function MessageBubble({
           )}
         </p>
       )}
-      <Attachments attachments={message.attachments} onSaveFile={onSaveFile} />
+      <Attachments message={message} onSaveFile={onSaveFile} />
       <Reactions reactions={message.reactions} onToggle={(emoji) => onReact(message, emoji)} />
       <span className={styles.meta}>
         <time dateTime={message.sentAt.toISOString()}>{formatTime(locale, message.sentAt)}</time>

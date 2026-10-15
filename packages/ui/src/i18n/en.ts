@@ -219,6 +219,7 @@ export const en = {
   'parcel.fetchFailed': 'I could not fetch this parcel.',
   'parcel.loading': 'I am fetching this parcel…',
   'parcel.save': 'Save',
+  'parcel.load': 'Load image',
   'parcel.dismiss': 'Dismiss',
   'parcel.sealed': 'Sealed parcel',
   'parcel.view': 'View',

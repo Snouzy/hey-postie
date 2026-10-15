@@ -1,7 +1,7 @@
 import { DomainError, type Message } from '@hey-postie/core';
 import { act, fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { CHAT, parcel, renderConversation, stubObjectUrls } from './parcel-test-helpers';
+import { CHAT, knowBob, parcel, renderConversation, stubObjectUrls } from './parcel-test-helpers';
 
 let urls: ReturnType<typeof stubObjectUrls>;
 beforeEach(() => {
@@ -10,8 +10,44 @@ beforeEach(() => {
 afterEach(() => vi.restoreAllMocks());
 
 describe('Receiving a parcel', () => {
+  it('waits for a click before fetching a picture from someone not in the address book', async () => {
+    const { deps } = renderConversation();
+    const attachment = parcel();
+    deps.fakes.file.store(attachment.url, new Blob(['png'], { type: 'image/png' }));
+    act(() => {
+      deps.fakes.chat.receive({
+        chatId: CHAT.id,
+        fromJid: 'stranger@elsewhere.org',
+        body: '',
+        attachments: [attachment],
+      });
+    });
+    const load = await screen.findByRole('button', { name: 'Load image' });
+    expect(screen.queryByRole('img')).not.toBeInTheDocument();
+    expect(deps.fakes.file.fetched).toEqual([]);
+    fireEvent.click(load);
+    expect(await screen.findByRole('img', { name: 'cat.png' })).toBeInTheDocument();
+    expect(deps.fakes.file.fetched).toEqual([attachment.url]);
+    expect(screen.queryByRole('button', { name: 'Load image' })).not.toBeInTheDocument();
+  });
+
+  it('does not offer "Load image" for a file that is not a picture', async () => {
+    const { deps } = renderConversation();
+    act(() => {
+      deps.fakes.chat.receive({
+        chatId: CHAT.id,
+        fromJid: 'stranger@elsewhere.org',
+        body: '',
+        attachments: [parcel({ name: 'doc.pdf', mimeType: 'application/pdf' })],
+      });
+    });
+    expect(await screen.findByRole('button', { name: 'Save' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Load image' })).not.toBeInTheDocument();
+  });
+
   it('shows an inline image from the fetched bytes, never from the raw URL', async () => {
     const { deps, onSaveFile } = renderConversation();
+    knowBob(deps);
     const sealed = parcel({ encryption: 'aesgcm', decryptionKey: 'iv+key' });
     const blob = new Blob(['png'], { type: 'image/png' });
     deps.fakes.file.store(sealed.url, blob);
@@ -41,6 +77,7 @@ describe('Receiving a parcel', () => {
 
   it('fetches once for the same parcel, and keeps the lightbox open through a reaction', async () => {
     const { deps } = renderConversation();
+    knowBob(deps);
     const attachment = parcel();
     let received!: Message;
     act(() => {
@@ -67,6 +104,7 @@ describe('Receiving a parcel', () => {
 
   it('revokes the object URL when the image leaves the screen', async () => {
     const { deps, view } = renderConversation();
+    knowBob(deps);
     act(() => {
       deps.fakes.chat.receive({
         chatId: CHAT.id,
@@ -82,6 +120,7 @@ describe('Receiving a parcel', () => {
 
   it('says so when the parcel cannot be fetched, and tries again on Retry', async () => {
     const { deps, core } = renderConversation();
+    knowBob(deps);
     vi.spyOn(core.files, 'fetch').mockRejectedValueOnce(new DomainError('ServerUnreachable'));
     act(() => {
       deps.fakes.chat.receive({

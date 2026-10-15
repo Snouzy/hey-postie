@@ -21,10 +21,12 @@ import styles from './ParcelCard.module.css';
 interface ParcelCardProps {
   attachment: Attachment;
   onSaveFile: SaveFile;
+  /** A picture the user must ask for: "Load image" then shows it inline. */
+  onLoad?: (() => void) | undefined;
 }
 
 /** A file that is not shown inline: kraft card, icon by type, name, size, "Save". */
-export function ParcelCard({ attachment, onSaveFile }: ParcelCardProps) {
+export function ParcelCard({ attachment, onSaveFile, onLoad }: ParcelCardProps) {
   const core = useCore();
   const text = useText();
   const locale = useLocale();
@@ -66,6 +68,11 @@ export function ParcelCard({ attachment, onSaveFile }: ParcelCardProps) {
           </span>
         )}
       </div>
+      {onLoad && (
+        <Button variant="primary" className={styles.save} onClick={onLoad}>
+          {text('parcel.load')}
+        </Button>
+      )}
       <Button
         className={styles.save}
         onClick={() => void save()}

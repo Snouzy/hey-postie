@@ -72,6 +72,16 @@ export function parcel(overrides: Partial<Attachment> = {}): Attachment {
   };
 }
 
+/** Puts bob in the address book, so his parcels load without a click. */
+export function knowBob(deps: ReturnType<typeof setupCore>['deps']) {
+  deps.fakes.roster.seed({
+    jid: 'bob@example.org',
+    name: 'bob',
+    presence: 'online',
+    subscription: 'both',
+  });
+}
+
 /** jsdom has no object URLs; the tests only check that the bytes, not the raw URL, reach the <img>. */
 export function stubObjectUrls() {
   const createObjectURL = vi.fn(() => 'blob:cat');

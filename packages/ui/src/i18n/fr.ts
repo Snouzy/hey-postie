@@ -226,6 +226,7 @@ export const fr: Record<MessageKey, string> = {
   'parcel.fetchFailed': 'Je n’ai pas pu récupérer ce colis.',
   'parcel.loading': 'Je vais chercher ce colis…',
   'parcel.save': 'Enregistrer',
+  'parcel.load': 'Charger l’image',
   'parcel.dismiss': 'Ignorer',
   'parcel.sealed': 'Colis scellé',
   'parcel.view': 'Voir',

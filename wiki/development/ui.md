@@ -308,7 +308,11 @@ core's `files` service; the UI only shows and asks._
   parcel will not get lighter. Any other error shows its sentence with "Retry" (the same `File`
   again) and "Dismiss"; the sentence alone is the `role="alert"`, the buttons sit beside it.
 - **Received** (`Attachments`, in `MessageBubble`; a message that is a parcel alone has no body
-  line): `files.isInlineImage(att)` decides between `InlineImage` and `ParcelCard`. The raw URL
+  line): `files.isInlineImage(att)` decides between `InlineImage` and `ParcelCard`, and
+  `files.autoLoad(message)` whether a picture may be fetched without a click (our own letters,
+  contacts in the roster). From anyone else the picture waits as a `ParcelCard` with a "Load
+  image" button, since fetching a stranger's URL would tell them when the chat was opened; a click
+  turns it into the inline image. Nothing shows until the service has answered. The raw URL
   never reaches an `<img src>`: `useAttachment(att)` asks `files.fetch` (which decrypts an
   `aesgcm` parcel), makes an object URL, revokes it on unmount, re-fetches only when `url`,
   `encryption` or `decryptionKey` change (a `message.updated` for a reaction brings a new
@@ -456,8 +460,9 @@ goes away, failed load with Retry; a hall's devices by member, known members wit
 its progress, the too-heavy sentence with the limit and no Retry, Retry on another failure, drop
 with the overlay and the depth counter, drags left alone outside a hall, an image paste taken and
 a text paste left alone with its default), `Uploads.test.tsx` (an upload in flight and a refusal
-survive a chat switch), `Attachments.test.tsx` (a sealed inline image from the fetched blob with a
-mocked `URL.createObjectURL`, the raw URL in no attribute of the DOM, lightbox and Save, one fetch
+survive a chat switch), `Attachments.test.tsx` (a stranger's picture waits for "Load image" and
+fetches nothing before, no such button on a PDF, a sealed inline image from a contact in the
+roster from the fetched blob with a mocked `URL.createObjectURL`, the raw URL in no attribute of the DOM, lightbox and Save, one fetch
 per parcel and the lightbox kept through a reaction, the object URL revoked on unmount, fetch
 failure with Retry, a file card whose Save fetches), `useMessages.test.tsx` (an update during the
 first load and during an older page wins), `MessageList.test.tsx` also (the scroll anchor holds
