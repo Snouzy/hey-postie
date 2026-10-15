@@ -73,6 +73,14 @@ describe('rooms.browse', () => {
   });
 });
 
+describe('rooms.roomService', () => {
+  it('returns the discovered conference service, or null', async () => {
+    deps.fakes.room.services.set('localhost', 'rooms.localhost');
+    expect(await core.rooms.roomService(' Localhost ')).toBe('rooms.localhost');
+    expect(await core.rooms.roomService('other.org')).toBeNull();
+  });
+});
+
 describe('rooms.members', () => {
   it('emits room.members when the server reports a change', async () => {
     const seen: number[] = [];
