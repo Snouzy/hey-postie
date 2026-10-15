@@ -66,18 +66,25 @@
 .bubble:focus-within .meta,
 .bubble[data-status='failed'] .meta,
 .bubble[data-status='pending'] .meta {
-  opacity: 0.8;
+  opacity: 1;
 }
 
-/* The stamp: delivery status at the bottom right of an outgoing bubble. */
+/* The stamp: delivery status at the bottom right of an outgoing bubble, in the bubble's own
+   contrast color so it reads on navy in both themes. */
 .stamp {
   display: inline-flex;
   align-items: center;
   gap: 2px;
+  color: var(--navy-contrast);
 }
 
-.bubble[data-status='read'] .stamp {
-  color: var(--yellow);
+/* Failed and read need to stand out: a small chip on paper, with ink or mailbox red. */
+.bubble[data-status='read'] .stamp,
+.bubble[data-status='failed'] .stamp {
+  padding: 0 var(--space-1);
+  border-radius: var(--radius-sm);
+  background: var(--paper-raised);
+  color: var(--ink);
 }
 
 .bubble[data-status='failed'] .stamp {
