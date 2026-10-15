@@ -1,5 +1,5 @@
 import type { Core } from '@hey-postie/core';
-import { useEffect, useState } from 'react';
+import { useRef, useState } from 'react';
 import type { SaveFile } from './components/Attachments';
 import { CoreProvider } from './core/CoreProvider';
 import { downloadBlob } from './core/download';
@@ -41,9 +41,12 @@ export function App({ core, locale, onOpenLink, version, onSaveFile }: AppProps)
   const [localeChoice, setLocaleChoice] = useState<LocaleChoice>(readLocaleChoice);
   const [showPreview, setShowPreviewState] = useState<boolean>(readShowPreview);
 
-  useEffect(() => {
+  // Synchronously, on the first render: a letter may arrive before any effect runs.
+  const told = useRef(false);
+  if (!told.current) {
+    told.current = true;
     core.notifications.setShowPreview(showPreview);
-  }, [core, showPreview]);
+  }
 
   function setLocale(choice: LocaleChoice) {
     writeLocaleChoice(choice);
@@ -52,6 +55,7 @@ export function App({ core, locale, onOpenLink, version, onSaveFile }: AppProps)
 
   function setShowPreview(value: boolean) {
     writeShowPreview(value);
+    core.notifications.setShowPreview(value);
     setShowPreviewState(value);
   }
 

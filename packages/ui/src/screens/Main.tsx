@@ -48,6 +48,7 @@ export function Main({ account, onOpenLink, onSaveFile, onLeave }: MainProps) {
   const contacts = useContacts();
   const [selected, setSelected] = useState<Chat | null>(null);
   const [dialog, setDialog] = useState<OpenDialog>(null);
+  const [backFromLicenses, setBackFromLicenses] = useState(false);
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [encryptionFocus, setEncryptionFocus] = useState(0); // "Check their devices" requests
   const [error, setError] = useState<MessageKey | null>(null);
@@ -117,6 +118,7 @@ export function Main({ account, onOpenLink, onSaveFile, onLeave }: MainProps) {
 
   function closeDialog() {
     setDialog(null);
+    setBackFromLicenses(false);
     setError(null);
   }
 
@@ -202,10 +204,17 @@ export function Main({ account, onOpenLink, onSaveFile, onLeave }: MainProps) {
           onClose={closeDialog}
           onLicenses={() => setDialog('licenses')}
           onOpenLink={onOpenLink}
+          focusLicenses={backFromLicenses}
         />
       )}
       {dialog === 'licenses' && (
-        <Licenses onClose={() => setDialog('settings')} onOpenLink={onOpenLink} />
+        <Licenses
+          onClose={() => {
+            setBackFromLicenses(true);
+            setDialog('settings');
+          }}
+          onOpenLink={onOpenLink}
+        />
       )}
       {dialog === 'deleteAccount' && (
         <DeleteAccountDialog

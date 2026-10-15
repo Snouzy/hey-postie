@@ -54,6 +54,14 @@
   color: var(--ink-muted);
 }
 
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+}
+
 .empty {
   margin: 0;
   font-family: var(--font-heading);

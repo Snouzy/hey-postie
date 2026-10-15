@@ -216,6 +216,7 @@ export const fr: Record<MessageKey, string> = {
   'licenses.title': 'Licences',
   'licenses.intro': 'Les pièces dont je suis fait, et leurs conditions.',
   'licenses.search': 'Chercher par nom ou licence',
+  'licenses.found': 'composants listés',
   'licenses.empty': 'Rien de ce nom dans ma sacoche.',
   'composer.attach': 'Joindre un colis',
   'composer.emoji': 'Ajouter un emoji',

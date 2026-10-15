@@ -37,7 +37,8 @@ describe('Settings: appearance', () => {
     expect(window.localStorage.getItem('hey-postie:theme')).toBeNull();
   });
 
-  it('applies the stored theme on the first render, before anything is clicked', () => {
+  // jsdom cannot show a paint; the layout effect runs before React returns from render.
+  it('has applied the stored theme by the time render() returns', () => {
     window.localStorage.setItem('hey-postie:theme', 'dark');
     const { core } = setupCore();
     render(<App core={core} locale="en" />);
@@ -49,6 +50,18 @@ describe('Settings: appearance', () => {
     const { core } = setupCore();
     render(<App core={core} locale="en" />);
     expect(document.documentElement.dataset.theme).toBeUndefined();
+  });
+
+  it('starts with the defaults when reading storage throws', () => {
+    const spy = vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
+      throw new Error('denied');
+    });
+    const { core } = setupCore();
+    render(<App core={core} locale="fr" />);
+    expect(document.documentElement.dataset.theme).toBeUndefined();
+    expect(core.notifications.getShowPreview()).toBe(true);
+    expect(screen.getByRole('button', { name: 'Se connecter' })).toBeInTheDocument();
+    spy.mockRestore();
   });
 
   it('still works when storage refuses', async () => {
@@ -65,7 +78,7 @@ describe('Settings: appearance', () => {
 describe('Settings: notifications', () => {
   it('hides the letter from the notifier when the preview is off, and remembers it', async () => {
     const { deps } = await openSettings();
-    const toggle = screen.getByRole('switch', { name: /Show the letter/ });
+    const toggle = screen.getByRole('checkbox', { name: /Show the letter/ });
     expect(toggle).toBeChecked();
     fireEvent.click(toggle);
     expect(toggle).not.toBeChecked();
@@ -78,11 +91,15 @@ describe('Settings: notifications', () => {
     expect(deps.fakes.notifier.shown[0]?.body).toBe(HIDDEN_PREVIEW);
   });
 
-  it('applies the stored choice at startup', async () => {
+  it('applies the stored choice before a letter can arrive', async () => {
     window.localStorage.setItem('hey-postie:notify-preview', 'off');
-    const { core } = setupCore();
+    const { deps, core } = setupCore();
     render(<App core={core} locale="en" />);
     expect(core.notifications.getShowPreview()).toBe(false);
+    // Right after render, before any effect-driven work: the body is already hidden.
+    deps.fakes.chat.receive({ chatId: 'bob@x.org', fromJid: 'bob@x.org', body: 'secret' });
+    await waitFor(() => expect(deps.fakes.notifier.shown).toHaveLength(1));
+    expect(deps.fakes.notifier.shown[0]?.body).toBe(HIDDEN_PREVIEW);
   });
 });
 
@@ -134,5 +151,6 @@ describe('Settings: about', () => {
     expect(screen.queryByRole('dialog', { name: 'Settings' })).not.toBeInTheDocument();
     fireEvent.keyDown(window, { key: 'Escape' });
     expect(screen.getByRole('dialog', { name: 'Settings' })).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Licenses' })).toHaveFocus());
   });
 });

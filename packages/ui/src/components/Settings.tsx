@@ -1,4 +1,4 @@
-import type { MouseEvent } from 'react';
+import { type MouseEvent, useEffect, useRef } from 'react';
 import { useText } from '../core/CoreProvider';
 import { useSettings } from '../core/SettingsProvider';
 import { LOCALE_CHOICES, type LocaleChoice, THEMES, type Theme } from '../core/settings';
@@ -11,6 +11,8 @@ interface SettingsProps {
   /** Opens the Licenses dialog; this one closes (no nested dialogs: Esc has one card to close). */
   onLicenses: () => void;
   onOpenLink: (url: string) => void;
+  /** True when the dialog comes back from Licenses: the focus returns to that button. */
+  focusLicenses?: boolean;
 }
 
 export const REPOSITORY_URL = 'https://github.com/Snouzy/hey-postie';
@@ -25,9 +27,17 @@ const LANGUAGE_NAMES: Record<Exclude<LocaleChoice, 'system'>, string> = {
  * The per-viewer choices: theme, notification preview, language, and the About corner. Every
  * change applies at once; there is no "Save". The values live in `SettingsProvider` (see `App`).
  */
-export function Settings({ onClose, onLicenses, onOpenLink }: SettingsProps) {
+export function Settings({ onClose, onLicenses, onOpenLink, focusLicenses }: SettingsProps) {
   const text = useText();
   const settings = useSettings();
+  const licenses = useRef<HTMLButtonElement>(null);
+
+  // After Dialog's own focus (a parent effect runs after its children's, so this one must wait a tick).
+  useEffect(() => {
+    if (!focusLicenses) return;
+    const id = window.setTimeout(() => licenses.current?.focus(), 0);
+    return () => window.clearTimeout(id);
+  }, [focusLicenses]);
 
   function openRepository(event: MouseEvent<HTMLAnchorElement>) {
     event.preventDefault();
@@ -60,9 +70,7 @@ export function Settings({ onClose, onLicenses, onOpenLink }: SettingsProps) {
           <label className={styles.radio}>
             <input
               type="checkbox"
-              role="switch"
               checked={settings.showPreview}
-              aria-checked={settings.showPreview}
               onChange={(event) => settings.setShowPreview(event.target.checked)}
             />
             {text('settings.showPreview')}
@@ -97,7 +105,9 @@ export function Settings({ onClose, onLicenses, onOpenLink }: SettingsProps) {
             <a href={REPOSITORY_URL} rel="noreferrer" onClick={openRepository}>
               {text('settings.repository')}
             </a>
-            <Button onClick={onLicenses}>{text('settings.licenses')}</Button>
+            <Button ref={licenses} onClick={onLicenses}>
+              {text('settings.licenses')}
+            </Button>
           </div>
         </section>
       </div>

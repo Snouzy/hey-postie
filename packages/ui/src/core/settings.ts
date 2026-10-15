@@ -1,4 +1,4 @@
-import type { Locale } from '../i18n';
+import { LOCALES, type Locale } from '../i18n';
 
 /**
  * The per-viewer conveniences: theme, language and whether notifications show the letter's text.
@@ -10,7 +10,7 @@ export type Theme = 'system' | 'light' | 'dark';
 export type LocaleChoice = 'system' | Locale;
 
 export const THEMES: readonly Theme[] = ['system', 'light', 'dark'];
-export const LOCALE_CHOICES: readonly LocaleChoice[] = ['system', 'en', 'fr'];
+export const LOCALE_CHOICES: readonly LocaleChoice[] = ['system', ...LOCALES];
 
 const THEME_KEY = 'hey-postie:theme';
 const LOCALE_KEY = 'hey-postie:locale';
@@ -27,7 +27,7 @@ export function writeTheme(theme: Theme) {
 
 export function readLocaleChoice(): LocaleChoice {
   const stored = read(LOCALE_KEY);
-  return stored === 'en' || stored === 'fr' ? stored : 'system';
+  return isLocale(stored) ? stored : 'system';
 }
 
 export function writeLocaleChoice(choice: LocaleChoice) {
@@ -41,6 +41,10 @@ export function readShowPreview(): boolean {
 
 export function writeShowPreview(value: boolean) {
   write(NOTIFY_PREVIEW_KEY, value ? null : 'off');
+}
+
+function isLocale(value: string | null): value is Locale {
+  return LOCALES.some((locale) => locale === value);
 }
 
 function read(key: string): string | null {

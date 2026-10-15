@@ -209,6 +209,7 @@ export const en = {
   'licenses.title': 'Licenses',
   'licenses.intro': 'The parts I am made of, and the terms they come with.',
   'licenses.search': 'Search by name or license',
+  'licenses.found': 'components listed',
   'licenses.empty': 'Nothing in my satchel by that name.',
   'composer.attach': 'Attach a parcel',
   'composer.emoji': 'Add an emoji',
