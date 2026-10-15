@@ -201,9 +201,9 @@ shows and asks._
   `AccountMenu` (`onMyDevices`, through `Sidebar` to `Main`). `useOwnDevices()` re-reads
   `crypto.ownDevices()` on every `devices.changed`, since the service does not say which address
   is mine. "Remove" replaces the list by a confirmation inside the same dialog (no nested
-  dialogs: Esc has one card to close), then `crypto.removeOwnDevice(id)`. The service exposes no
-  own device id, so no row is marked "This device" (the repository has `ownDeviceId`; the service
-  does not, decision pending in the contracts).
+  dialogs: Esc has one card to close), then `crypto.removeOwnDevice(id)`. The row whose id is
+  `crypto.ownDeviceId()` wears a "This device" stamp and has no "Remove": a device does not
+  retire itself from here (no row is marked until the service has answered).
 
 ## Keyboard
 

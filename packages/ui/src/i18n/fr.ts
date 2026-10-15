@@ -191,6 +191,7 @@ export const fr: Record<MessageKey, string> = {
   'crypto.remove': 'Retirer',
   'crypto.myDevices': 'Mes appareils',
   'crypto.myDevicesHint': 'Les clés qui ouvrent vos lettres, une par appareil.',
+  'crypto.thisDevice': 'Cet appareil',
   'crypto.myDevicesEmpty': 'Aucune clé à moi pour le moment.',
   'crypto.confirmRemove':
     'Retirer cet appareil ? Il n’ouvrira plus les lettres scellées pour vous.',

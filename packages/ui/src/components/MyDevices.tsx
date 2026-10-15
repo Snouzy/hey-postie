@@ -1,5 +1,5 @@
 import type { Device } from '@hey-postie/core';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useCore, useText } from '../core/CoreProvider';
 import { useOwnDevices } from '../core/useDevices';
 import type { MessageKey } from '../i18n';
@@ -22,7 +22,20 @@ export function MyDevices({ onClose }: MyDevicesProps) {
   const text = useText();
   const devices = useOwnDevices();
   const [removing, setRemoving] = useState<Device | null>(null);
+  const [thisDeviceId, setThisDeviceId] = useState<number | undefined>(undefined);
   const [error, setError] = useState<MessageKey | null>(null);
+
+  // Unknown until the service answers: no row is marked in the meantime.
+  useEffect(() => {
+    let cancelled = false;
+    core.crypto
+      .ownDeviceId()
+      .then((id) => !cancelled && setThisDeviceId(id))
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [core]);
 
   async function remove(device: Device) {
     setError(null);
@@ -60,6 +73,7 @@ export function MyDevices({ onClose }: MyDevicesProps) {
               devices={devices}
               label={text('crypto.myDevices')}
               actions="remove"
+              thisDeviceId={thisDeviceId}
               onAction={(device) => setRemoving(device)}
             />
           )}

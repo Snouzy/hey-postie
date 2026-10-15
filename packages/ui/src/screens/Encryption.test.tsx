@@ -118,7 +118,7 @@ describe('The Encryption section of the details pane', () => {
 });
 
 describe('My devices', () => {
-  it('lists my keys and removes one after confirmation', async () => {
+  it('lists my keys, marks this device, and removes another after confirmation', async () => {
     const other = FINGERPRINT.replace(/a/g, 'f');
     const { deps } = await signedIn((d) => {
       d.fakes.crypto.seed(
@@ -133,15 +133,21 @@ describe('My devices', () => {
     const list = await within(dialog).findByRole('list', { name: 'My devices' });
     expect(within(list).getAllByRole('listitem')).toHaveLength(2);
     expect(within(list).getByText(FORMATTED)).toBeInTheDocument();
+    // The fake's own device is the first seeded one: marked, and not removable from itself.
+    expect(await within(list).findByText('This device')).toBeInTheDocument();
+    expect(
+      within(list).queryByRole('button', { name: `Remove ${FORMATTED}` }),
+    ).not.toBeInTheDocument();
 
-    fireEvent.click(within(list).getByRole('button', { name: `Remove ${FORMATTED}` }));
+    const otherFormatted = FORMATTED.replace(/A/g, 'F');
+    fireEvent.click(within(list).getByRole('button', { name: `Remove ${otherFormatted}` }));
     expect(within(dialog).getByText(/Remove this device\?/)).toBeInTheDocument();
     expect((await deps.fakes.crypto.ownDevices()).length).toBe(2);
 
     fireEvent.click(within(dialog).getByRole('button', { name: 'Remove' }));
     await waitFor(() => expect(within(dialog).getAllByRole('listitem')).toHaveLength(1));
-    expect((await deps.fakes.crypto.ownDevices()).map((d) => d.deviceId)).toEqual([2]);
-    expect(within(dialog).queryByText(FORMATTED)).not.toBeInTheDocument();
+    expect((await deps.fakes.crypto.ownDevices()).map((d) => d.deviceId)).toEqual([1]);
+    expect(within(dialog).queryByText(otherFormatted)).not.toBeInTheDocument();
   });
 });
 

@@ -185,6 +185,7 @@ export const en = {
   'crypto.remove': 'Remove',
   'crypto.myDevices': 'My devices',
   'crypto.myDevicesHint': 'The keys that open your letters, one per device.',
+  'crypto.thisDevice': 'This device',
   'crypto.myDevicesEmpty': 'No key of mine yet.',
   'crypto.confirmRemove': 'Remove this device? It will no longer open the letters sealed for you.',
   'message.undecryptableHelp': 'Ask them to send it again, or check their devices.',
