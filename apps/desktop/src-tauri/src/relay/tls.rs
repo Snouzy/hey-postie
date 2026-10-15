@@ -53,14 +53,21 @@ fn config() -> Result<Arc<ClientConfig>, RelayError> {
     Ok(CONFIG.get_or_init(|| config).clone())
 }
 
-/// A rejected certificate is the one failure the user must hear about precisely.
+/// Anything wrong with the certificate chain is the one failure the user must hear about
+/// precisely, and the one that must never lead to trying another candidate.
 fn classify(error: std::io::Error) -> RelayError {
+    use tokio_rustls::rustls::Error;
     let rustls_error = error
         .get_ref()
-        .and_then(|inner| inner.downcast_ref::<tokio_rustls::rustls::Error>());
+        .and_then(|inner| inner.downcast_ref::<Error>());
     match rustls_error {
-        Some(tokio_rustls::rustls::Error::InvalidCertificate(reason)) => {
-            log::debug!("certificate rejected: {reason:?}");
+        Some(
+            Error::InvalidCertificate(_)
+            | Error::InvalidCertRevocationList(_)
+            | Error::NoCertificatesPresented
+            | Error::UnsupportedNameType,
+        ) => {
+            log::debug!("certificate rejected: {rustls_error:?}");
             RelayError::CertificateInvalid
         }
         _ => RelayError::ServerUnreachable(format!("tls handshake: {}", error.kind())),
@@ -81,6 +88,8 @@ mod tests {
         let error = classify(io(Error::InvalidCertificate(
             CertificateError::NotValidForName,
         )));
+        assert!(matches!(error, RelayError::CertificateInvalid));
+        let error = classify(io(Error::NoCertificatesPresented));
         assert!(matches!(error, RelayError::CertificateInvalid));
     }
 

@@ -1,9 +1,13 @@
 //! Finding the server for a domain (RFC 6120 section 3.2 and XEP-0368): SRV records, direct TLS
 //! first, STARTTLS second, then the well-known ports when the domain publishes no SRV at all.
 
+use std::time::Duration;
+
 use hickory_resolver::proto::rr::RData;
 use hickory_resolver::TokioResolver;
 use rand::RngExt;
+
+use super::RelayError;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Security {
@@ -28,42 +32,87 @@ pub struct SrvRecord {
     pub target: String,
 }
 
-/// Every address worth trying, in order. Never fails: without SRV records (or without a working
-/// resolver) the domain itself on the standard ports is the answer.
-pub async fn candidates(domain: &str) -> Vec<Candidate> {
-    let mut found = Vec::new();
-    if let Ok(resolver) = TokioResolver::builder_tokio().and_then(|builder| builder.build()) {
-        for (service, security) in [
-            ("_xmpps-client._tcp", Security::DirectTls),
-            ("_xmpp-client._tcp", Security::StartTls),
-        ] {
-            let records = srv(&resolver, &format!("{service}.{domain}.")).await;
-            log::debug!("{service} for the domain: {} record(s)", records.len());
-            found.extend(
-                order(records, &mut rand::rng())
-                    .into_iter()
-                    .map(|record| Candidate {
-                        host: record.target,
-                        port: record.port,
-                        security,
-                    }),
-            );
+/// The addresses to try, in order, and whether they were guessed.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Candidates {
+    pub list: Vec<Candidate>,
+    /// No SRV record at all: the list is the domain itself on the standard ports.
+    pub guessed: bool,
+}
+
+/// DNS answers rarely take long; past this, the domain is treated as having no SRV record.
+const LOOKUP_TIMEOUT: Duration = Duration::from_secs(5);
+
+/// Every address worth trying. With SRV records, their order; without any, the domain itself
+/// on the standard ports. A domain whose records say "no XMPP here" (a single `.` target,
+/// RFC 6120 section 3.2.1) gets no fallback: the administrator asked for none.
+pub async fn candidates(domain: &str) -> Result<Candidates, RelayError> {
+    let records = tokio::time::timeout(LOOKUP_TIMEOUT, srv_records(domain))
+        .await
+        .unwrap_or_default();
+    let mut list = Vec::new();
+    let mut declined = false;
+    for (security, found) in records {
+        let usable: Vec<SrvRecord> = found
+            .into_iter()
+            .filter(|record| record.target != ".")
+            .collect();
+        declined |= usable.is_empty();
+        list.extend(
+            order(usable, &mut rand::rng())
+                .into_iter()
+                .map(|record| Candidate {
+                    host: record.target,
+                    port: record.port,
+                    security,
+                }),
+        );
+    }
+    if !list.is_empty() {
+        return Ok(Candidates {
+            list,
+            guessed: false,
+        });
+    }
+    if declined {
+        log::debug!("the domain declares that it offers no XMPP service");
+        return Err(RelayError::ServerUnreachable("service not offered".into()));
+    }
+    log::debug!("no SRV record, trying the domain on 5223 then 5222");
+    Ok(Candidates {
+        list: vec![
+            Candidate {
+                host: domain.to_owned(),
+                port: 5223,
+                security: Security::DirectTls,
+            },
+            Candidate {
+                host: domain.to_owned(),
+                port: 5222,
+                security: Security::StartTls,
+            },
+        ],
+        guessed: true,
+    })
+}
+
+/// The SRV records of both services, direct TLS first. Empty without a working resolver.
+async fn srv_records(domain: &str) -> Vec<(Security, Vec<SrvRecord>)> {
+    let Ok(resolver) = TokioResolver::builder_tokio().and_then(|builder| builder.build()) else {
+        return Vec::new();
+    };
+    let mut records = Vec::new();
+    for (service, security) in [
+        ("_xmpps-client._tcp", Security::DirectTls),
+        ("_xmpp-client._tcp", Security::StartTls),
+    ] {
+        let found = srv(&resolver, &format!("{service}.{domain}.")).await;
+        log::debug!("{service} for the domain: {} record(s)", found.len());
+        if !found.is_empty() {
+            records.push((security, found));
         }
     }
-    if found.is_empty() {
-        log::debug!("no SRV record, trying the domain on 5223 then 5222");
-        found.push(Candidate {
-            host: domain.to_owned(),
-            port: 5223,
-            security: Security::DirectTls,
-        });
-        found.push(Candidate {
-            host: domain.to_owned(),
-            port: 5222,
-            security: Security::StartTls,
-        });
-    }
-    found
+    records
 }
 
 async fn srv(resolver: &TokioResolver, name: &str) -> Vec<SrvRecord> {
@@ -78,13 +127,19 @@ async fn srv(resolver: &TokioResolver, name: &str) -> Vec<SrvRecord> {
                 priority: srv.priority,
                 weight: srv.weight,
                 port: srv.port,
-                target: srv.target.to_utf8().trim_end_matches('.').to_owned(),
+                target: srv_target(&srv.target.to_utf8()),
             }),
             _ => None,
         })
-        // A single record with target "." means "this service does not exist here" (RFC 2782).
-        .filter(|record| !record.target.is_empty())
         .collect()
+}
+
+/// Host names come back with a trailing dot; the root name `.` alone means "no service".
+fn srv_target(name: &str) -> String {
+    if name == "." {
+        return name.to_owned();
+    }
+    name.trim_end_matches('.').to_owned()
 }
 
 /// RFC 2782 ordering: lowest priority first; within a priority, a weighted random draw so that
@@ -172,6 +227,12 @@ mod tests {
         let mut targets: Vec<_> = ordered.into_iter().map(|record| record.target).collect();
         targets.sort();
         assert_eq!(targets, ["a", "b", "c"]);
+    }
+
+    #[test]
+    fn a_trailing_dot_is_removed_but_the_root_alone_is_kept() {
+        assert_eq!(srv_target("xmpp.example.org."), "xmpp.example.org");
+        assert_eq!(srv_target("."), ".");
     }
 
     #[test]

@@ -2,16 +2,24 @@
 //! of plain XMPP-over-TCP streams (RFC 6120, what servers speak). The webview connects to
 //! `ws://127.0.0.1:<port>/xmpp/<token>`; the relay resolves, connects and secures the TCP side.
 //!
-//! One file per concern: `server` accepts WebSockets, `bridge` runs one session, `framing`
-//! translates between the two wire formats, `resolve` finds the server, `tls` secures the socket.
+//! One file per concern: `server` accepts WebSockets, `bridge` sets a session up (`resolve`
+//! finds the server, `connect` reaches it, `tls` secures the socket), `pump` relays the frames
+//! and `framing` translates between the two wire formats.
 
 mod bridge;
+mod connect;
 mod framing;
+mod pump;
 mod resolve;
 mod server;
+#[cfg(test)]
+mod test_support;
 mod tls;
 
 use std::net::TcpListener;
+
+/// A WebSocket from the webview, accepted on the loopback listener.
+type Ws = tokio_tungstenite::WebSocketStream<tokio::net::TcpStream>;
 
 /// What the webview gets: the URL to connect to. The token keeps other local processes out.
 pub struct Handle {

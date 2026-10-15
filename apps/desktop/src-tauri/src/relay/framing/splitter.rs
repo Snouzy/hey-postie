@@ -47,8 +47,9 @@ pub struct Splitter {
     pos: usize,
     /// Where the markup being scanned started (an element, a comment, ...).
     start: usize,
-    /// Depth inside the current top-level element; the stream header does not count.
-    depth: usize,
+    /// Open elements inside the current top-level element, outermost first. The stream header
+    /// is not on it: the stream is the document, its children are what we cut out.
+    stack: Vec<Vec<u8>>,
     state: State,
     /// Position of the `<` that opened the markup being scanned (tag, comment, CDATA, PI).
     markup_start: usize,
@@ -68,16 +69,11 @@ impl Splitter {
             buf: Vec::new(),
             pos: 0,
             start: 0,
-            depth: 0,
+            stack: Vec::new(),
             state: State::Text,
             markup_start: 0,
             name: Vec::new(),
         }
-    }
-
-    /// Forget everything: used when the stream restarts after SASL.
-    pub fn reset(&mut self) {
-        *self = Splitter::new();
     }
 
     /// Feeds bytes and returns every item completed by them, in order.
@@ -99,7 +95,7 @@ impl Splitter {
             }
             self.pos += 1;
         }
-        if self.state == State::Text && self.depth == 0 {
+        if self.state == State::Text && self.stack.is_empty() {
             // Whitespace between stanzas (keep-alives): nothing to keep.
             self.buf.clear();
             self.pos = 0;
@@ -112,7 +108,7 @@ impl Splitter {
         match self.state {
             State::Text => {
                 if byte == b'<' {
-                    if self.depth == 0 {
+                    if self.stack.is_empty() {
                         self.start = self.pos;
                     }
                     self.markup_start = self.pos;
@@ -182,27 +178,29 @@ impl Splitter {
         self.state = State::Text;
         let empty = self.buf[self.pos - 1] == b'/';
         let markup = self.buf[self.start..=self.pos].to_vec();
-        if self.depth == 0 && is_stream_root(&self.name) && !empty {
+        if self.stack.is_empty() && is_stream_root(&self.name) && !empty {
             return Ok(Some(Item::Header(markup)));
         }
         if empty {
-            return Ok((self.depth == 0).then_some(Item::Element(markup)));
+            return Ok(self.stack.is_empty().then_some(Item::Element(markup)));
         }
-        self.depth += 1;
+        self.stack.push(std::mem::take(&mut self.name));
         Ok(None)
     }
 
     fn finish_end_tag(&mut self) -> Result<Option<Item>, FramingError> {
         self.state = State::Text;
-        if self.depth == 0 {
+        let Some(open) = self.stack.pop() else {
             return if is_stream_root(&self.name) {
                 Ok(Some(Item::Close))
             } else {
                 Err(FramingError::Malformed("end tag without start"))
             };
+        };
+        if open != self.name {
+            return Err(FramingError::Malformed("mismatched end tag"));
         }
-        self.depth -= 1;
-        if self.depth == 0 {
+        if self.stack.is_empty() {
             return Ok(Some(Item::Element(
                 self.buf[self.start..=self.pos].to_vec(),
             )));

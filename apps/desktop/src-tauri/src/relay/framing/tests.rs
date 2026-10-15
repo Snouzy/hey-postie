@@ -108,11 +108,44 @@ fn a_stray_end_tag_is_an_error() {
 }
 
 #[test]
-fn reset_forgets_a_half_read_element() {
+fn a_mismatched_end_tag_is_an_error_at_once() {
     let mut splitter = Splitter::new();
-    assert!(splitter.push(b"<iq><que").unwrap().is_empty());
-    splitter.reset();
-    assert_eq!(splitter.push(b"<a/>").unwrap(), vec![element(b"<a/>")]);
+    assert_eq!(
+        splitter.push(b"<iq><query></iq>"),
+        Err(FramingError::Malformed("mismatched end tag"))
+    );
+}
+
+#[test]
+fn an_element_over_the_limit_is_refused() {
+    let mut splitter = Splitter::new();
+    let huge = vec![b'x'; splitter::MAX_ELEMENT_BYTES + 1];
+    assert!(splitter.push(b"<message><body>").unwrap().is_empty());
+    assert_eq!(splitter.push(&huge), Err(FramingError::TooLarge));
+}
+
+#[test]
+fn the_cut_does_not_depend_on_where_the_chunks_split() {
+    let mut sample = HEADER.to_vec();
+    sample.extend_from_slice(
+        b"<stream:features><starttls xmlns='urn:ietf:params:xml:ns:xmpp-tls'/></stream:features>\n\
+          <iq id='1' type='result'><query xmlns='x'><item a='>'/></query></iq>\
+          <message><body><![CDATA[x<y]]></body><!-- c --></message></stream:stream>",
+    );
+    let expected = Splitter::new().push(&sample).unwrap();
+    assert_eq!(expected.len(), 5, "header, features, iq, message, close");
+    for cut in 0..=sample.len() {
+        let mut splitter = Splitter::new();
+        let mut items = splitter.push(&sample[..cut]).unwrap();
+        items.extend(splitter.push(&sample[cut..]).unwrap());
+        assert_eq!(items, expected, "split at byte {cut}");
+    }
+    let mut one_by_one = Splitter::new();
+    let mut items = Vec::new();
+    for byte in &sample {
+        items.extend(one_by_one.push(std::slice::from_ref(byte)).unwrap());
+    }
+    assert_eq!(items, expected);
 }
 
 #[test]
@@ -146,19 +179,53 @@ fn stream_prefixed_elements_get_their_namespace_declared() {
 }
 
 #[test]
-fn elements_already_declaring_the_prefix_or_without_it_are_untouched() {
-    let declared: &[u8] = br#"<stream:features xmlns:stream="http://etherx.jabber.org/streams"/>"#;
-    assert_eq!(element_to_frame(declared), declared);
-    let iq: &[u8] = b"<iq type='result'/>";
-    assert_eq!(element_to_frame(iq), iq);
+fn unprefixed_elements_get_the_client_namespace_unless_they_declare_one() {
+    assert_eq!(
+        element_to_frame(b"<message to='a@b'><body>hi</body></message>"),
+        br#"<message xmlns="jabber:client" to='a@b'><body>hi</body></message>"#
+    );
+    assert_eq!(
+        element_to_frame(b"<iq type='result'/>"),
+        br#"<iq xmlns="jabber:client" type='result'/>"#
+    );
+    let sasl: &[u8] = b"<success xmlns='urn:ietf:params:xml:ns:xmpp-sasl'/>";
+    assert_eq!(element_to_frame(sasl), sasl);
+    let own: &[u8] = br#"<message xmlns="jabber:client" id="1"/>"#;
+    assert_eq!(element_to_frame(own), own);
+    let child_only: &[u8] = b"<message><x xmlns='jabber:x:oob'/></message>";
+    assert_eq!(
+        element_to_frame(child_only),
+        br#"<message xmlns="jabber:client"><x xmlns='jabber:x:oob'/></message>"#,
+        "a child's xmlns does not count"
+    );
 }
 
 #[test]
-fn parse_open_extracts_the_domain() {
-    let to = parse_open(
-        r#"<open xmlns="urn:ietf:params:xml:ns:xmpp-framing" to="example.org" version="1.0"/>"#,
+fn a_declaration_after_a_quoted_angle_bracket_is_still_seen() {
+    let declared: &[u8] =
+        br#"<stream:features a='>' xmlns:stream="http://etherx.jabber.org/streams"/>"#;
+    assert_eq!(element_to_frame(declared), declared);
+    let message: &[u8] = br#"<message a=">" xmlns="jabber:client"><body>x</body></message>"#;
+    assert_eq!(element_to_frame(message), message);
+}
+
+#[test]
+fn parse_open_extracts_the_domain_lang_and_version() {
+    let open = parse_open(
+        r#"<open xmlns="urn:ietf:params:xml:ns:xmpp-framing" to="example.org" xml:lang="fr" version="1.0"/>"#,
+    )
+    .unwrap();
+    assert_eq!(
+        open,
+        OpenFrame {
+            to: "example.org".into(),
+            lang: Some("fr".into()),
+            version: Some("1.0".into()),
+        }
     );
-    assert_eq!(to.unwrap(), "example.org");
+    let bare = parse_open(r#"<open xmlns="urn:ietf:params:xml:ns:xmpp-framing" to="x"/>"#).unwrap();
+    assert_eq!(bare.lang, None);
+    assert_eq!(bare.version, None);
 }
 
 #[test]
@@ -182,21 +249,46 @@ fn parse_open_rejects_anything_else_first() {
 
 #[test]
 fn classify_tells_open_close_and_stanzas_apart() {
-    assert_eq!(
+    assert!(matches!(
         classify(r#"<open xmlns="urn:ietf:params:xml:ns:xmpp-framing" to="x"/>"#),
-        ClientFrame::Open
-    );
+        Ok(ClientFrame::Open(_))
+    ));
     assert_eq!(
         classify(r#"<close xmlns="urn:ietf:params:xml:ns:xmpp-framing"/>"#),
-        ClientFrame::Close
+        Ok(ClientFrame::Close)
     );
-    assert_eq!(classify("<iq type='get'/>"), ClientFrame::Stanza);
+    assert_eq!(classify("<iq type='get'/>"), Ok(ClientFrame::Stanza));
 }
 
 #[test]
-fn the_stream_header_escapes_the_domain() {
-    let header = stream_header("a&b.org");
+fn classify_refuses_stream_markup_inside_a_frame() {
+    for forged in [
+        "<message/><stream:stream to='evil'>",
+        "<message/></stream:stream>",
+        "<message><body></stream:stream></body></message>",
+    ] {
+        assert_eq!(
+            classify(forged),
+            Err(FramingError::Malformed("stream markup in a frame")),
+            "{forged}"
+        );
+    }
+}
+
+#[test]
+fn the_stream_header_carries_to_version_and_lang() {
+    let open = OpenFrame {
+        to: "a&b.org".into(),
+        lang: Some("fr".into()),
+        version: None,
+    };
+    let header = stream_header(&open);
     assert!(header.starts_with("<?xml version='1.0'?><stream:stream "));
-    assert!(header.contains("to='a&amp;b.org'"));
-    assert!(header.ends_with("version='1.0'>"));
+    assert!(header.contains("to='a&amp;b.org' version='1.0' xml:lang='fr'>"));
+    let plain = stream_header(&OpenFrame {
+        to: "x".into(),
+        lang: None,
+        version: Some("1.0".into()),
+    });
+    assert!(plain.ends_with("to='x' version='1.0'>"));
 }
