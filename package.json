@@ -13,6 +13,7 @@
     "test": "pnpm -r --parallel test",
     "build": "pnpm -r build",
     "rust": "cd apps/desktop/src-tauri && cargo fmt --check && cargo clippy --all-targets -- -D warnings && cargo test",
+    "licenses": "node apps/desktop/scripts/licenses.mjs",
     "verify": "pnpm check && pnpm lint && pnpm test && pnpm rust && pnpm build",
     "desktop:dev": "pnpm --filter @hey-postie/desktop dev",
     "desktop:build": "pnpm --filter @hey-postie/desktop bundle",

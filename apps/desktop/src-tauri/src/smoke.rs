@@ -33,26 +33,36 @@ pub fn arm(app: AppHandle, login: bool) {
         app.listen("smoke-log", |event| {
             eprintln!("smoke: webview {}", event.payload())
         });
-        app.listen("smoke-online", |_event| {
+        let handle = app.clone();
+        app.listen("smoke-online", move |_event| {
             eprintln!("smoke: signed in, the account is online");
-            std::process::exit(0);
+            exit(&handle, 0);
         });
-        app.listen("smoke-failed", |event| {
+        let handle = app.clone();
+        app.listen("smoke-failed", move |event| {
             eprintln!("smoke: sign-in failed with {}", event.payload());
-            std::process::exit(1);
+            exit(&handle, 1);
         });
     } else {
-        app.listen("smoke-ready", |_event| {
+        let handle = app.clone();
+        app.listen("smoke-ready", move |_event| {
             eprintln!("smoke: the interface rendered");
-            std::process::exit(0);
+            exit(&handle, 0);
         });
     }
     let timeout = if login { LOGIN_TIMEOUT } else { RENDER_TIMEOUT };
     std::thread::spawn(move || {
         std::thread::sleep(timeout);
         eprintln!("smoke: timed out after {} s", timeout.as_secs());
-        std::process::exit(1);
+        exit(&app, 1);
     });
+}
+
+/// `process::exit` skips `RunEvent::Exit`, so the single-instance socket is released by hand;
+/// otherwise the next launch would find a stale one.
+fn exit(app: &AppHandle, code: i32) -> ! {
+    tauri_plugin_single_instance::destroy(app);
+    std::process::exit(code)
 }
 
 #[cfg(test)]

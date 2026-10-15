@@ -5,13 +5,23 @@ import { StrictMode, useEffect } from 'react';
 import { createRoot } from 'react-dom/client';
 import { createTauriDependencies } from './dependencies';
 import { startDesktopIntegrations } from './desktop';
+import { openLinkInBrowser } from './openLink';
+import { saveFileToDisk } from './saveFile';
 import { isTauri, signalSmokeReady } from './tauri';
 
 const core = createCore(createTauriDependencies());
 const locale = pickLocale(navigator.languages);
-if (isTauri()) {
+const desktop = isTauri();
+if (desktop) {
   startDesktopIntegrations(core).catch((error: unknown) =>
     console.warn('[desktop] integrations failed to start', error),
+  );
+}
+
+/** Links go to the system browser; in a plain browser (`pnpm app:dev`) `App` opens a new tab. */
+function openLink(url: string) {
+  openLinkInBrowser(url).catch((error: unknown) =>
+    console.warn('[links] cannot open the link in the browser', error),
   );
 }
 
@@ -29,7 +39,11 @@ if (!root) throw new Error('No #root element');
 const reactRoot = createRoot(root);
 reactRoot.render(
   <StrictMode>
-    <App core={core} locale={locale} />
+    <App
+      core={core}
+      locale={locale}
+      {...(desktop ? { onOpenLink: openLink, onSaveFile: saveFileToDisk } : {})}
+    />
     <SmokeSignal />
   </StrictMode>,
 );

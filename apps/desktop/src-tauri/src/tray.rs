@@ -1,24 +1,26 @@
-//! The menu bar / tray icon: "Open Hey Postie", "Quit", and the unread count (text next to the
-//! icon on macOS, in the tooltip everywhere, in the dock badge on macOS).
+//! The menu bar / tray icon: "Open Hey Postie", "Quit" (in the system's language, `i18n.rs`), and
+//! the unread count (text next to the icon on macOS, in the tooltip everywhere, in the dock badge
+//! on macOS).
 
 use tauri::menu::{Menu, MenuItem};
 use tauri::tray::TrayIconBuilder;
 use tauri::{AppHandle, Manager, Runtime};
 
+use crate::i18n::Language;
 use crate::window;
 
 const TRAY_ID: &str = "main";
 const OPEN: &str = "open";
 const QUIT: &str = "quit";
 
-pub fn install<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<()> {
-    let open = MenuItem::with_id(app, OPEN, "Open Hey Postie", true, None::<&str>)?;
-    let quit = MenuItem::with_id(app, QUIT, "Quit", true, None::<&str>)?;
+pub fn install<R: Runtime>(app: &AppHandle<R>, language: Language) -> tauri::Result<()> {
+    let open = MenuItem::with_id(app, OPEN, language.open_app(), true, None::<&str>)?;
+    let quit = MenuItem::with_id(app, QUIT, language.quit(), true, None::<&str>)?;
     let menu = Menu::with_items(app, &[&open, &quit])?;
 
     let mut tray = TrayIconBuilder::with_id(TRAY_ID)
         .menu(&menu)
-        .tooltip("Hey Postie")
+        .tooltip(language.tooltip(0))
         .on_menu_event(|app, event| match event.id().as_ref() {
             OPEN => {
                 if let Err(error) = window::show_main(app) {
@@ -36,13 +38,14 @@ pub fn install<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<()> {
 }
 
 /// Shows `count` unread messages next to the tray icon and on the dock badge; `0` clears both.
-pub fn set_unread<R: Runtime>(app: &AppHandle<R>, count: u32) -> tauri::Result<()> {
+pub fn set_unread<R: Runtime>(
+    app: &AppHandle<R>,
+    language: Language,
+    count: u32,
+) -> tauri::Result<()> {
     let label = (count > 0).then(|| count.to_string());
     if let Some(tray) = app.tray_by_id(TRAY_ID) {
-        tray.set_tooltip(Some(match &label {
-            Some(label) => format!("Hey Postie: {label} unread"),
-            None => "Hey Postie".to_owned(),
-        }))?;
+        tray.set_tooltip(Some(language.tooltip(count)))?;
         #[cfg(target_os = "macos")]
         tray.set_title(label.as_deref())?;
     }

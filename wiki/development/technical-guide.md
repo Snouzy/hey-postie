@@ -48,6 +48,7 @@ tasks/             agents' plans and lessons, untracked
 | `pnpm lint` | Biome (lint and format). `pnpm lint:fix` writes the fixes. |
 | `pnpm test` | Vitest, every package. |
 | `pnpm rust` | `cargo fmt --check`, `cargo clippy -D warnings`, `cargo test` in `apps/desktop/src-tauri`. |
+| `pnpm licenses` | Regenerates `packages/ui/src/data/licenses.json` from the dependency trees (see [dependencies.md](dependencies.md)). |
 | `pnpm verify` | All of the above, then the Vite build. Must be green before a pull request. |
 
 ## Test server
@@ -86,12 +87,13 @@ distribution. Only one session at a time adds or upgrades dependencies.
 ## Desktop
 
 _Checked on 2026-10-15 against Tauri 2.12.4, `tauri-plugin-notification` 2.7.0,
-`tauri-plugin-deep-link` 2.6.2, on macOS. Windows and Linux are assumed from the crates' docs._
+`tauri-plugin-deep-link` 2.6.2, `tauri-plugin-single-instance` 2.5.4, `tauri-plugin-opener` 2.7.2,
+`tauri-plugin-dialog` 2.8.3, on macOS. Windows and Linux are assumed from the crates' docs._
 
 - The Rust side lives in `apps/desktop/src-tauri/src/`: `lib.rs` registers plugins, commands and
   window events; `keychain.rs` wraps the `keyring` crate (macOS Keychain, Windows Credential
   Manager, Linux Secret Service; `KeychainUnavailable` when none works); `tray.rs`, `links.rs`,
-  `window.rs` are described below; `smoke.rs` implements `--smoke`.
+  `window.rs`, `save.rs`, `i18n.rs` are described below; `smoke.rs` implements `--smoke`.
 - macOS entitlements (`src-tauri/Entitlements.plist`): app sandbox, network client, user-selected
   files. They are on from the first build so that the App Store build is the same build.
 
@@ -232,9 +234,14 @@ once at startup from `isFocused()`.
 ### Tray, badge, close-to-tray (`src-tauri/src/tray.rs`, `window.rs`, `app/unread.ts`)
 
 - `tray.rs` builds one tray icon (feature `tray-icon`) with the window icon and a menu:
-  "Open Hey Postie" (show, unminimize, focus) and "Quit" (`app.exit(0)`). The menu texts are
-  English only for now: the tray lives in Rust, outside the i18n dictionaries.
-- The command `set_unread_count(count)` sets the tooltip ("Hey Postie: 3 unread"), the text next to
+  "Open Hey Postie" (show, unminimize, focus) and "Quit" (`app.exit(0)`). The texts come from
+  `i18n.rs`: the tray lives in Rust, outside the interface's dictionaries, so the two languages are
+  there. `language_from_locale` reads the primary tag of the system locale (`sys-locale` crate:
+  `fr`, `fr-FR`, `fr_CA.UTF-8` → French, anything else → English; unit tests in the module); the
+  result is picked once at startup and kept in Tauri state. Not tested by hand on a French Mac
+  yet: the picker is unit-tested, the system locale read is the crate's.
+- The command `set_unread_count(count)` sets the tooltip ("Hey Postie: 3 unread" / "Hey Postie :
+  3 non lus"), the text next to
   the icon on macOS (`set_title`), and the badge of the main window (`WebviewWindow::set_badge_count`:
   the dock on macOS, the launcher on Linux; Tauri documents it as unsupported on Windows, so it is
   not called there). `0` clears everything. `app/unread.ts` calls it at startup and on every
@@ -261,12 +268,58 @@ once at startup from `isFocused()`.
   (unit tests in `app/links.test.ts`). `openChatsFromXmppLinks` then calls `core.chats.open(jid)`
   and emits `chat.requested`. If no account is signed in, `open` fails and the link is dropped with
   a warning (error code only).
-- Open: on Windows and Linux the OS starts a second instance with the link as argument; the
-  `single-instance` plugin (with its `deep-link` feature) is needed to forward it to the running
-  app. Not added yet (one dependency at a time).
+- On Windows and Linux the OS starts a second instance with the link as argument;
+  `tauri-plugin-single-instance` (feature `deep-link`), registered first in `lib.rs`, forwards the
+  arguments to the deep-link plugin of the running app (so `on_open_url` fires as usual), shows the
+  window, and the second process exits before it builds anything. macOS already routes links to the
+  running app; the plugin's macOS side (a Unix socket, read in `platform_impl/macos.rs` of 2.5.4)
+  only prevents two copies of the app. Consequence for `--smoke`: a smoke run while another Hey
+  Postie (for example `pnpm desktop:dev`) is open exits 0 at once without rendering anything, since
+  it is the second instance; quit the other app first. `smoke.rs` calls
+  `tauri_plugin_single_instance::destroy` before `process::exit`, which skips `RunEvent::Exit`,
+  so no stale socket is left behind. Not tested on Windows or Linux.
+
+### Links in messages (`app/openLink.ts`)
+
+`App`'s `onOpenLink` prop (`packages/ui/src/App.tsx`) receives `openLinkInBrowser` from
+`main.tsx` when the page runs inside Tauri. It keeps `http:`, `https:` and `mailto:` only
+(`isOpenableLink`, unit-tested: `javascript:`, `file:`, `data:`, `xmpp:` are refused and nothing
+of the URL is logged) and calls `openUrl` of `@tauri-apps/plugin-opener`. The capability
+`opener:allow-open-url` (`capabilities/default.json`) repeats the list on the Rust side, so the
+webview could not open another scheme even if the TypeScript check were bypassed. In a plain
+browser `App` falls back to `window.open`.
+
+### Save a file (`app/saveFile.ts`, `src-tauri/src/save.rs`)
+
+`App`'s `onSaveFile(blob, name)` prop receives `saveFileToDisk`. Decision of 2026-10-15: the
+save panel and the write happen in Rust, not through `@tauri-apps/plugin-dialog` + `plugin-fs`
+from the webview, because then no path ever crosses the IPC (the webview cannot ask to write
+anywhere else, so no `fs` scope to maintain) and it is the sandbox-friendly path: in the macOS
+sandbox the save panel (powerbox) grants the write to the file the user picked, with the
+entitlement `files.user-selected.read-write` already in `Entitlements.plist`.
+
+- TypeScript sends the bytes as the raw IPC body (`invoke('save_file', Uint8Array, { headers })`)
+  and the suggested name percent-encoded in the `x-file-name` header, after refusing blobs above
+  200 MB so the bytes are never sent.
+- Rust (`save::save`): `InvokeBody::Raw` only; the cap again (`MAX_BYTES`, 200 MiB; the body sits
+  in memory twice: `Request` borrows it, the write needs its own copy); the name decoded and
+  reduced to a bare file name (`Path::file_name`, no `..`, no separators); `tauri-plugin-dialog`'s
+  `save_file` with that name, awaited through a oneshot channel (the plugin opens the panel on the
+  main thread); `std::fs::write` on a blocking thread. Returns `true` when written, `false` when
+  cancelled; errors are codes (`FileTooLarge`, `NoFileName`, `Io: …`), never the name or the bytes.
+- Verified on 2026-10-15: unit tests of the cap and the name handling; the whole path (panel,
+  write) needs a hand on the panel and is not covered by `--smoke`. Not yet exercised in a signed,
+  sandboxed bundle.
+
+### Licenses (`apps/desktop/scripts/licenses.mjs`)
+
+`pnpm licenses` writes `packages/ui/src/data/licenses.json`, the data of the "Licenses" dialog
+(dialog not built yet). Sources and format: [dependencies.md](dependencies.md), "The licenses
+file". Rerun it in the same commit as a dependency change.
 
 ### Still open on the desktop side
 
-- `tauri-plugin-autostart` (launch at login) and the `single-instance` plugin.
+- `tauri-plugin-autostart` (launch at login).
 - `chat.requested` is emitted by the shell; the interface listens to it (milestone 1, UI).
 - The default-window-icon tray icon (template icon for macOS dark menu bars).
+- Single instance and `xmpp:` links on Windows and Linux: written from the crates' docs, not run.

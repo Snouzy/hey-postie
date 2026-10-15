@@ -4,7 +4,7 @@ import styles from './Attachments.module.css';
 import { InlineImage } from './InlineImage';
 import { ParcelCard } from './ParcelCard';
 
-export type SaveFile = (blob: Blob, name: string) => void;
+export type SaveFile = (blob: Blob, name: string) => void | Promise<void>;
 
 interface AttachmentsProps {
   attachments: Attachment[];
