@@ -123,8 +123,8 @@ describe('toMessage', () => {
       'juliet@example.org': ['👍'],
     };
     expect(toMessage(model({ ...incoming, reactions }), context).reactions).toEqual([
-      { emoji: '❤️', fromJids: ['romeo@example.org'] },
-      { emoji: '👍', fromJids: ['romeo@example.org', 'juliet@example.org'] },
+      { emoji: '❤️', fromJids: ['romeo@example.org'], mine: false },
+      { emoji: '👍', fromJids: ['romeo@example.org', 'juliet@example.org'], mine: false },
     ]);
     expect(toMessage(model({ ...incoming, reactions: 'junk' }), context).reactions).toEqual([]);
   });

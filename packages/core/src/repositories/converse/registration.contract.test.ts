@@ -26,6 +26,7 @@ const PASSWORD = `pw-${RUN}-long-enough`;
 
 const repositories = createConverseRepositories({
   persistentStore: 'localStorage',
+  priority: 10,
   connectTimeoutMs: 8_000,
 });
 let core: Core;

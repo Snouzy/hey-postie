@@ -98,6 +98,11 @@ export interface FilesService {
   fetch(attachment: Attachment): Promise<Blob>;
   /** True for images the UI may show inline (by media type and size). */
   isInlineImage(attachment: Attachment): boolean;
+  /**
+   * Whether the UI may fetch a message's attachments without a click: our own messages and those
+   * of contacts in the roster. Anyone else could use a URL to learn when the chat is opened.
+   */
+  autoLoad(message: Message): Promise<boolean>;
 }
 
 /**

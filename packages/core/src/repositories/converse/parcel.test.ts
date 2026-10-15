@@ -157,8 +157,8 @@ describe('react', () => {
     expect(Array.from(reactions?.children ?? []).map((r) => r.textContent)).toEqual(['👍', '❤️']);
     expect(sizzle('store[xmlns="urn:xmpp:hints"]', stanza)).toHaveLength(1);
     expect(updated.at(-1)?.reactions).toEqual([
-      { emoji: '❤️', fromJids: [JID] },
-      { emoji: '👍', fromJids: [JID] },
+      { emoji: '❤️', fromJids: [JID], mine: false },
+      { emoji: '👍', fromJids: [JID], mine: false },
     ]);
   });
 
@@ -173,13 +173,13 @@ describe('react', () => {
       updated.some((m) => m.reactions.some((r) => r.fromJids.includes(JULIET))),
     );
     expect(updated.at(-1)?.reactions).toEqual([
-      { emoji: '❤️', fromJids: [JID] },
-      { emoji: '👍', fromJids: [JID, JULIET] },
+      { emoji: '❤️', fromJids: [JID], mine: false },
+      { emoji: '👍', fromJids: [JID, JULIET], mine: false },
     ]);
     expect(received.find((m) => m.id === 'r1')).toBeUndefined();
 
     await repositories.chat.react(JULIET, target.id, []);
-    expect(updated.at(-1)?.reactions).toEqual([{ emoji: '👍', fromJids: [JULIET] }]);
+    expect(updated.at(-1)?.reactions).toEqual([{ emoji: '👍', fromJids: [JULIET], mine: false }]);
     await expect(repositories.chat.react(JULIET, 'nope', ['x'])).rejects.toMatchObject({
       code: 'Unknown',
     });

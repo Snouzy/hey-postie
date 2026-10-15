@@ -7,7 +7,9 @@ import type { Attachment } from '../contracts/types';
 export const INLINE_IMAGE_MAX_BYTES = 10 * 1024 * 1024;
 const INLINE_TYPES = new Set(['image/png', 'image/jpeg', 'image/gif', 'image/webp']);
 
-export function createFilesService(deps: Pick<CoreDependencies, 'chat' | 'file'>): FilesService {
+export function createFilesService(
+  deps: Pick<CoreDependencies, 'chat' | 'file' | 'roster'>,
+): FilesService {
   return {
     async send(chatId, file, onProgress) {
       const limit = await deps.chat.maxFileSize();
@@ -19,6 +21,14 @@ export function createFilesService(deps: Pick<CoreDependencies, 'chat' | 'file'>
     maxFileSize: () => deps.chat.maxFileSize(),
     fetch: (attachment) => deps.file.fetch(attachment),
     isInlineImage,
+    async autoLoad(message) {
+      if (message.direction === 'out') return true;
+      const bare = message.fromJid.split('/')[0] ?? '';
+      const contacts = await deps.roster.list();
+      return contacts.some(
+        (c) => c.jid === bare && (c.subscription === 'both' || c.subscription === 'to'),
+      );
+    },
   };
 }
 

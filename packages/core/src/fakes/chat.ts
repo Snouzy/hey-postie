@@ -68,6 +68,10 @@ export class FakeChat implements ChatRepository {
     return this.ensureChat(jid, jid);
   }
 
+  async message(chatId: string, messageId: string): Promise<Message | null> {
+    return (this.byChat.get(chatId) ?? []).find((m) => m.id === messageId) ?? null;
+  }
+
   async messages(
     chatId: string,
     options?: { before?: string; limit?: number },
@@ -131,12 +135,18 @@ export class FakeChat implements ChatRepository {
     const message = (this.byChat.get(chatId) ?? []).find((m) => m.id === messageId);
     if (!message) return;
     const others = message.reactions
-      .map((r) => ({ emoji: r.emoji, fromJids: r.fromJids.filter((j) => j !== this.myJid) }))
+      .map((r) => ({
+        emoji: r.emoji,
+        fromJids: r.fromJids.filter((j) => j !== this.myJid),
+        mine: false,
+      }))
       .filter((r) => r.fromJids.length > 0);
     for (const emoji of emojis) {
       const existing = others.find((r) => r.emoji === emoji);
-      if (existing) existing.fromJids.push(this.myJid);
-      else others.push({ emoji, fromJids: [this.myJid] });
+      if (existing) {
+        existing.fromJids.push(this.myJid);
+        existing.mine = true;
+      } else others.push({ emoji, fromJids: [this.myJid], mine: true });
     }
     this.update({ ...message, reactions: others });
   }

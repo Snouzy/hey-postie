@@ -76,6 +76,8 @@ export interface Attachment {
 export interface Reaction {
   emoji: string;
   fromJids: string[];
+  /** True when this account reacted (in a room, under its occupant JID). Set by the repository. */
+  mine: boolean;
 }
 
 export interface Message {

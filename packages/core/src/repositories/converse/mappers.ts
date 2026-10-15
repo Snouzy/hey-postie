@@ -196,9 +196,12 @@ function reactions(value: unknown): Reaction[] {
       byEmoji.set(emoji, jids);
     }
   }
-  return [...byEmoji]
-    .map(([emoji, fromJids]) => ({ emoji, fromJids }))
-    .sort((a, b) => a.emoji.localeCompare(b.emoji));
+  return (
+    [...byEmoji]
+      // `mine` is settled by the chat repository, which knows the own reaction JID of the chat.
+      .map(([emoji, fromJids]) => ({ emoji, fromJids, mine: false }))
+      .sort((a, b) => a.emoji.localeCompare(b.emoji))
+  );
 }
 
 function presence(status: string): Presence {
