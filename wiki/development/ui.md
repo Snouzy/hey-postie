@@ -63,8 +63,9 @@ A hall is a chat with `kind: 'room'`: its messages arrive through the same `chat
 `message.received` path, with `fromNick` and `isMention` set by the repository. The UI keeps one
 list of rows for the sidebar, built by `withRooms(chats, rooms)` (`core/useRooms.ts`): every
 chat whose id is a hall's JID takes the hall's name and kind, and a hall with no message yet (just
-joined) gets a row of its own (`roomChat`). `rooms.list()` is therefore the source of truth for
-which rows are halls; `chat.kind` from the service is honoured too.
+joined) gets a row of its own at the top of the list (`roomChat`). `rooms.list()` is therefore
+the source of truth for which rows are halls; `chat.kind` from the service is honoured too. JIDs
+are bare and lowercase from the core, so rows and halls are matched as-is.
 
 - `useRooms()`: `rooms.list()` on mount and on every `room.updated`, kept to the halls that are
   joined or bookmarked; same request counter as `useChats`.
@@ -72,33 +73,54 @@ which rows are halls; `chat.kind` from the service is honoured too.
   An empty JID (a direct chat) asks nothing.
 - **Join a room** (`JoinRoom`, from the "+" menu): two tabs. *Address*: room JID, nick prefilled
   with the account's local part, and a password field that appears only once the service
-  answers `RoomPasswordRequired`. *Browse* (`RoomBrowser`): a domain prefilled with
-  `rooms.<account domain>`, "Look up" → `rooms.browse(domain)`, a list of `RoomInfo` (name, JID,
-  members count); a click fills the address and returns to the first tab. Submit →
-  `rooms.join`; errors are Postie's sentence inline; on success `Main` selects the hall.
+  answers `RoomPasswordRequired`. *Browse* (`RoomBrowser`): a domain prefilled with what
+  `rooms.roomService(accountDomain)` discovers, or `rooms.<account domain>` when it finds
+  nothing; "Look up" → `rooms.browse(domain)` (an `InvalidJid` reads as the `joinRoom.badDomain`
+  sentence and empties the list), then a list of `RoomInfo` (name, JID, members count); a click
+  fills the address and returns to the first tab. Submit → `rooms.join`; errors are Postie's
+  sentence inline; on success `Main` selects the hall. The only rule the dialog applies itself
+  is that its fields are not empty; JIDs, nicks and domains are validated by the service.
 - **Conversation** of a hall: the topic next to the name (one line, the full text in `title`),
   a "Members" button instead of "Details" that toggles `RoomDetails`, the sender's nick above
   each run of incoming messages (`MessageList showSenders`), and a **mention highlight**: a
-  bubble with `isMention` gets a soft `--yellow` background, a yellow left border and the title
-  "Mentions you" (`MessageBubble.mention`).
+  bubble with `isMention` gets a soft `--yellow` background, a yellow left border and a visually
+  hidden "Mentions you" (`MessageBubble.mention`).
+- **Outside a hall**: a room chat whose hall is not joined shows Postie's "I am not in this hall
+  right now" on a kraft banner and a disabled composer. When the hall is still known (bookmarked,
+  left elsewhere, kicked) the banner offers "Join again" → `rooms.join` with the stored nick,
+  errors inline. A room chat with no hall record at all (history of a hall left for good) shows
+  the banner alone, and neither the members button nor the contact pane: `Main` renders
+  `Details` only for `chat.kind === 'direct'` and `RoomDetails` (keyed by the JID) only when the
+  hall record exists.
 - **Nick completion**: `Composer` receives the members' nicks (minus my own). Tab completes the
-  word before the caret into the first nick that starts with it, ignoring case: `nick: ` at the
-  start of a line, `nick ` elsewhere (`completeNick`, a pure function). Shift+Tab and a word that
-  matches nobody leave Tab to the browser.
+  word before the caret into the nick it equals, else the first nick that starts with it, both
+  ignoring case: `nick: ` at the start of a line, `nick ` elsewhere, and no second space when one
+  already follows the caret (`completeNick`, a pure function). The caret lands after the nick and
+  the textarea regrows. Shift+Tab and a word that matches nobody leave Tab to the browser.
 - **RoomDetails** (right pane): topic, JID, members grouped by role (moderators, participants,
   visitors) with the affiliation as a kraft hint (owner, admin, member, banned; none is silent),
-  the notify rule as three radios (`rooms.setNotify`), and "Leave the hall", confirmed through
-  `Dialog` → `rooms.leave`; `Main` then drops the selection and the pane.
+  the notify rule as three radios (`rooms.setNotify`, then `useRooms().refresh()` through
+  `onChanged`, since the pane shows the rule from the hall record; a failure shows the sentence),
+  and "Leave the hall", confirmed through `Dialog` → `rooms.leave`; `Main` then drops the
+  selection and the pane.
 - The sidebar badge of a hall is the **mentions count** on stamp yellow when it is above zero,
   otherwise the unread count in a muted chip.
 
 ## Keyboard
 
 Cmd/Ctrl+K focuses the search (listener in `Main`). The "+" of the sidebar opens a menu
-(`AddMenu`, `role="menu"`): focus lands on the first item, arrow keys cycle, Esc or a click
-outside closes it and focus returns to "+". Esc closes the open dialog (listener in
-`Dialog`, which also traps Tab inside the card and gives the focus back to the opener) or, when no
-dialog is open, the details pane (listener in `Main`). Enter in the composer sends, except while an
+(`AddMenu`, `role="menu"`): focus lands on the first item, arrow keys cycle, Esc, Tab out, a
+click outside or picking an item closes it. Picking an item puts the focus back on "+" before
+the dialog opens, so the dialog gives the focus back to "+" when it closes. Esc closes the open
+dialog (`Dialog` listens in the capture phase and stops the event there, so a confirmation over
+the details pane closes alone; it also traps Tab inside the card and gives the focus back to the
+opener) or, when no dialog is open, the details pane (listener in `Main`).
+
+**Toggle buttons as tabs.** The sidebar's "Chats" / "Contacts" and the join dialog's "Address" /
+"Browse" are plain `<button aria-pressed>` elements, not a `role="tablist"`: two buttons that
+swap one panel do not need the tab keyboard model (arrow keys, roving tabindex), and a pressed
+button is announced as such by screen readers. Decision of 2026-10-15; revisit if a screen grows
+past two or three panels. Enter in the composer sends, except while an
 IME is composing (`isComposing`). Arrow keys move
 between rows of the chat list (`ChatList.moveWithArrows`). Every control is a `<button>`,
 `<input>` or `<a>`, so Tab reaches it; `:focus-visible` is styled once in `tokens.css`.
@@ -133,5 +155,7 @@ success goes to Main, password prefill), `ChatList.test.tsx` (order, badge, seal
 `Composer.test.tsx` (Enter / Shift+Enter, empty disabled, inline error), `Main.test.tsx`
 (empty state, markRead and notification rules, new chat dialog, contacts, sign out),
 `Rooms.test.tsx` (join by address, password field on `RoomPasswordRequired`, `NickTaken`
-sentence, browse and pick, sender nick and mention highlight, Tab completion, members by role
-and notify radios, leave with confirmation, mentions badge).
+sentence, focus back to "+", room service discovery, bad domain sentence, browse and pick,
+sender nick and mention highlight, Tab completion with the caret, outside a hall and "Join
+again", a room chat without a hall record, members by role and notify radios, Esc on the leave
+confirmation, leave with confirmation, a fresh hall on top, mentions badge).

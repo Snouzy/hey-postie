@@ -20,6 +20,13 @@ function openJoinDialog() {
   return screen.getByRole('dialog', { name: 'Join a room' });
 }
 
+/** The members pane shows the list once the service answered; closes it again. */
+async function membersLoaded() {
+  fireEvent.click(screen.getByRole('button', { name: 'Members' }));
+  await screen.findByRole('heading', { name: 'Moderators' });
+  fireEvent.click(screen.getByRole('button', { name: 'Close details' }));
+}
+
 /** Joins the hall through the service and opens it from the sidebar. */
 async function inHall(deps: FakeDependencies, core: ReturnType<typeof setupCore>['core']) {
   await act(() => core.rooms.join({ jid: HALL, nick: 'alice' }));
@@ -28,6 +35,7 @@ async function inHall(deps: FakeDependencies, core: ReturnType<typeof setupCore>
       { nick: 'alice', role: 'participant', affiliation: 'member' },
       { nick: 'bob', role: 'moderator', affiliation: 'owner' },
       { nick: 'brenda', role: 'visitor', affiliation: 'none' },
+      { nick: 'Bo', role: 'participant', affiliation: 'none' },
     ]);
   });
   fireEvent.click(await screen.findByRole('button', { name: /hall/ }));
@@ -69,6 +77,31 @@ describe('Join a room', () => {
     );
   });
 
+  it('gives the focus back to "+" when the dialog closes', async () => {
+    await signedIn();
+    const dialog = openJoinDialog();
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Cancel' }));
+    expect(screen.getByRole('button', { name: 'Add' })).toHaveFocus();
+  });
+
+  it('asks the server where its halls are before browsing', async () => {
+    await signedIn((deps) => deps.fakes.room.services.set('x.org', 'conference.x.org'));
+    const dialog = openJoinDialog();
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Browse' }));
+    await waitFor(() =>
+      expect(within(dialog).getByLabelText('Server')).toHaveValue('conference.x.org'),
+    );
+  });
+
+  it('says it in its own words when the server name is not one', async () => {
+    await signedIn();
+    const dialog = openJoinDialog();
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Browse' }));
+    fireEvent.change(within(dialog).getByLabelText('Server'), { target: { value: 'not a!' } });
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Look up' }));
+    expect(await within(dialog).findByRole('alert')).toHaveTextContent('server name');
+  });
+
   it('browses the published halls and fills the address on click', async () => {
     await signedIn((deps) =>
       deps.fakes.room.publish('rooms.x.org', [{ jid: HALL, name: 'The Hall', membersCount: 3 }]),
@@ -105,22 +138,58 @@ describe('A hall', () => {
       });
     });
     expect(await within(region).findByText('bob')).toBeInTheDocument();
-    expect(within(region).getByTitle('Mentions you')).toHaveTextContent('alice: look');
-    expect(within(region).getByText('hi').closest('[title]')).toBeNull();
+    const mention = within(region).getByText('Mentions you').parentElement;
+    expect(mention).toHaveTextContent('alice: look');
+    expect(within(region).getByText('hi').parentElement).not.toHaveTextContent('Mentions you');
   });
 
-  it('completes a nick with Tab', async () => {
+  it('completes a nick with Tab and leaves the caret after it', async () => {
     const { deps, core } = await signedIn();
     const region = await inHall(deps, core);
-    const area = within(region).getByRole('textbox', { name: /Write/ });
+    await membersLoaded();
+    const area = within(region).getByRole('textbox', { name: /Write/ }) as HTMLTextAreaElement;
+    // The exact nick (Bo) wins over the one that starts the same way (bob), whatever the case.
     fireEvent.change(area, { target: { value: 'hello bo' } });
-    await waitFor(() => {
-      fireEvent.keyDown(area, { key: 'Tab' });
-      expect(area).toHaveValue('hello bob ');
-    });
-    fireEvent.change(area, { target: { value: 'br' } });
     fireEvent.keyDown(area, { key: 'Tab' });
-    expect(area).toHaveValue('brenda: ');
+    expect(area).toHaveValue('hello Bo ');
+    await waitFor(() => expect(area.selectionStart).toBe('hello Bo '.length));
+
+    // At the start of a line, and no second space when one follows the caret.
+    fireEvent.change(area, { target: { value: 'Bre x' } });
+    area.setSelectionRange(3, 3);
+    fireEvent.keyDown(area, { key: 'Tab' });
+    expect(area).toHaveValue('brenda: x');
+    fireEvent.change(area, { target: { value: 'see b' } });
+    fireEvent.keyDown(area, { key: 'Tab' });
+    expect(area).toHaveValue('see bob ');
+  });
+
+  it('stands at the door of a hall the user is not in, and joins again', async () => {
+    const { deps, core } = await signedIn();
+    await act(() => core.rooms.join({ jid: HALL, nick: 'alice' }));
+    const [room] = await core.rooms.list();
+    if (!room) throw new Error('no room');
+    act(() => deps.fakes.room.change({ ...room, joined: false, bookmarked: true }));
+    fireEvent.click(await screen.findByRole('button', { name: /hall/ }));
+    expect(await screen.findByRole('status')).toHaveTextContent('I am not in this hall');
+    expect(screen.getByRole('textbox', { name: /Write/ })).toBeDisabled();
+    fireEvent.click(screen.getByRole('button', { name: 'Join again' }));
+    await waitFor(() => expect(deps.fakes.room.joined).toEqual([HALL, HALL]));
+    expect(screen.queryByRole('status')).not.toBeInTheDocument();
+    expect(screen.getByRole('textbox', { name: /Write/ })).toBeEnabled();
+  });
+
+  it('shows a neutral state, not the contact pane, for a hall without a record', async () => {
+    const { deps } = await signedIn();
+    act(() => {
+      deps.fakes.chat.receive({ chatId: HALL, kind: 'room', fromJid: `${HALL}/bob`, body: 'old' });
+    });
+    fireEvent.click(await screen.findByRole('button', { name: /hall/ }));
+    expect(await screen.findByRole('status')).toHaveTextContent('I am not in this hall');
+    expect(screen.queryByRole('button', { name: 'Join again' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Details' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Members' })).not.toBeInTheDocument();
+    expect(screen.queryByText('Remove contact')).not.toBeInTheDocument();
   });
 
   it('shows the topic, the members by role and sets the notify rule', async () => {
@@ -144,6 +213,16 @@ describe('A hall', () => {
     expect((await core.rooms.list())[0]?.notify).toBe('all');
   });
 
+  it('Esc closes the leave confirmation but keeps the pane', async () => {
+    const { deps, core } = await signedIn();
+    await inHall(deps, core);
+    fireEvent.click(screen.getByRole('button', { name: 'Members' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Leave the hall' }));
+    fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' });
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(screen.getByRole('complementary', { name: 'Members' })).toBeInTheDocument();
+  });
+
   it('leaves after confirmation and goes back to the empty state', async () => {
     const { deps, core } = await signedIn();
     await inHall(deps, core);
@@ -153,6 +232,17 @@ describe('A hall', () => {
     await waitFor(() => expect(deps.fakes.room.left).toEqual([HALL]));
     expect(await screen.findByText(/No letter open/)).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /hall/ })).not.toBeInTheDocument();
+  });
+
+  it('puts a freshly joined hall at the top of the list', async () => {
+    const { deps, core } = await signedIn();
+    act(() => {
+      deps.fakes.chat.receive({ chatId: 'bob@x.org', fromJid: 'bob@x.org', body: 'hi' });
+    });
+    await screen.findByRole('button', { name: /bob/ });
+    await act(() => core.rooms.join({ jid: HALL, nick: 'alice' }));
+    const rows = await screen.findAllByRole('button', { name: /bob|hall/ });
+    expect(rows[0]).toHaveTextContent('hall');
   });
 
   it('shows the mentions count as the sidebar badge', async () => {

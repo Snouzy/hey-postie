@@ -19,6 +19,7 @@ therefore right on first paint, with no JavaScript (spec 4.2; Review Focus 5 of 
 | `--red` | `#C8321B` | `#F07A66` | Mailbox red: wax seal, destructive actions, errors |
 | `--kraft` | `#B98A4E` | `#D9B27C` | Satchel, attachment cards |
 | `--yellow` | `#F2C14E` | same | Stamp yellow: highlights, badges |
+| `--on-yellow` | `#1E2230` | same | Ink on the stamp: stays dark because the yellow does |
 | `--success`, `--warning` | `#2E7D4F`, `#A35900` | same | Statuses |
 
 Spacing: `--space-1` (4px) to `--space-12` (48px). Radii: `--radius-sm` 8, `--radius` 12,
@@ -49,8 +50,7 @@ First person, short sentences, nods to postal life. Never a joke in an error. Bo
 ## Components
 
 _Checked on 2026-10-15. Sources: `packages/ui/src/components/`, one `.module.css` per component,
-tokens only, no hard-coded color (the one exception is the ink on the yellow badge, which must
-stay dark in both themes)._ Motion goes only through `var(--motion)` / `var(--motion-fast)`.
+tokens only, no hard-coded color._ Motion goes only through `var(--motion)` / `var(--motion-fast)`.
 
 | Component | Rule |
 |---|---|
@@ -58,12 +58,12 @@ stay dark in both themes)._ Motion goes only through `var(--motion)` / `var(--mo
 | `Field` | Label always visible above the input; placeholders are hints, never labels. |
 | `Dialog` | A raised card on a dimmed backdrop, `role="dialog"`, `aria-modal`, titled; focus goes to the first field (else the card), Tab cycles inside, Esc and the X close it and the focus returns to the opener. Small: one form, two buttons. Destructive actions (remove a contact) confirm through it. |
 | `PresenceDot` | 10px dot: `--success` online, `--warning` away, `--red` dnd, `--ink-muted` offline. The name is in `title` and `aria-label`. |
-| `ChatList` | Rows: title, one-line preview, time (today: hour; else: short date), unread **badge** on `--yellow` with dark ink. A hall shows the `users` icon before its title; its badge is the mentions count on yellow, or the plain unread count in a muted chip (`--line`, `--ink-muted`). The selected row has a navy bar on the left. |
+| `ChatList` | Rows: title, one-line preview, time (today: hour; else: short date), unread **badge** on `--yellow` with dark ink. A hall shows the `users` icon before its title (with a hidden "Hall" for screen readers); its badge is the mentions count on yellow, or the plain unread count in a muted chip (`--line`, `--ink-muted`). The selected row has a navy bar on the left. |
 | `ContactList` | Grouped under presence headings, in the service's order. |
 | `MessageList` | Grouped by day (sticky pill separator: "Today", "Yesterday", or the long date in the locale) then by consecutive sender. In a hall, the sender's nick sits above each run of incoming messages, small and muted. |
-| `MessageBubble` | **Bubbles**: incoming on `--paper-raised`, bottom-left corner tighter; outgoing on `--navy` with `--navy-contrast` text, bottom-right corner tighter. Time at the bottom, visible on the last bubble of a run and on hover. **Stamps** (outgoing only), in `--navy-contrast` on the bubble: pending clock, sent one check, delivered double check. Read and failed sit on a small `--paper-raised` chip so they stand out on navy in both themes: read in `--ink`, failed in `--red`, with a "Retry" button. An `undecryptable` message shows Postie's sentence in the heading font with the **wax seal** (a `--red` stamp icon), never an empty bubble. A **mention** (`isMention`, incoming) sits on a soft mix of `--yellow` and `--paper-raised` with a 3px `--yellow` left border. |
+| `MessageBubble` | **Bubbles**: incoming on `--paper-raised`, bottom-left corner tighter; outgoing on `--navy` with `--navy-contrast` text, bottom-right corner tighter. Time at the bottom, visible on the last bubble of a run and on hover. **Stamps** (outgoing only), in `--navy-contrast` on the bubble: pending clock, sent one check, delivered double check. Read and failed sit on a small `--paper-raised` chip so they stand out on navy in both themes: read in `--ink`, failed in `--red`, with a "Retry" button. An `undecryptable` message shows Postie's sentence in the heading font with the **wax seal** (a `--red` stamp icon), never an empty bubble. A **mention** (`isMention`, incoming) sits on a soft mix of `--yellow` and `--paper-raised` with a 3px `--yellow` left border and a visually hidden "Mentions you". |
 | `Linkify` | Bodies are text; only `http(s)://` and `xmpp:` become links, `rel="noreferrer"`, routed through `onOpenLink`. |
-| `Composer` | Auto-growing textarea (max 200px), Enter sends, Shift+Enter breaks the line, Tab completes a member's nick in a hall, send button disabled while empty; errors from the service inline in red, in Postie's voice. |
+| `Composer` | Auto-growing textarea (max 200px), Enter sends, Shift+Enter breaks the line, Tab completes a member's nick in a hall, send button disabled while empty, the whole thing disabled outside a hall (a kraft banner above it says so, with "Join again" when the hall is known); errors from the service inline in red, in Postie's voice. |
 | `Details` | Right pane, 280px: the peer's JID in monospace and the destructive action in `danger`. |
 | `RoomDetails` | The right pane of a hall: topic, JID, members under role headings (same uppercase heading as `ContactList`) with the affiliation in `--kraft`, the notify rule as radios with `accent-color: var(--navy)`, "Leave the hall" in `danger` confirmed through `Dialog`. Empty members: Postie's sentence in the heading font. |
 | `AddMenu` | The "+" of the sidebar: a `role="menu"` card on `--paper-raised` with three items (New chat, Join a room, Add contact), icon then label. |
