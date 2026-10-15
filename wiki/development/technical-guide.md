@@ -31,7 +31,6 @@ tasks/             agents' plans and lessons, untracked
   `packages/core/src/fakes/keychain.ts` keeps a `Map` in memory for tests.
   `packages/core/src/repositories/converse/` wraps `@converse/headless`: `engine.ts` owns the one
   Converse instance, `xmpp.ts`, `roster.ts`, `chat.ts`, `room.ts` and `registration.ts` (XEP-0077 over a bare
-  Strophe connection, plus account deletion and local wipe) implement the repository contracts,
   Converse instance, `xmpp.ts`, `roster.ts`, `chat.ts`, `crypto.ts` (OMEMO devices and trust over
   Converse's device lists) and `registration.ts` (XEP-0077 over a bare Strophe connection, plus
   account deletion and local wipe) implement the repository contracts, `mappers.ts` and
