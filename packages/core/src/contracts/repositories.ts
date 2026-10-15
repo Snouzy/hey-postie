@@ -45,6 +45,8 @@ export interface ChatRepository {
   list(): Promise<Chat[]>;
   /** Opens (or creates) the direct chat with a bare JID. */
   open(jid: string): Promise<Chat>;
+  /** One message by id, wherever it is in the history; null when unknown. */
+  message(chatId: string, messageId: string): Promise<Message | null>;
   /** The most recent messages, oldest first. `before` asks for the page that precedes a message id. */
   messages(chatId: string, options?: { before?: string; limit?: number }): Promise<Message[]>;
   send(chatId: string, body: string): Promise<Message>;

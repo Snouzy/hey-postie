@@ -68,6 +68,10 @@ export class FakeChat implements ChatRepository {
     return this.ensureChat(jid, jid);
   }
 
+  async message(chatId: string, messageId: string): Promise<Message | null> {
+    return (this.byChat.get(chatId) ?? []).find((m) => m.id === messageId) ?? null;
+  }
+
   async messages(
     chatId: string,
     options?: { before?: string; limit?: number },

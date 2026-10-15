@@ -71,6 +71,13 @@ export class ConverseChatRepository implements ChatRepository {
     return this.chat(chat);
   }
 
+  async message(chatId: string, messageId: string): Promise<Message | null> {
+    const chat = await this.find(chatId);
+    await chat.messages.fetched;
+    const model = chat.messages.get(messageId);
+    return model && this.displayable([model]).length > 0 ? this.mapMessage(model, chat) : null;
+  }
+
   async messages(
     chatId: string,
     options?: { before?: string; limit?: number },
@@ -80,7 +87,7 @@ export class ConverseChatRepository implements ChatRepository {
     await chat.messages.fetched;
     if (!options?.before) {
       const models = this.displayable(chat.messages.models).sort(byTime).slice(-limit);
-      return models.map((model) => this.message(model, chat));
+      return models.map((model) => this.mapMessage(model, chat));
     }
     return this.olderThan(chat, options.before, limit);
   }
@@ -89,7 +96,7 @@ export class ConverseChatRepository implements ChatRepository {
     const chat = await this.find(chatId);
     const model = await chat.sendMessage({ body });
     if (!model) throw new DomainError('Unknown', 'Unknown: the message could not be sent');
-    return this.message(model, chat);
+    return this.mapMessage(model, chat);
   }
 
   /** The bare JID of the signed-in account, the key of our own reactions in a direct chat. */
@@ -113,7 +120,7 @@ export class ConverseChatRepository implements ChatRepository {
       throw new DomainError('FileTooLarge', `FileTooLarge: limit ${limit} bytes`);
     }
     const model = await uploadFile(chat, file, onProgress);
-    const message = this.message(model, chat);
+    const message = this.mapMessage(model, chat);
     return {
       ...message,
       attachments: message.attachments.map((attachment) => ({ ...attachment, size: file.size })),
@@ -191,7 +198,7 @@ export class ConverseChatRepository implements ChatRepository {
     // A live message arriving meanwhile is also added to the collection: it is not history.
     return this.displayable(added.filter((model) => model.get('is_archived')))
       .sort(byTime)
-      .map((model) => this.message(model, chat));
+      .map((model) => this.mapMessage(model, chat));
   }
 
   /** Straight from the collection: `api.chats.get` only answers for direct chats. */
@@ -233,7 +240,7 @@ export class ConverseChatRepository implements ChatRepository {
       chat.messages.on(event, (model) => {
         const message = model as MessageModel;
         if (!this.isDisplayable(message)) return;
-        for (const handler of this.updateHandlers) handler(this.message(message, chat));
+        for (const handler of this.updateHandlers) handler(this.mapMessage(message, chat));
       });
     }
   }
@@ -247,7 +254,7 @@ export class ConverseChatRepository implements ChatRepository {
     if (!this.isDisplayable(model) || model.get('is_archived')) return;
     this.emitChat(chat);
     if (model.get('sender') === 'me' && !model.get('is_carbon')) return;
-    const message = this.message(model, chat);
+    const message = this.mapMessage(model, chat);
     for (const handler of this.messageHandlers) handler(message);
   }
 
@@ -264,10 +271,10 @@ export class ConverseChatRepository implements ChatRepository {
 
   private chat(chat: ChatModel): Chat {
     const last = this.displayable(chat.messages.models).at(-1);
-    return toChat(chat, last ? this.message(last, chat) : undefined);
+    return toChat(chat, last ? this.mapMessage(last, chat) : undefined);
   }
 
-  private message(model: MessageModel, chat: ChatModel): Message {
+  private mapMessage(model: MessageModel, chat: ChatModel): Message {
     const authenticated = this.loaded?.api.connection.authenticated() === true;
     const unread = Number(chat.get(isRoom(chat) ? 'num_unread_general' : 'num_unread')) || 0;
     const context = { chatId: String(chat.get('jid')), authenticated, unread };

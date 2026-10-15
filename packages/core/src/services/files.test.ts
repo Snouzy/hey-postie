@@ -71,3 +71,31 @@ describe('isInlineImage', () => {
     expect(isInlineImage(att('image/png', 20 * 1024 * 1024))).toBe(false);
   });
 });
+
+describe('files.autoLoad', () => {
+  const message = (fromJid: string, direction: 'in' | 'out') => ({
+    id: 'm',
+    chatId: 'c',
+    fromJid,
+    body: '',
+    sentAt: new Date(),
+    direction,
+    status: 'delivered' as const,
+    encryption: 'none' as const,
+    attachments: [],
+    reactions: [],
+    isMention: false,
+  });
+
+  it('loads our own parcels and those of contacts, not those of strangers', async () => {
+    deps.fakes.roster.seed({
+      jid: 'bob@x.org',
+      name: 'Bob',
+      presence: 'online',
+      subscription: 'both',
+    });
+    expect(await core.files.autoLoad(message('me@example.org', 'out'))).toBe(true);
+    expect(await core.files.autoLoad(message('bob@x.org/phone', 'in'))).toBe(true);
+    expect(await core.files.autoLoad(message('stranger@x.org', 'in'))).toBe(false);
+  });
+});

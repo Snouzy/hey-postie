@@ -13,6 +13,7 @@ export function createChatsService(
 ): ChatsService {
   /** The oldest message id loaded per chat, for `loadOlder`. */
   const oldest = new Map<string, string>();
+  const pending = new Map<string, Promise<void>>();
 
   deps.chat.onMessage((message) => events.emit('message.received', sanitize(message)));
   deps.chat.onMessageUpdate((message) => events.emit('message.updated', sanitize(message)));
@@ -48,13 +49,21 @@ export function createChatsService(
     async toggleReaction(chatId, messageId, emoji) {
       const trimmed = emoji.trim();
       if (!trimmed) throw new DomainError('EmptyMessage');
-      const message = (await deps.chat.messages(chatId, { limit: PAGE_SIZE })).find(
-        (m) => m.id === messageId,
+      // One write at a time per message, so two quick taps compose instead of racing.
+      const key = `${chatId}\u0000${messageId}`;
+      const run = (pending.get(key) ?? Promise.resolve()).then(async () => {
+        const message = await deps.chat.message(chatId, messageId);
+        if (!message) throw new DomainError('Unknown', 'Unknown: no such message');
+        const mine = new Set(message.reactions.filter((r) => r.mine).map((r) => r.emoji));
+        if (mine.has(trimmed)) mine.delete(trimmed);
+        else mine.add(trimmed);
+        await deps.chat.react(chatId, messageId, [...mine]);
+      });
+      pending.set(
+        key,
+        run.catch(() => undefined),
       );
-      const mine = new Set((message?.reactions ?? []).filter((r) => r.mine).map((r) => r.emoji));
-      if (mine.has(trimmed)) mine.delete(trimmed);
-      else mine.add(trimmed);
-      await deps.chat.react(chatId, messageId, [...mine]);
+      return run;
     },
     markRead(chatId) {
       return deps.chat.markRead(chatId);

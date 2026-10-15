@@ -130,6 +130,21 @@ describe('chats.toggleReaction', () => {
     expect(seen.at(-1)).toEqual(['👍:carol@x.org', '❤️:me@example.org']);
   });
 
+  it('composes two quick taps instead of racing them', async () => {
+    const chat = await core.chats.open('bob@x.org');
+    const incoming = deps.fakes.chat.receive({ chatId: chat.id, fromJid: 'bob@x.org', body: 'hi' });
+    await Promise.all([
+      core.chats.toggleReaction(chat.id, incoming.id, '👍'),
+      core.chats.toggleReaction(chat.id, incoming.id, '❤️'),
+    ]);
+    expect(deps.fakes.chat.reactions.at(-1)?.emojis).toEqual(['👍', '❤️']);
+  });
+
+  it('refuses an unknown message', async () => {
+    const chat = await core.chats.open('bob@x.org');
+    await expect(core.chats.toggleReaction(chat.id, 'nope', '👍')).rejects.toThrow(/Unknown/);
+  });
+
   it('refuses an empty emoji', async () => {
     await expect(core.chats.toggleReaction('c', 'm', ' ')).rejects.toThrow(/EmptyMessage/);
   });
