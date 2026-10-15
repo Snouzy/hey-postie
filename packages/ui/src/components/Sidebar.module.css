@@ -11,16 +11,7 @@
   display: flex;
   align-items: center;
   gap: var(--space-2);
-  padding: var(--space-3) var(--space-3) var(--space-3) var(--space-4);
-}
-
-.accountName {
-  flex: 1;
-  min-width: 0;
-  font-weight: 600;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  padding: var(--space-2) var(--space-3);
 }
 
 .tabs {

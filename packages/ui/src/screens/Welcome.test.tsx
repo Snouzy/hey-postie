@@ -9,7 +9,7 @@ describe('Welcome', () => {
     expect(screen.getByRole('heading', { name: 'Hey Postie' })).toBeInTheDocument();
     expect(screen.getByRole('img', { name: /Postie/ })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Se connecter' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Créer un compte' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Créer un compte' })).toBeEnabled();
   });
 
   it('shows the English texts by default', () => {

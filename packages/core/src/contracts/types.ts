@@ -115,6 +115,10 @@ export interface RegistrationField {
   required: boolean;
 }
 
+/**
+ * Hidden fields and the form's own data (FORM_TYPE, CAPTCHA challenge) are kept by the repository
+ * between `form` and `submit`: the UI only sends what the user typed.
+ */
 export interface RegistrationForm {
   domain: string;
   instructions?: string;

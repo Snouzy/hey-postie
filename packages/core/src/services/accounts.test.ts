@@ -88,7 +88,13 @@ describe('accounts.signOut', () => {
 });
 
 describe('accounts.register', () => {
-  const form = { domain: 'b.org', fields: [] };
+  const form = {
+    domain: 'b.org',
+    fields: [
+      { name: 'username', label: 'Username', type: 'text' as const, required: true },
+      { name: 'password', label: 'Password', type: 'password' as const, required: true },
+    ],
+  };
 
   it('asks the form through the relay url of the domain', async () => {
     deps.fakes.registration.forms.set('b.org', form);
@@ -152,5 +158,79 @@ describe('accounts.deleteAccount', () => {
   it('refuses when nobody is signed in', async () => {
     const core = createCore(deps);
     await expect(core.accounts.deleteAccount()).rejects.toThrow(/Unknown/);
+  });
+});
+
+describe('accounts.registrationForm hardening', () => {
+  const field = (name: string, type: 'text' | 'password' | 'hidden' = 'text') => ({
+    name,
+    label: name,
+    type,
+    required: true,
+  });
+
+  it('refuses a form without username and password', async () => {
+    deps.fakes.registration.forms.set('b.org', { domain: 'b.org', fields: [field('email')] });
+    const core = createCore(deps);
+    await expect(core.accounts.registrationForm('b.org')).rejects.toThrow(
+      /RegistrationUnsupported/,
+    );
+  });
+
+  it('drops a remote CAPTCHA image, keeps a data image, dedupes fields', async () => {
+    deps.fakes.registration.forms.set('b.org', {
+      domain: 'b.org',
+      fields: [field('username'), field('password', 'password'), field('username')],
+      captchaImageDataUrl: 'https://evil.example/track.png',
+      captchaField: 'ocr',
+    });
+    const core = createCore(deps);
+    const form = await core.accounts.registrationForm('b.org');
+    expect(form.fields).toHaveLength(2);
+    expect(form.captchaImageDataUrl).toBeUndefined();
+    expect(form.captchaField).toBeUndefined();
+    deps.fakes.registration.forms.set('b.org', {
+      domain: 'b.org',
+      fields: [field('username'), field('password', 'password')],
+      captchaImageDataUrl: 'data:image/png;base64,iVBORw0KGgo=',
+      captchaField: 'ocr',
+    });
+    const ok = await core.accounts.registrationForm('b.org');
+    expect(ok.captchaField).toBe('ocr');
+  });
+
+  it('ignores a CAPTCHA whose field name is reserved', async () => {
+    deps.fakes.registration.forms.set('b.org', {
+      domain: 'b.org',
+      fields: [field('username'), field('password', 'password')],
+      captchaImageDataUrl: 'data:image/png;base64,iVBORw0KGgo=',
+      captchaField: 'password',
+    });
+    const core = createCore(deps);
+    expect((await core.accounts.registrationForm('b.org')).captchaField).toBeUndefined();
+  });
+});
+
+describe('accounts.register when sign-in fails afterwards', () => {
+  it('reports AccountCreatedSignInFailed', async () => {
+    deps.fakes.xmpp.failWith = new DomainError('ServerUnreachable');
+    const core = createCore(deps);
+    await expect(
+      core.accounts.register({ domain: 'b.org', username: 'alice', password: 'longenough' }),
+    ).rejects.toThrow(/AccountCreatedSignInFailed/);
+    expect(deps.fakes.registration.submitted).toHaveLength(1);
+  });
+});
+
+describe('accounts.deleteAccount when the local wipe fails', () => {
+  it('still succeeds once the server deleted the account', async () => {
+    const core = createCore(deps);
+    await core.accounts.signIn({ jid: 'a@b.org', password: 'pw', remember: false });
+    deps.fakes.registration.currentJid = 'a@b.org';
+    deps.fakes.registration.wipeLocal = async () => {
+      throw new Error('disk');
+    };
+    await expect(core.accounts.deleteAccount()).resolves.toBeUndefined();
+    expect(core.accounts.current()).toBeNull();
   });
 });

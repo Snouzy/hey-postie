@@ -127,7 +127,8 @@ describe('My devices', () => {
         { deviceId: 2, fingerprint: other },
       );
     });
-    fireEvent.click(screen.getByRole('button', { name: 'My devices' }));
+    fireEvent.click(screen.getByRole('button', { name: 'alice' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'My devices…' }));
     const dialog = screen.getByRole('dialog', { name: 'My devices' });
     const list = await within(dialog).findByRole('list', { name: 'My devices' });
     expect(within(list).getAllByRole('listitem')).toHaveLength(2);

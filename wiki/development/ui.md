@@ -15,10 +15,12 @@ through `useCore()` (services) and `core.events`; it never imports Converse, Tau
 |---|---|---|---|
 | no | `null`, `offline`, `error` | none yet, or "Back" | `Welcome` |
 | no | any | "Sign in" | `SignIn` |
+| no | any | "Create an account" | `CreateAccount` |
 | yes | any (`connecting`, `offline`, `error` show a banner) | any | `Main` |
 
-Three inputs: the account from the core, a `door` (`'welcome' | 'signIn'`) that the user's clicks
-move, and `inside`, set the first time the account is `online`. Once inside, `Main` stays mounted
+Three inputs: the account from the core, a `door` (`'welcome' | 'signIn' | 'createAccount'`) that
+the user's clicks move, and `inside`, set the first time the account is `online` (a created
+account is signed in by `accounts.register`, so it enters Main through the same path). Once inside, `Main` stays mounted
 through reconnections and drops: the sidebar shows "I am back on the bike" while `connecting`,
 and an offline banner with "Sign in again" on `offline` / `error`. Only a sign out, from `Main`
 (`onLeave('welcome' | 'signIn')`), leaves it. Errors while first connecting keep the user on
@@ -28,9 +30,49 @@ sentence).
 
 | Screen | File | What it does |
 |---|---|---|
-| Welcome | `screens/Welcome.tsx` | Postie `happy`, "Sign in", "Create an account" (not wired yet). |
+| Welcome | `screens/Welcome.tsx` | Postie `happy`, "Sign in", "Create an account". |
 | Sign in | `screens/SignIn.tsx` | JID, password, "Remember me". On blur of a valid-looking JID, asks `accounts.rememberedPassword` and prefills. While `connecting`: Postie `delivering`, form disabled. |
+| Create account | `screens/CreateAccount.tsx`, `screens/RegistrationForm.tsx` | Two steps, see [Create account](#create-account) below. |
 | Main | `screens/Main.tsx` | Three columns: `Sidebar`, `Conversation` (keyed by chat id, so drafts and in-flight loads stay with their chat; or the empty state with Postie `asleep`), optional `Details`. Owns the selected chat, the open dialog and the error sentence of background actions. Subscribes to `chat.requested` (notification click, `xmpp:` link) and opens the chat if it is not listed yet. |
+
+## Create account
+
+Two steps on one screen, both with Postie above the card (`delivering` while waiting for the
+server, `oops` on an error, `sealed` otherwise) and the focus in the first field.
+
+1. **"Where?"** (`CreateAccount.tsx`): a server field with a short sentence by Postie
+   (`aria-describedby`) and a link to the public directory `https://providers.xmpp.net`, opened
+   through `onOpenLink` with `rel="noreferrer"`. No server is listed in the app: we do not vouch
+   for any. "Continue" calls `accounts.registrationForm(domain)`. `RegistrationUnsupported`,
+   `ServerUnreachable` and `CertificateInvalid` keep the user here with their sentence and the
+   button reads "Try another server".
+2. **"Who?"** (`RegistrationForm.tsx`): the `RegistrationForm` from the core, rendered
+   generically. `text`, `password` and `email` fields become `Field`s (our own labels for
+   `username` and `password`, the server's `label` for the rest; `required` enforced; the server's
+   `instructions` shown as Postie's sentence with the domain). `hidden` fields are not shown and,
+   because the contract carries no value for them, not sent either. We add "Repeat password"
+   (must match) and require 8 characters, both checked before anything leaves the screen. When
+   `captchaImageDataUrl` is set the image is shown as it comes, with its answer field named after
+   `captchaField`. Submit calls `accounts.register({ domain, username, password, extra })`, where
+   `extra` is every other value (email, CAPTCHA answer, custom fields). `AccountConflict` puts the
+   focus back on the username; other errors show their sentence. Success signs in, so `App`
+   moves to Main on its own.
+
+"Back" goes from "Who?" to "Where?" (the domain is kept) and from "Where?" to Welcome.
+
+## Account menu
+
+The account row of the sidebar (`components/AccountMenu.tsx`) is a button
+(`aria-haspopup="menu"`) that opens a small `role="menu"`: the JID, "Sign out", "My devices…"
+(see Encryption) and "Delete my account…". The first item takes the focus, arrows move and wrap, Esc or a click
+outside closes it and the focus returns to the row. Deleting the account is therefore two clicks
+away, as App Store rule 5.1.1(v) asks.
+
+"Delete my account…" opens `components/DeleteAccountDialog.tsx` from `Main`: a plain sentence
+(no joke; it is permanent on the server), a field where the user types their own JID
+(`aria-describedby` the sentence; compared trimmed and lower-cased), and a `danger` button that
+stays disabled until it matches. Submit calls `accounts.deleteAccount()`; on success `Main`
+leaves to Welcome (`onLeave('welcome')`), on failure the sentence shows and the dialog stays.
 
 ## How the UI subscribes to the core
 
@@ -142,8 +184,8 @@ shows and asks._
 - **Devices in a hall** (`RoomEncryption`, in `RoomDetails`): the same list, grouped by member,
   for the members whose `jid` the hall reveals (non-anonymous halls); a member without any known
   device takes no room, anonymous members cannot be checked. Nothing to show: Postie says so.
-- **My devices** (`MyDevices`): a `Dialog` opened from the key button beside "Sign out" in the
-  `Sidebar` (`onMyDevices`; the account menu will fold it in). `useOwnDevices()` re-reads
+- **My devices** (`MyDevices`): a `Dialog` opened from the "My devices…" item of the
+  `AccountMenu` (`onMyDevices`, through `Sidebar` to `Main`). `useOwnDevices()` re-reads
   `crypto.ownDevices()` on every `devices.changed`, since the service does not say which address
   is mine. "Remove" replaces the list by a confirmation inside the same dialog (no nested
   dialogs: Esc has one card to close), then `crypto.removeOwnDevice(id)`. The service exposes no
@@ -155,7 +197,8 @@ shows and asks._
 Cmd/Ctrl+K focuses the search (listener in `Main`). The "+" of the sidebar opens a menu
 (`AddMenu`, `role="menu"`): focus lands on the first item, arrow keys cycle, Esc, Tab out, a
 click outside or picking an item closes it. Picking an item puts the focus back on "+" before
-the dialog opens, so the dialog gives the focus back to "+" when it closes. Esc closes the open
+the dialog opens, so the dialog gives the focus back to "+" when it closes. The account row opens
+`AccountMenu` with the same keyboard rules (focus back on the row). Esc closes the open
 dialog (`Dialog` listens in the capture phase and stops the event there, so a confirmation over
 the details pane closes alone; it also traps Tab inside the card and gives the focus back to the
 opener) or, when no dialog is open, the details pane (listener in `Main`).
@@ -194,10 +237,17 @@ and bodies are always rendered as text (no HTML).
 
 `pnpm --filter @hey-postie/ui test` (Vitest, Testing Library, jsdom). What they cover, checked on
 2026-10-15: `SignIn.test.tsx` (invalid JID never reaches `xmpp.connect`, wrong password sentence,
-success goes to Main, password prefill), `ChatList.test.tsx` (order, badge, sealed preview),
+success goes to Main, password prefill), `CreateAccount.test.tsx` (directory link through
+`onOpenLink`, server without registration stays on "Where?", unreachable server, seeded form with
+email, hidden field and CAPTCHA, mismatched and short passwords never reach `registration.submit`,
+conflict focuses the username, success sends `extra` and lands in Main, back links),
+`AccountMenu.test.tsx` (JID, arrows, Esc, click outside, actions), `DeleteAccountDialog.test.tsx`
+(two clicks away, button asleep until the JID matches, `deleteCurrent` recorded and Welcome
+shown, failure sentence, Esc), `ChatList.test.tsx` (order, badge, sealed preview),
 `MessageList.test.tsx` (grouping, day labels, retry, undecryptable, links, load older),
 `Composer.test.tsx` (Enter / Shift+Enter, empty disabled, inline error), `Main.test.tsx`
-(empty state, markRead and notification rules, new chat dialog, contacts, sign out),
+(empty state, markRead and notification rules, new chat dialog, contacts, sign out through the
+account menu),
 `Rooms.test.tsx` (join by address, password field on `RoomPasswordRequired`, `NickTaken`
 sentence, focus back to "+", room service discovery, bad domain sentence, browse and pick,
 sender nick and mention highlight, Tab completion with the caret, outside a hall and "Join

@@ -1,13 +1,13 @@
 import type { Account, Chat, Contact, Room } from '@hey-postie/core';
-import { KeyRound, LogOut, Search } from 'lucide-react';
+import { Search } from 'lucide-react';
 import { type RefObject, useState } from 'react';
 import { useText } from '../core/CoreProvider';
 import type { MessageKey } from '../i18n';
+import { AccountMenu } from './AccountMenu';
 import { AddMenu } from './AddMenu';
 import { Button } from './Button';
 import { ChatList } from './ChatList';
 import { ContactList } from './ContactList';
-import { PresenceDot } from './PresenceDot';
 import styles from './Sidebar.module.css';
 
 export type SidebarTab = 'chats' | 'contacts';
@@ -30,6 +30,7 @@ interface SidebarProps {
   /** Opens the "My devices" dialog (own OMEMO keys). */
   onMyDevices: () => void;
   onSignOut: () => void;
+  onDeleteAccount: () => void;
   onSignInAgain: () => void;
 }
 
@@ -45,19 +46,16 @@ export function Sidebar(props: SidebarProps) {
   const contacts = needle
     ? props.contacts.filter((contact) => contact.name.toLowerCase().includes(needle))
     : props.contacts;
-  const online = props.account.state === 'online';
 
   return (
     <nav className={styles.sidebar}>
       <header className={styles.account}>
-        <PresenceDot presence={online ? 'online' : 'offline'} />
-        <span className={styles.accountName}>{props.account.displayName}</span>
-        <Button variant="ghost" onClick={props.onMyDevices} aria-label={text('crypto.myDevices')}>
-          <KeyRound size={18} aria-hidden />
-        </Button>
-        <Button variant="ghost" onClick={props.onSignOut} aria-label={text('main.signOut')}>
-          <LogOut size={18} aria-hidden />
-        </Button>
+        <AccountMenu
+          account={props.account}
+          onSignOut={props.onSignOut}
+          onMyDevices={props.onMyDevices}
+          onDeleteAccount={props.onDeleteAccount}
+        />
       </header>
 
       {props.account.state === 'connecting' && (

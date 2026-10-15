@@ -55,7 +55,7 @@ tokens only, no hard-coded color._ Motion goes only through `var(--motion)` / `v
 | Component | Rule |
 |---|---|
 | `Button` | One component, four variants: `primary` (navy fill), `secondary` (navy outline), `ghost` (icon buttons, no border), `danger` (red outline, destructive actions). Pill shaped. |
-| `Field` | Label always visible above the input; placeholders are hints, never labels. |
+| `Field` | Label always visible above the input; placeholders are hints, never labels. A helper sentence goes in a `<p>` the input points to with `aria-describedby` (see `CreateAccount`). |
 | `Dialog` | A raised card on a dimmed backdrop, `role="dialog"`, `aria-modal`, titled; focus goes to the first field (else the card), Tab cycles inside, Esc and the X close it and the focus returns to the opener. Small: one form, two buttons. Destructive actions (remove a contact) confirm through it. |
 | `PresenceDot` | 10px dot: `--success` online, `--warning` away, `--red` dnd, `--ink-muted` offline. The name is in `title` and `aria-label`. |
 | `ChatList` | Rows: title, one-line preview, time (today: hour; else: short date), unread **badge** on `--yellow` with dark ink. A hall shows the `users` icon before its title (with a hidden "Hall" for screen readers); its badge is the mentions count on yellow, or the plain unread count in a muted chip (`--line`, `--ink-muted`). The selected row has a navy bar on the left. |
@@ -69,11 +69,13 @@ tokens only, no hard-coded color._ Motion goes only through `var(--motion)` / `v
 | `EncryptionSection`, `RoomEncryption` | The "Encryption" part of a details pane: the same uppercase heading as the members, a muted hint to compare in person, then the `DeviceList` (in a hall: one list per member, under the nick). Empty: Postie's sentence in the heading font. The section is focusable (`tabindex=-1`) so a sealed letter can send the reader to it. |
 | `MyDevices` | A `Dialog`: a muted hint, then my own devices in a `DeviceList` with "Remove". The confirmation (sentence, fingerprint, Cancel / Remove in `danger`) replaces the list inside the same card. |
 | `Details` | Right pane, 280px: the peer's JID in monospace, the Encryption section, and the destructive action in `danger`. |
+| `AccountMenu` | The account row of the sidebar: presence dot, display name, chevron; a button with `aria-haspopup="menu"`. Opens a raised card (`role="menu"`) with the JID in monospace and three `menuitem`s, "Sign out", "My devices…" (lucide `key-round`) and "Delete my account…" in `--red`. Focus on the first item, arrows wrap, Esc and a click outside close it and the focus returns to the row. |
+| `DeleteAccountDialog` | A `Dialog` for the one irreversible action: a plain sentence (no joke), a field where the user types their own JID, a `danger` button disabled until it matches, Postie's sentence below while deleting or on failure. |
 | `RoomDetails` | The right pane of a hall: topic, JID, members under role headings (same uppercase heading as `ContactList`) with the affiliation in `--kraft`, the Encryption section (members' devices, grouped by nick), the notify rule as radios with `accent-color: var(--navy)`, "Leave the hall" in `danger` confirmed through `Dialog`. Empty members: Postie's sentence in the heading font. |
 | `AddMenu` | The "+" of the sidebar: a `role="menu"` card on `--paper-raised` with three items (New chat, Join a room, Add contact), icon then label. |
 | `JoinRoom` | A `Dialog` with two tabs (`aria-pressed`, navy underline like the sidebar tabs): the address form, or `RoomBrowser`. The password field appears only when the hall asks for it. |
 | `RoomBrowser` | A domain field with "Look up" beside it, then a scrollable list (240px) of halls: name, JID in monospace, members count with the `users` icon. |
-| `Sidebar` | 300px: account name with its presence dot (online, or offline when the line is down), the key button ("My devices") and sign out; a kraft banner while reconnecting or offline ("Sign in again"), and for failed background actions; "Chats" / "Contacts" toggle buttons (`aria-pressed`); pill search that filters by title or name; "+" opens `AddMenu`. |
+| `Sidebar` | 300px: the `AccountMenu` row (sign out, my devices and account deletion live in it); a kraft banner while reconnecting or offline ("Sign in again"), and for failed background actions; "Chats" / "Contacts" toggle buttons (`aria-pressed`); pill search that filters by title or name; "+" opens `AddMenu`. |
 
 Postie's sentences (errors, empty states, the sealed letter) always use `--font-heading` with
 `SOFT 100`; the rest of the interface uses `--font-text`.

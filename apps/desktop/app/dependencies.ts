@@ -2,7 +2,6 @@ import {
   type CoreDependencies,
   createConverseRepositories,
   FakeCrypto,
-  FakeRegistration,
   FakeRoom,
 } from '@hey-postie/core';
 import { TauriKeychain } from './repositories/keychain';
@@ -10,12 +9,12 @@ import { TauriNotifier } from './repositories/notifier';
 import { TauriTransport } from './repositories/transport';
 
 /**
- * The real repositories of the desktop app. XMPP, roster and chats come from the Converse engine
+ * The real repositories of the desktop app. XMPP, roster, chats and registration come from the Converse engine
  * (`packages/core/src/repositories/converse/`); the transport is the Rust relay and the notifier
  * the system's (`./repositories/`).
  */
 export function createTauriDependencies(): CoreDependencies {
-  const { xmpp, roster, chat } = createConverseRepositories();
+  const { xmpp, roster, chat, registration } = createConverseRepositories();
   return {
     keychain: new TauriKeychain(),
     transport: new TauriTransport(),
@@ -26,8 +25,7 @@ export function createTauriDependencies(): CoreDependencies {
     room: new FakeRoom(),
     // Milestone 3 replaces the fake with the Converse OMEMO repository.
     crypto: new FakeCrypto(),
-    // Milestone 5 replaces the fake with the Converse registration repository.
-    registration: new FakeRegistration(),
+    registration,
     notifier: new TauriNotifier(),
   };
 }

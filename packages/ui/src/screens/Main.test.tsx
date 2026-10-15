@@ -145,7 +145,8 @@ describe('Main', () => {
 
   it('signs out back to the welcome screen', async () => {
     await signedIn();
-    fireEvent.click(screen.getByRole('button', { name: 'Sign out' }));
+    fireEvent.click(screen.getByRole('button', { name: 'alice' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Sign out' }));
     expect(await screen.findByRole('button', { name: 'Create an account' })).toBeInTheDocument();
   });
 });

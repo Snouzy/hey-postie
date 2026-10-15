@@ -1,0 +1,20 @@
+.domain {
+  font-family: var(--font-mono);
+  font-size: 14px;
+  color: var(--ink);
+}
+
+.fieldHelp {
+  margin: calc(-1 * var(--space-2)) 0 0;
+  font-size: 13px;
+  color: var(--ink-muted);
+}
+
+/* The server's puzzle, shown as it comes: no scaling tricks that would make it harder to read. */
+.captcha {
+  align-self: flex-start;
+  max-width: 100%;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--paper);
+}
