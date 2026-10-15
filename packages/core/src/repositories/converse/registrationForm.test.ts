@@ -1,13 +1,36 @@
 // @vitest-environment jsdom
 import { describe, expect, it } from 'vitest';
-import { buildRemoveIq, buildSubmitIq, errorOf, parseRegistrationQuery } from './registrationForm';
+import { DomainError } from '../../contracts/errors';
+import { buildRemoveIq, buildSubmitIq, errorOf, parseRegistrationReply } from './registrationForm';
 
 const parse = (xml: string) => new DOMParser().parseFromString(xml, 'text/xml').documentElement;
-const query = (inner: string) => parse(`<query xmlns="jabber:iq:register">${inner}</query>`);
+/** A result IQ whose query holds `inner`; `siblings` go next to the query, as XEP-0231 data does. */
+const query = (inner: string, siblings = '') =>
+  parse(
+    `<iq xmlns="jabber:client" type="result" id="r1"><query xmlns="jabber:iq:register">${inner}</query>${siblings}</iq>`,
+  );
+const failure = (run: () => unknown) => {
+  try {
+    run();
+    return 'no error';
+  } catch (error) {
+    return error instanceof DomainError ? error.code : String(error);
+  }
+};
+const CAPTCHA_FORM = `<x xmlns="jabber:x:data" type="form">
+  <field var="FORM_TYPE" type="hidden"><value>urn:xmpp:captcha</value></field>
+  <field var="challenge" type="hidden"><value>F3A6292C</value></field>
+  <field var="ocr" label="Enter the text you see">
+    <media xmlns="urn:xmpp:media-element"><uri type="image/png">cid:sha1+abc@bob.xmpp.org</uri></media>
+  </field>
+</x>`;
+const bob = (base64: string, type = 'image/png') =>
+  `<data xmlns="urn:xmpp:bob" cid="sha1+abc@bob.xmpp.org" type="${type}" max-age="0">${base64}</data>`;
+const LEGACY = { form: { domain: 'd', fields: [] }, xdata: false, defaults: {} };
 
-describe('parseRegistrationQuery', () => {
+describe('parseRegistrationReply', () => {
   it('reads legacy fields, instructions and types', () => {
-    const { form, xdata, defaults } = parseRegistrationQuery(
+    const { form, xdata, defaults } = parseRegistrationReply(
       query(
         '<instructions> Choose a username. </instructions><username/><password/><email/><registered/><x xmlns="jabber:x:oob"><url>https://x</url></x><name/>',
       ),
@@ -26,8 +49,14 @@ describe('parseRegistrationQuery', () => {
     expect(form.captchaImageDataUrl).toBeUndefined();
   });
 
+  it('rejects a reply without a registration query', () => {
+    expect(failure(() => parseRegistrationReply(parse('<iq type="result"/>'), 'd'))).toBe(
+      'RegistrationUnsupported',
+    );
+  });
+
   it('prefers an x:data form, mapping types, labels, required and hidden defaults', () => {
-    const { form, xdata, defaults } = parseRegistrationQuery(
+    const { form, xdata, defaults } = parseRegistrationReply(
       query(`<instructions>legacy</instructions><username/><password/>
         <x xmlns="jabber:x:data" type="form">
           <instructions>Pick a name</instructions>
@@ -51,32 +80,56 @@ describe('parseRegistrationQuery', () => {
     ]);
   });
 
-  it('extracts a XEP-0158 CAPTCHA image from the bob data', () => {
-    const { form } = parseRegistrationQuery(
+  it('refuses a required field of a type it cannot render, drops an optional one', () => {
+    const form = (required: string) =>
       query(`<x xmlns="jabber:x:data" type="form">
-          <field var="FORM_TYPE" type="hidden"><value>urn:xmpp:captcha</value></field>
-          <field var="challenge" type="hidden"><value>F3A6292C</value></field>
-          <field var="ocr" label="Enter the text you see">
-            <media xmlns="urn:xmpp:media-element"><uri type="image/png">cid:sha1+abc@bob.xmpp.org</uri></media>
-          </field>
-        </x>
-        <data xmlns="urn:xmpp:bob" cid="sha1+abc@bob.xmpp.org" type="image/png" max-age="0">iVBORw0K
-        Ggo=</data>`),
+        <field var="username" type="text-single"><required/></field>
+        <field var="tos" type="boolean" label="Agree">${required}</field>
+        <field var="lang" type="list-single"><option><value>en</value></option></field>
+      </x>`);
+    expect(failure(() => parseRegistrationReply(form('<required/>'), 'd'))).toBe(
+      'RegistrationUnsupported',
+    );
+    expect(parseRegistrationReply(form(''), 'd').form.fields.map((f) => f.name)).toEqual([
+      'username',
+    ]);
+  });
+
+  it('extracts a XEP-0158 CAPTCHA image from bob data next to the query (XEP-0231 placement)', () => {
+    const { form } = parseRegistrationReply(
+      query(CAPTCHA_FORM, bob('iVBORw0K\n        Ggo=')),
       'example.org',
     );
     expect(form.captchaField).toBe('ocr');
     expect(form.captchaImageDataUrl).toBe('data:image/png;base64,iVBORw0KGgo=');
     expect(form.fields.map((f) => f.name)).toEqual(['FORM_TYPE', 'challenge', 'ocr']);
   });
+
+  it('also finds bob data inside the query', () => {
+    const { form } = parseRegistrationReply(query(CAPTCHA_FORM + bob('iVBORw0KGgo=')), 'd');
+    expect(form.captchaImageDataUrl).toBe('data:image/png;base64,iVBORw0KGgo=');
+  });
+
+  it('leaves the CAPTCHA image out when the bob data is not a plausible image', () => {
+    const without = (siblings: string) =>
+      parseRegistrationReply(query(CAPTCHA_FORM, siblings), 'd').form;
+    expect(without('')).not.toHaveProperty('captchaImageDataUrl');
+    expect(without(bob('iVBORw0KGgo=', 'text/html'))).not.toHaveProperty('captchaImageDataUrl');
+    expect(without(bob('not base64 &lt;script&gt;'))).not.toHaveProperty('captchaImageDataUrl');
+    expect(without(bob('A'.repeat(400 * 1024)))).not.toHaveProperty('captchaImageDataUrl');
+    expect(without(bob('iVBORw0KGgo=', 'image/jpeg')).captchaImageDataUrl).toBe(
+      'data:image/jpeg;base64,iVBORw0KGgo=',
+    );
+  });
 });
 
 describe('buildSubmitIq', () => {
   it('answers a legacy form with one child per value, escaped', () => {
-    const iq = buildSubmitIq(
-      'id1',
-      { form: { domain: 'd', fields: [] }, xdata: false, defaults: {} },
-      { username: 'bob', password: 'p<&"\'>w', 'bad name': 'x' },
-    );
+    const iq = buildSubmitIq('id1', LEGACY, {
+      username: 'bob',
+      password: 'p<&"\'>w',
+      'bad name': 'x',
+    });
     expect(iq.getAttribute('type')).toBe('set');
     expect(iq.getAttribute('id')).toBe('id1');
     expect(iq.getAttribute('xmlns')).toBe('jabber:client');
@@ -86,6 +139,16 @@ describe('buildSubmitIq', () => {
       ['username', 'bob'],
       ['password', 'p<&"\'>w'],
     ]);
+  });
+
+  it('refuses values with characters XML cannot carry', () => {
+    expect(failure(() => buildSubmitIq('id', LEGACY, { password: 'a\u0000b' }))).toBe(
+      'RegistrationRejected',
+    );
+    expect(failure(() => buildSubmitIq('id', LEGACY, { password: 'a\u001fb' }))).toBe(
+      'RegistrationRejected',
+    );
+    expect(failure(() => buildSubmitIq('id', LEGACY, { password: 'tab\tok é' }))).toBe('no error');
   });
 
   it('answers an x:data form with a submit echoing hidden fields and skipping empty optional ones', () => {

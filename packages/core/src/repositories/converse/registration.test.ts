@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { DomainError } from '../../contracts/errors';
 import { createConverseRepositories } from './index';
 
@@ -71,8 +71,10 @@ const XDATA_FORM = `<query xmlns="jabber:iq:register"><instructions>legacy</inst
     <field var="password" type="text-private" label="Password"><required/></field>
   </x></query>`;
 const LEGACY_FORM = `<query xmlns="jabber:iq:register"><username/><password/></query>`;
-const iqError = (condition: string) =>
-  `<error type="cancel"><${condition} xmlns="urn:ietf:params:xml:ns:xmpp-stanzas"/></error>`;
+const iqError = (condition: string, text = '') =>
+  `<error type="cancel"><${condition} xmlns="urn:ietf:params:xml:ns:xmpp-stanzas"/>${
+    text ? `<text xmlns="urn:ietf:params:xml:ns:xmpp-stanzas">${text}</text>` : ''
+  }</error>`;
 
 const idOf = (frame: string) => /\bid="([^"]+)"/.exec(frame)?.[1] ?? '';
 
@@ -81,6 +83,8 @@ function server(options: {
   register?: boolean;
   form?: string;
   onGet?: string;
+  /** The whole reply to the get, when the error/result shapes above do not fit. */
+  rawGetReply?: (id: string) => string;
   onSet?: (frame: string) => string;
 }): ServerScript {
   return (socket, frame) => {
@@ -91,6 +95,7 @@ function server(options: {
       socket.reply(CLOSE);
       socket.closeFromServer(1000);
     } else if (frame.includes('type="get"')) {
+      if (options.rawGetReply) return socket.reply(options.rawGetReply(idOf(frame)));
       const body = options.onGet
         ? `<iq type="error" id="${idOf(frame)}">${options.onGet}</iq>`
         : `<iq type="result" id="${idOf(frame)}">${options.form ?? XDATA_FORM}</iq>`;
@@ -116,6 +121,12 @@ const failure = (promise: Promise<unknown>) =>
     () => 'resolved',
     (error: unknown) => (error instanceof DomainError ? error.code : String(error)),
   );
+const caught = (promise: Promise<unknown>) =>
+  promise.then(
+    () => null,
+    (error: unknown) => (error instanceof DomainError ? error : null),
+  );
+const SECRET = { username: 'bob-secret-name', password: 'pw-secret-value' };
 
 beforeAll(() => {
   window.fetch = () => Promise.reject(new Error('no network in tests'));
@@ -182,6 +193,80 @@ describe('ConverseRegistrationRepository over a scripted WebSocket', () => {
     await expect(failure(repositories.registration.form(target))).resolves.toBe(
       'RegistrationUnsupported',
     );
+  });
+
+  it('keeps the server text and what the user typed out of error messages', async () => {
+    const text = `${SECRET.username} is taken, try ${SECRET.password}`;
+    for (const condition of ['conflict', 'not-acceptable']) {
+      ScriptedSocket.script = server({ onSet: () => iqError(condition, text) });
+      const error = await caught(repositories.registration.submit({ ...target, values: SECRET }));
+      expect(error?.message).toBe(`${error?.code}: ${condition}`);
+      expect(error?.message).not.toContain(SECRET.password);
+      expect(error?.message).not.toContain(SECRET.username);
+      expect(error?.cause).toBe(text);
+    }
+  });
+
+  it('resolves a legacy submit on a result, and only on a result', async () => {
+    ScriptedSocket.script = server({ form: LEGACY_FORM });
+    await expect(
+      repositories.registration.submit({ ...target, values: SECRET }),
+    ).resolves.toBeUndefined();
+    ScriptedSocket.script = (socket, frame) => {
+      if (frame.includes('type="set"')) return socket.reply(`<iq type="set" id="${idOf(frame)}"/>`);
+      server({ form: LEGACY_FORM })(socket, frame);
+    };
+    await expect(
+      failure(repositories.registration.submit({ ...target, values: SECRET })),
+    ).resolves.toBe('Unknown');
+  });
+
+  it('treats malformed XML and a result without a query as failures, not forms', async () => {
+    ScriptedSocket.script = server({ rawGetReply: (id) => `<iq type="result" id="${id}"><query` });
+    await expect(failure(repositories.registration.form(target))).resolves.toBe(
+      'ServerUnreachable',
+    );
+    ScriptedSocket.script = server({ rawGetReply: (id) => `<iq type="result" id="${id}"/>` });
+    await expect(failure(repositories.registration.form(target))).resolves.toBe(
+      'RegistrationUnsupported',
+    );
+  });
+
+  it('keeps only the last of two concurrent form() streams', async () => {
+    const [first, second] = await Promise.all([
+      repositories.registration.form(target),
+      repositories.registration.form(target),
+    ]);
+    expect(first.fields).toEqual(second.fields);
+    expect(ScriptedSocket.opened).toHaveLength(2);
+    const closed = ScriptedSocket.opened.filter((s) => s.sent.some((f) => f.includes('<close')));
+    expect(closed).toHaveLength(1);
+    await repositories.registration.submit({ ...target, values: SECRET });
+    expect(ScriptedSocket.opened).toHaveLength(2);
+  });
+
+  it('closes a stream nobody submits on after five minutes', async () => {
+    // Only timers: the scripted socket runs on microtasks, which stay real.
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+    try {
+      await repositories.registration.form(target);
+      vi.advanceTimersByTime(5 * 60_000 + 1);
+    } finally {
+      vi.useRealTimers();
+    }
+    expect(ScriptedSocket.opened[0]?.sent.at(-1)).toContain('<close');
+    await repositories.registration.submit({ ...target, values: SECRET });
+    expect(ScriptedSocket.opened).toHaveLength(2);
+  });
+
+  it('refuses a clear-text websocket URL that is not loopback', async () => {
+    const insecure = { domain: 'example.org', websocketUrl: 'ws://example.org/ws' };
+    await expect(failure(repositories.registration.form(insecure))).resolves.toBe(
+      'ServerUnreachable',
+    );
+    expect(ScriptedSocket.opened).toHaveLength(0);
+    const loopback = { domain: 'example.org', websocketUrl: 'ws://127.0.0.1:7000/xmpp/t' };
+    await expect(repositories.registration.form(loopback)).resolves.toBeTruthy();
   });
 
   it('rejects a server without the register feature before any IQ', async () => {

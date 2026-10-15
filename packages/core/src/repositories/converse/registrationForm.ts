@@ -1,3 +1,4 @@
+import { DomainError } from '../../contracts/errors';
 import type { RegistrationField, RegistrationForm } from '../../contracts/types';
 
 /**
@@ -16,6 +17,10 @@ export const NS = {
 };
 
 const CAPTCHA_FIELD = 'ocr';
+const CAPTCHA_TYPES = new Set(['image/png', 'image/jpeg', 'image/gif', 'image/webp']);
+/** Decoded size; a registration CAPTCHA is a few kB. */
+const CAPTCHA_MAX_BYTES = 256 * 1024;
+const BASE64 = /^[A-Za-z0-9+/]+={0,2}$/;
 /** Legacy children of `<query/>` that are not fields (XEP-0077 §3.1). */
 const LEGACY_NON_FIELDS = new Set(['instructions', 'registered', 'x', 'key']);
 
@@ -27,10 +32,12 @@ export interface ParsedRegistration {
   defaults: Record<string, string>;
 }
 
-/** Reads the `<query xmlns="jabber:iq:register"/>` of a result IQ. */
-export function parseRegistrationQuery(query: Element, domain: string): ParsedRegistration {
+/** Reads the result IQ: its `<query xmlns="jabber:iq:register"/>`, and bob data anywhere in it. */
+export function parseRegistrationReply(reply: Element, domain: string): ParsedRegistration {
+  const query = reply.getElementsByTagNameNS(NS.register, 'query')[0];
+  if (!query) throw new DomainError('RegistrationUnsupported', 'RegistrationUnsupported: no form');
   const x = childrenNS(query, NS.xdata, 'x')[0];
-  return x ? parseXData(query, x, domain) : parseLegacy(query, domain);
+  return x ? parseXData(reply, x, domain) : parseLegacy(query, domain);
 }
 
 function parseLegacy(query: Element, domain: string): ParsedRegistration {
@@ -55,24 +62,34 @@ function legacyType(name: string): RegistrationField['type'] {
   return 'text';
 }
 
-function parseXData(query: Element, x: Element, domain: string): ParsedRegistration {
+function parseXData(reply: Element, x: Element, domain: string): ParsedRegistration {
   const fields: RegistrationField[] = [];
   const defaults: Record<string, string> = {};
   let captcha: Pick<RegistrationForm, 'captchaImageDataUrl' | 'captchaField'> = {};
   for (const field of childrenNS(x, NS.xdata, 'field')) {
     const name = field.getAttribute('var');
     if (!name) continue;
+    const required = childrenNS(field, NS.xdata, 'required').length > 0;
     const type = xdataType(field.getAttribute('type'), name);
-    if (!type) continue;
+    if (!type) {
+      // A `boolean`, `list-*` or `jid-single` we cannot render: fine when optional, fatal otherwise.
+      if (required) {
+        throw new DomainError(
+          'RegistrationUnsupported',
+          `RegistrationUnsupported: required field of type ${field.getAttribute('type')}`,
+        );
+      }
+      continue;
+    }
     const value = childrenNS(field, NS.xdata, 'value')[0]?.textContent ?? '';
     if (value) defaults[name] = value;
     fields.push({
       name,
       label: field.getAttribute('label') || name,
       type,
-      required: type === 'hidden' || childrenNS(field, NS.xdata, 'required').length > 0,
+      required: type === 'hidden' || required,
     });
-    if (name === CAPTCHA_FIELD) captcha = captchaOf(query, field);
+    if (name === CAPTCHA_FIELD) captcha = captchaOf(reply, field);
   }
   const instructions = childrenNS(x, NS.xdata, 'instructions')[0]?.textContent?.trim();
   return {
@@ -99,21 +116,24 @@ function xdataType(type: string | null, name: string): RegistrationField['type']
 }
 
 /**
- * XEP-0158: the `ocr` field carries a `<media><uri>cid:...</uri></media>` and the image itself
- * travels as a `<data xmlns="urn:xmpp:bob" cid="..." type="image/png">` sibling of the form.
+ * XEP-0158: the `ocr` field carries a `<media><uri>cid:...</uri></media>`; XEP-0231 lets the image
+ * travel in the same stanza as a `<data xmlns="urn:xmpp:bob" cid="..." type="image/png">` child of
+ * the IQ (or, as some servers do, of the query), so the whole reply is searched. Only a plausible
+ * image becomes a data URL; an `http:` URI or anything else leaves the form without a CAPTCHA image.
  */
 function captchaOf(
-  query: Element,
+  reply: Element,
   field: Element,
 ): Pick<RegistrationForm, 'captchaImageDataUrl' | 'captchaField'> {
   const uri = field.getElementsByTagName('uri')[0]?.textContent?.trim() ?? '';
   const cid = uri.replace(/^cid:/, '');
-  const data =
-    childrenNS(query, NS.bob, 'data').find((d) => d.getAttribute('cid') === cid) ??
-    childrenNS(query, NS.bob, 'data')[0];
-  const type = data?.getAttribute('type');
-  const base64 = data?.textContent?.replace(/\s+/g, '');
-  if (!type || !base64) return {};
+  const all = Array.from(reply.getElementsByTagNameNS(NS.bob, 'data'));
+  const data = all.find((d) => d.getAttribute('cid') === cid) ?? all[0];
+  const type = data?.getAttribute('type') ?? '';
+  const base64 = data?.textContent?.replace(/\s+/g, '') ?? '';
+  const valid =
+    CAPTCHA_TYPES.has(type) && BASE64.test(base64) && (base64.length * 3) / 4 <= CAPTCHA_MAX_BYTES;
+  if (!valid) return {};
   return { captchaImageDataUrl: `data:${type};base64,${base64}`, captchaField: CAPTCHA_FIELD };
 }
 
@@ -126,6 +146,9 @@ export function buildSubmitIq(
   parsed: ParsedRegistration,
   values: Record<string, string>,
 ): Element {
+  if (Object.values(values).some(hasXmlIllegalChar)) {
+    throw new DomainError('RegistrationRejected', 'RegistrationRejected: control character');
+  }
   const body = parsed.xdata
     ? `<x xmlns="${NS.xdata}" type="submit">${xdataFields(parsed, values)}</x>`
     : legacyFields(values);
@@ -182,9 +205,23 @@ export function childrenNS(parent: Element, ns: string, localName: string): Elem
 }
 
 function parseXml(xml: string): Element {
-  return new DOMParser().parseFromString(xml, 'text/xml').documentElement;
+  const document = new DOMParser().parseFromString(xml, 'text/xml');
+  if (document.getElementsByTagName('parsererror').length > 0) {
+    throw new Error('registration: malformed stanza');
+  }
+  return document.documentElement;
 }
 
 function escapeXml(text: string): string {
   return text.replace(/[<>&"']/g, (c) => `&#${c.charCodeAt(0)};`);
+}
+
+/** Characters XML 1.0 cannot carry (RFC 6120 §11.1): they would corrupt or truncate the stanza. */
+function hasXmlIllegalChar(text: string): boolean {
+  for (const char of text) {
+    const code = char.codePointAt(0) ?? 0;
+    const control = code < 0x20 && code !== 0x09 && code !== 0x0a && code !== 0x0d;
+    if (control || code === 0xfffe || code === 0xffff) return true;
+  }
+  return false;
 }

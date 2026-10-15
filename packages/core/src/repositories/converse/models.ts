@@ -94,6 +94,13 @@ export interface ConnectionLike {
   deleteHandler(reference: unknown): void;
   _changeConnectStatus(status: number, condition?: string): void;
   _doDisconnect(): void;
+  /** `errback` gets the error stanza, or `null` on timeout (`strophe.js/src/connection.js:840-900`). */
+  sendIQ(
+    iq: Element,
+    callback: (stanza: Element) => void,
+    errback: (stanza: Element | null) => void,
+    timeout?: number,
+  ): string;
 }
 
 export type StropheStatusCallback = (status: number, condition?: string | null) => void;
@@ -121,8 +128,12 @@ export interface StropheConnection extends ConnectionLike {
     name: string | null,
     type: string | null,
     id: string | null,
-  ): unknown;
+  ): StropheHandler;
+  deleteHandler(handler: StropheHandler): void;
 }
+
+/** Opaque: what `_addSysHandler` returns and `deleteHandler` takes. */
+export type StropheHandler = { user: boolean };
 
 /** The localForage instance behind Converse's persistent store (`utils/init.js:106-136`). */
 export interface PersistentStorageLike {
@@ -132,14 +143,16 @@ export interface PersistentStorageLike {
 export interface ConverseApi {
   settings: { get(key: string): unknown; set(key: string, value: unknown): void };
   user: { login(jid: string, password: string): Promise<void>; logout(): Promise<void> };
-  connection: { get(): ConnectionLike | undefined; authenticated(): boolean | undefined };
+  connection: {
+    get(): ConnectionLike | undefined;
+    connected(): boolean | undefined;
+    authenticated(): boolean | undefined;
+  };
   listen: {
     on(name: string, handler: Handler): unknown;
     not(name: string, handler: Handler): unknown;
   };
   waitUntil(name: string): Promise<unknown> | null;
-  /** Rejects with the error stanza, or `null` on timeout (`shared/api/send.js:49-75`). */
-  sendIQ(stanza: unknown, timeout?: number): Promise<Element>;
   contacts: {
     add(attributes: { jid: string; name?: string }): Promise<ContactModel>;
     remove(jid: string, unsubscribe?: boolean): Promise<void>;
