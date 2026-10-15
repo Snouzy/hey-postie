@@ -143,7 +143,7 @@ export class ConverseCryptoRepository implements CryptoRepository {
   private async settled(omemo: Omemo): Promise<void> {
     const domain = omemo.ownJid.split('@')[1] ?? '';
     const ping = omemo.env
-      .stx`<iq type="get" to="${domain}" xmlns="jabber:client"><ping xmlns="urn:xmpp:ping"/></iq>`;
+      .stx`<iq type="get" to="${domain}" xmlns="jabber:client"><ping xmlns="urn:xmpp:ping"/></iq>` as Element;
     // Strophe's own sendIQ: Converse's api.sendIQ leaves a detached rejection on timeout (§13).
     const connection = omemo.api.connection.get();
     if (connection) {
