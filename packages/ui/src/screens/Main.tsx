@@ -1,6 +1,7 @@
 import type { Account, Chat, Contact } from '@hey-postie/core';
 import { useEffect, useRef, useState } from 'react';
 import { AddContact } from '../components/AddContact';
+import type { SaveFile } from '../components/Attachments';
 import { Conversation } from '../components/Conversation';
 import { DeleteAccountDialog } from '../components/DeleteAccountDialog';
 import { DetailsPane } from '../components/DetailsPane';
@@ -23,6 +24,7 @@ import styles from './Main.module.css';
 interface MainProps {
   account: Account;
   onOpenLink: (url: string) => void;
+  onSaveFile: SaveFile;
   /** After sign out: back to the welcome screen, or straight to the sign-in form. */
   onLeave: (door: 'welcome' | 'signIn') => void;
 }
@@ -38,7 +40,7 @@ type OpenDialog =
   | null;
 
 /** The three columns. Owns the selection and tells the notifications service what is on screen. */
-export function Main({ account, onOpenLink, onLeave }: MainProps) {
+export function Main({ account, onOpenLink, onSaveFile, onLeave }: MainProps) {
   const core = useCore();
   const text = useText();
   const { chats: directChats, refresh } = useChats();
@@ -159,6 +161,7 @@ export function Main({ account, onOpenLink, onLeave }: MainProps) {
           onToggleDetails={() => showDetails(false)}
           onOpenEncryption={() => showDetails(true)}
           onOpenLink={onOpenLink}
+          onSaveFile={onSaveFile}
         />
       ) : (
         <section className={styles.empty}>

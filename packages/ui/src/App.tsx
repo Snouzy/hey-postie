@@ -1,6 +1,8 @@
 import type { Core } from '@hey-postie/core';
 import { useEffect, useState } from 'react';
+import type { SaveFile } from './components/Attachments';
 import { CoreProvider } from './core/CoreProvider';
+import { downloadBlob } from './core/download';
 import { SettingsProvider } from './core/SettingsProvider';
 import {
   type LocaleChoice,
@@ -25,6 +27,8 @@ interface AppProps {
   onOpenLink?: (url: string) => void;
   /** Shown in Settings > About; "dev" when the host did not say. */
   version?: string;
+  /** Where a saved parcel goes. Default: a browser download; the desktop app opens a file dialog. */
+  onSaveFile?: SaveFile;
 }
 
 /**
@@ -32,7 +36,7 @@ interface AppProps {
  * on the first render, applied at once, and handed to the Settings dialog through
  * `SettingsProvider`. A language change swaps the dictionary and the whole tree re-renders.
  */
-export function App({ core, locale, onOpenLink, version }: AppProps) {
+export function App({ core, locale, onOpenLink, version, onSaveFile }: AppProps) {
   const [theme, setTheme] = useTheme();
   const [localeChoice, setLocaleChoice] = useState<LocaleChoice>(readLocaleChoice);
   const [showPreview, setShowPreviewState] = useState<boolean>(readShowPreview);
@@ -64,7 +68,10 @@ export function App({ core, locale, onOpenLink, version }: AppProps) {
           version: version ?? 'dev',
         }}
       >
-        <Screens onOpenLink={onOpenLink ?? openInNewWindow} />
+        <Screens
+          onOpenLink={onOpenLink ?? openInNewWindow}
+          onSaveFile={onSaveFile ?? downloadBlob}
+        />
       </SettingsProvider>
     </CoreProvider>
   );
@@ -79,7 +86,13 @@ type Door = 'welcome' | 'signIn' | 'createAccount';
  * Main stays mounted through reconnections and drops (it shows a banner); only a sign out, from
  * Main itself, leaves it.
  */
-function Screens({ onOpenLink }: { onOpenLink: (url: string) => void }) {
+function Screens({
+  onOpenLink,
+  onSaveFile,
+}: {
+  onOpenLink: (url: string) => void;
+  onSaveFile: SaveFile;
+}) {
   const account = useAccount();
   const [door, setDoor] = useState<Door>('welcome');
   const [inside, setInside] = useState(false);
@@ -94,6 +107,7 @@ function Screens({ onOpenLink }: { onOpenLink: (url: string) => void }) {
       <Main
         account={account}
         onOpenLink={onOpenLink}
+        onSaveFile={onSaveFile}
         onLeave={(next) => {
           setInside(false);
           setDoor(next);

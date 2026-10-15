@@ -1,0 +1,32 @@
+.trigger {
+  padding: var(--space-1);
+  background: var(--paper-raised);
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow-card);
+}
+
+.quick {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.emoji {
+  width: 32px;
+  height: 32px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.emoji:hover,
+.emoji:focus-visible {
+  background: var(--paper);
+}
+
+.more {
+  padding: var(--space-1);
+}

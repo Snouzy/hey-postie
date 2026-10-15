@@ -1,7 +1,7 @@
 import { fireEvent, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
+import { mergeById } from '../core/useMessages';
 import { message, renderWithCore, setupCore } from '../test-utils';
-import { mergeById } from './Conversation';
 import { groupByDay, MessageList } from './MessageList';
 
 const noop = async () => true;
@@ -18,8 +18,11 @@ function renderList(
       messages={messages}
       hasOlder={false}
       onLoadOlder={noop}
+      myJid={null}
       onRetry={onRetry}
       onOpenLink={onOpenLink}
+      onReact={() => {}}
+      onSaveFile={() => {}}
       {...props}
     />,
     core,
