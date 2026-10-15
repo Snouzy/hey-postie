@@ -249,7 +249,9 @@ installed package and by `repositories.test.ts`, which drives the real headless 
   for `chat.msg_chain` (`handleMAMResult` queues the results without awaiting them) and returns the
   `is_archived` models added meanwhile; a message without `stanza_id <bare_jid>` yields `[]`.
   Retracted messages come out with an empty body and no attachment (`retracted: true`); dangling
-  retractions and reactions are dropped.
+  retractions and reactions are dropped. Both read paths sort by `time` themselves: the collection
+  sorts at insertion only, and one contract run (fixtures colliding with an older run's archived
+  copies) returned it out of order.
 - `mappers.ts`: pure functions, unit-tested with plain `{ get }` objects. Attachments: an http(s)
   `oob_url`, or a body that is only an `aesgcm://` URL (its `#ivkey` goes to `decryptionKey`); a bare
   link in a body is just a link. A file name whose percent-escapes are malformed is kept raw.

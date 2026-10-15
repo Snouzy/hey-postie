@@ -58,7 +58,7 @@ export class ConverseChatRepository implements ChatRepository {
     const limit = options?.limit ?? DEFAULT_LIMIT;
     await chat.messages.fetched;
     if (!options?.before) {
-      const models = this.displayable(chat.messages.models).slice(-limit);
+      const models = this.displayable(chat.messages.models).sort(byTime).slice(-limit);
       return models.map((model) => this.message(model, chat));
     }
     return this.olderThan(chat, options.before, limit);
@@ -106,8 +106,6 @@ export class ConverseChatRepository implements ChatRepository {
     } finally {
       chat.messages.off('add', collect);
     }
-    const byTime = (a: MessageModel, b: MessageModel) =>
-      String(a.get('time')).localeCompare(String(b.get('time')));
     // A live message arriving meanwhile is also added to the collection: it is not history.
     return this.displayable(added.filter((model) => model.get('is_archived')))
       .sort(byTime)
@@ -197,6 +195,14 @@ export class ConverseChatRepository implements ChatRepository {
     if (model.get('dangling_reaction') || model.get('dangling_retraction')) return false;
     return !model.get('is_ephemeral') || model.get('error_type') === 'Decryption';
   }
+}
+
+/**
+ * The collection sorts on `time` at insertion only; one contract run against a real archive (a MAM
+ * page overlapping live messages) returned it out of order, so both read paths sort themselves.
+ */
+function byTime(a: MessageModel, b: MessageModel): number {
+  return String(a.get('time')).localeCompare(String(b.get('time')));
 }
 
 /** `PRIVATE_CHAT_TYPE` (`shared/constants.js:66`); rooms are `chatroom`, feeds `headline`. */
