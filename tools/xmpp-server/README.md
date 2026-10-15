@@ -179,3 +179,7 @@ To rebuild Prosody itself, run `install.sh` again; it replaces `prosody/` and `r
 - `prosodyctl register` silently overwrites an existing account, password included; `users.sh`
   checks for the account file first.
 - `mkcert -install` and anything that writes the System keychain needs an interactive `sudo`.
+
+## Reset
+
+`bash tools/xmpp-server/reset.sh` stops the server if it runs, deletes everything under `data/` except the log, recreates `alice` and `bob`, and restarts it. Use it when the contract tests fail because of state left by manual sessions (stale bookmarks, OMEMO device lists, archived messages with reused ids).
