@@ -120,7 +120,7 @@ describe.skipIf(!SERVER)('Parcels and reactions against the XMPP test server', (
         () => updated.find((m) => m.id === sent.id && m.reactions.length > 0),
         "bob's reaction",
       );
-      expect(updated.at(-1)?.reactions).toEqual([{ emoji: '👍', fromJids: [BOB] }]);
+      expect(updated.at(-1)?.reactions).toEqual([{ emoji: '👍', fromJids: [BOB], mine: false }]);
 
       bob.forget();
       await core.chats.toggleReaction(BOB, sent.id, '🎉');
@@ -132,8 +132,8 @@ describe.skipIf(!SERVER)('Parcels and reactions against the XMPP test server', (
       expect(element?.getAttribute('id')).toBe(id);
       expect(Array.from(element?.children ?? []).map((r) => r.textContent)).toEqual(['🎉']);
       expect(updated.at(-1)?.reactions).toEqual([
-        { emoji: '🎉', fromJids: [ALICE] },
-        { emoji: '👍', fromJids: [BOB] },
+        { emoji: '🎉', fromJids: [ALICE], mine: true },
+        { emoji: '👍', fromJids: [BOB], mine: false },
       ]);
     },
     TIMEOUT,
