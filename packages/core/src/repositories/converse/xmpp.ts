@@ -141,12 +141,13 @@ export class ConverseXmppRepository implements XmppRepository {
     if (!loaded) return;
     const { api, env } = loaded;
     const connection = api.connection.get();
-    if (!connection) return;
-    silenceStanzaLog(connection);
+    if (connection) silenceStanzaLog(connection);
     const { CONNFAIL = 2 } = env.Strophe.Status;
-    const wrapped = wrapSocketClose(connection, CONNFAIL, (reason) => {
-      this.closeReason = reason;
-    });
+    const wrapped =
+      connection &&
+      wrapSocketClose(connection, CONNFAIL, (reason) => {
+        this.closeReason = reason;
+      });
     if (!wrapped) {
       console.warn('converse: transport has no _onClose to wrap, close reasons are unavailable');
     }
