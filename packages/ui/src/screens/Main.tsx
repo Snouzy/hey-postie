@@ -31,7 +31,7 @@ export function Main({ account, onOpenLink, onLeave }: MainProps) {
   const core = useCore();
   const text = useText();
   const { chats: directChats, refresh } = useChats();
-  const { rooms } = useRooms();
+  const { rooms, refresh: refreshRooms } = useRooms();
   const contacts = useContacts();
   const [selected, setSelected] = useState<Chat | null>(null);
   const [dialog, setDialog] = useState<OpenDialog>(null);
@@ -144,12 +144,14 @@ export function Main({ account, onOpenLink, onLeave }: MainProps) {
           <p className={styles.emptyText}>{text('main.empty')}</p>
         </section>
       )}
-      {chat && detailsOpen && !room && (
+      {chat?.kind === 'direct' && detailsOpen && (
         <Details chat={chat} onClose={() => setDetailsOpen(false)} />
       )}
       {room && detailsOpen && (
         <RoomDetails
+          key={room.jid}
           room={room}
+          onChanged={refreshRooms}
           onClose={() => setDetailsOpen(false)}
           onLeft={() => {
             setSelected(null);

@@ -93,7 +93,7 @@ export const en = {
   'main.add': 'Add',
   'main.joinRoom': 'Join a room',
   'main.members': 'Members',
-  'chatList.room': 'Room',
+  'chatList.room': 'Hall',
   'chatList.mentions': 'mentions',
 
   'joinRoom.title': 'Join a room',
@@ -108,10 +108,12 @@ export const en = {
   'joinRoom.browse': 'Look up',
   'joinRoom.browsing': 'I am reading the directory…',
   'joinRoom.noRooms': 'No hall listed on this server.',
-  'joinRoom.membersCount': 'members',
-  'joinRoom.pick': 'Pick',
+  'joinRoom.membersCount': '{count} members',
+  'joinRoom.badDomain': 'That does not look like a server name. Try rooms.server.',
 
   'room.topicEmpty': 'No topic yet.',
+  'room.notJoined': 'I am not in this hall right now.',
+  'room.joinAgain': 'Join again',
   'room.members': 'Members',
   'room.membersEmpty': 'Nobody in this hall yet, I will keep the door open.',
   'room.role.moderator': 'Moderators',

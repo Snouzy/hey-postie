@@ -41,6 +41,8 @@ export function Conversation({
   const nicks = room
     ? members.map((member) => member.nick).filter((nick) => nick !== room.nick)
     : [];
+  // A hall the user is not in: left elsewhere, kicked, or bookmarked and not joined yet.
+  const outside = chat.kind === 'room' && !room?.joined;
 
   useEffect(() => {
     let cancelled = false;
@@ -89,6 +91,16 @@ export function Conversation({
     setMessages((current) => mergeById(current, [sent]));
   }
 
+  async function joinAgain() {
+    if (!room) return;
+    try {
+      await core.rooms.join({ jid: room.jid, nick: room.nick });
+      setError(null);
+    } catch (caught) {
+      setError(errorKey(caught));
+    }
+  }
+
   function retry(failed: Message) {
     setMessages((current) => current.filter((m) => m.id !== failed.id));
     send(failed.body).catch(() => setMessages((current) => mergeById(current, [failed])));
@@ -106,29 +118,37 @@ export function Conversation({
             </p>
           )}
         </div>
-        <Button
-          variant="ghost"
-          onClick={onToggleDetails}
-          aria-pressed={detailsOpen}
-          aria-label={text(room ? 'main.members' : 'main.details')}
-        >
-          {room ? <Users size={18} aria-hidden /> : <Info size={18} aria-hidden />}
-        </Button>
+        {(room || chat.kind === 'direct') && (
+          <Button
+            variant="ghost"
+            onClick={onToggleDetails}
+            aria-pressed={detailsOpen}
+            aria-label={text(room ? 'main.members' : 'main.details')}
+          >
+            {room ? <Users size={18} aria-hidden /> : <Info size={18} aria-hidden />}
+          </Button>
+        )}
       </header>
+      {outside && (
+        <div className={styles.outside} role="status">
+          {text('room.notJoined')}
+          {room && <Button onClick={() => void joinAgain()}>{text('room.joinAgain')}</Button>}
+        </div>
+      )}
       <MessageList
         messages={messages}
         hasOlder={hasOlder}
         onLoadOlder={loadOlder}
         onRetry={retry}
         onOpenLink={onOpenLink}
-        showSenders={Boolean(room)}
+        showSenders={chat.kind === 'room'}
       />
       {error && (
         <p className={styles.error} role="alert">
           {text(error)}
         </p>
       )}
-      <Composer onSend={send} nicks={nicks} />
+      <Composer onSend={send} nicks={nicks} disabled={outside} />
     </section>
   );
 }

@@ -12,6 +12,8 @@ import styles from './RoomDetails.module.css';
 interface RoomDetailsProps {
   room: Room;
   onClose: () => void;
+  /** After a change the core may not announce (the notify rule): Main re-reads the halls. */
+  onChanged: () => Promise<void>;
   /** After leaving: Main drops the selection. */
   onLeft: () => void;
 }
@@ -20,7 +22,7 @@ const ROLES: readonly RoomMember['role'][] = ['moderator', 'participant', 'visit
 const RULES: readonly RoomNotify[] = ['all', 'mentions', 'none'];
 
 /** The right pane of a hall: topic, who is there, when to ring the bell, and the way out. */
-export function RoomDetails({ room, onClose, onLeft }: RoomDetailsProps) {
+export function RoomDetails({ room, onClose, onChanged, onLeft }: RoomDetailsProps) {
   const core = useCore();
   const text = useText();
   const members = useRoomMembers(room.jid);
@@ -30,6 +32,7 @@ export function RoomDetails({ room, onClose, onLeft }: RoomDetailsProps) {
   async function setNotify(rule: RoomNotify) {
     try {
       await core.rooms.setNotify(room.jid, rule);
+      await onChanged();
     } catch (caught) {
       setError(errorKey(caught));
     }

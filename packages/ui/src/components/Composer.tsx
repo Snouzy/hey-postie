@@ -10,19 +10,21 @@ interface ComposerProps {
   onSend: (body: string) => Promise<void>;
   /** In a hall: the nicks Tab can complete. */
   nicks?: string[];
+  /** Nothing can be written (a hall the user is not in). */
+  disabled?: boolean;
 }
 
 /**
  * Enter sends, Shift+Enter breaks the line. The textarea grows with the text. In a hall, Tab
  * completes the word before the caret into a member's nick.
  */
-export function Composer({ onSend, nicks = [] }: ComposerProps) {
+export function Composer({ onSend, nicks = [], disabled = false }: ComposerProps) {
   const text = useText();
   const [body, setBody] = useState('');
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<MessageKey | null>(null);
   const area = useRef<HTMLTextAreaElement>(null);
-  const canSend = body.trim().length > 0 && !sending;
+  const canSend = body.trim().length > 0 && !sending && !disabled;
 
   async function send() {
     if (!canSend) return;
@@ -51,9 +53,11 @@ export function Composer({ onSend, nicks = [] }: ComposerProps) {
       event.preventDefault();
       setBody(completed.body);
       // The caret lands after the nick once React has written the new value.
-      requestAnimationFrame(() =>
-        area.current?.setSelectionRange(completed.caret, completed.caret),
-      );
+      requestAnimationFrame(() => {
+        if (!area.current) return;
+        area.current.setSelectionRange(completed.caret, completed.caret);
+        grow(area.current);
+      });
     }
   }
 
@@ -77,7 +81,7 @@ export function Composer({ onSend, nicks = [] }: ComposerProps) {
             grow(event.target);
           }}
           onKeyDown={onKeyDown}
-          disabled={sending}
+          disabled={sending || disabled}
         />
         <Button
           variant="primary"
@@ -94,8 +98,9 @@ export function Composer({ onSend, nicks = [] }: ComposerProps) {
 }
 
 /**
- * The word before the caret, completed into the first nick that starts with it (ignoring case):
- * `nick: ` at the start of a line, `nick ` elsewhere. Nothing to complete returns null.
+ * The word before the caret, completed into the nick it equals, else the first nick that starts
+ * with it (ignoring case): `nick: ` at the start of a line, `nick ` elsewhere (no second space
+ * when one follows already). Nothing to complete returns null.
  */
 export function completeNick(
   body: string,
@@ -105,14 +110,18 @@ export function completeNick(
   const before = body.slice(0, caret);
   const word = before.match(/\S+$/)?.[0];
   if (!word) return null;
-  const nick = nicks.find((candidate) => candidate.toLowerCase().startsWith(word.toLowerCase()));
+  const lower = word.toLowerCase();
+  const nick =
+    nicks.find((candidate) => candidate.toLowerCase() === lower) ??
+    nicks.find((candidate) => candidate.toLowerCase().startsWith(lower));
   if (!nick) return null;
   const start = caret - word.length;
   const atLineStart = start === 0 || before[start - 1] === '\n';
-  const inserted = atLineStart ? `${nick}: ` : `${nick} `;
+  const inserted = atLineStart ? `${nick}:` : nick;
+  const completed = body[caret] === ' ' ? inserted : `${inserted} `;
   return {
-    body: before.slice(0, start) + inserted + body.slice(caret),
-    caret: start + inserted.length,
+    body: before.slice(0, start) + completed + body.slice(caret),
+    caret: start + completed.length,
   };
 }
 
