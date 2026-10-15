@@ -43,3 +43,12 @@
   flex-direction: column;
   gap: 2px;
 }
+
+/* Who speaks, in a hall: above the run, in the sender's column. */
+.sender {
+  align-self: flex-start;
+  padding: 0 var(--space-3);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink-muted);
+}

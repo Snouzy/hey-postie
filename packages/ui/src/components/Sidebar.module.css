@@ -34,7 +34,7 @@
     border-color var(--motion-fast);
 }
 
-.tab[aria-selected='true'] {
+.tab[aria-pressed='true'] {
   color: var(--navy);
   border-bottom-color: var(--navy);
 }

@@ -43,6 +43,11 @@ export function createRoomsService(
     setNotify(jid, rule) {
       return deps.room.setNotify(normalizeJid(jid).split('/')[0] ?? '', rule);
     },
+    async roomService(domain) {
+      const trimmed = domain.trim().toLowerCase();
+      if (!DOMAIN.test(trimmed)) throw new DomainError('InvalidJid', 'InvalidJid: not a domain');
+      return deps.room.roomService(trimmed);
+    },
     async browse(domain) {
       const trimmed = domain.trim().toLowerCase();
       if (!DOMAIN.test(trimmed)) throw new DomainError('InvalidJid', 'InvalidJid: not a domain');

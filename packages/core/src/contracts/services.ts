@@ -62,6 +62,8 @@ export interface RoomsService {
   setNotify(jid: string, rule: RoomNotify): Promise<void>;
   /** Lists the public rooms of a domain; the domain is validated like a JID's domain. */
   browse(domain: string): Promise<RoomInfo[]>;
+  /** The conference service of the signed-in account's domain, discovered on the server, or null. */
+  roomService(domain: string): Promise<string | null>;
 }
 
 /**

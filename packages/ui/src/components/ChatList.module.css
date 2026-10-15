@@ -49,7 +49,14 @@
   width: 100%;
 }
 
+.hall {
+  flex-shrink: 0;
+  color: var(--ink-muted);
+}
+
 .title {
+  flex: 1;
+  min-width: 0;
   font-weight: 600;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -87,9 +94,15 @@
   padding: 0 6px;
   border-radius: 999px;
   background: var(--yellow);
-  color: #1e2230;
+  color: var(--on-yellow);
   font-size: 12px;
   font-weight: 700;
   line-height: 20px;
   text-align: center;
+}
+
+/* Unread letters without a mention: the count, without the stamp. */
+.muted {
+  background: var(--line);
+  color: var(--ink-muted);
 }

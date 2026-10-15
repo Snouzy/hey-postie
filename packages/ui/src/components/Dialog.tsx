@@ -30,12 +30,15 @@ export function Dialog({ title, onClose, children }: DialogProps) {
     };
   }, []);
 
+  // Capture phase, and the event stops here: Esc closes this dialog only, not the pane behind it.
   useEffect(() => {
     const onKeyDown = (event: globalThis.KeyboardEvent) => {
-      if (event.key === 'Escape') onClose();
+      if (event.key !== 'Escape') return;
+      event.stopPropagation();
+      onClose();
     };
-    window.addEventListener('keydown', onKeyDown);
-    return () => window.removeEventListener('keydown', onKeyDown);
+    window.addEventListener('keydown', onKeyDown, true);
+    return () => window.removeEventListener('keydown', onKeyDown, true);
   }, [onClose]);
 
   function cycleFocus(event: KeyboardEvent) {
