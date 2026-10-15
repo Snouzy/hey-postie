@@ -99,7 +99,7 @@ every change applies at once.
 | Section | Control | Where the value lives |
 |---|---|---|
 | Appearance | Radios "Follow the system" / "Light" / "Dark" (`fieldset` + `legend`) | `data-theme` on `<html>` (`'light'` / `'dark'`, removed for "system": the tokens then follow `prefers-color-scheme`), remembered in `localStorage` `hey-postie:theme`. |
-| Notifications | A `role="switch"` checkbox "Show the letter in notifications" | `core.notifications.setShowPreview(value)`; remembered in `localStorage` `hey-postie:notify-preview` (`off`, or absent). |
+| Notifications | A checkbox "Show the letter in notifications" | `core.notifications.setShowPreview(value)`; remembered in `localStorage` `hey-postie:notify-preview` (`off`, or absent). |
 | Language | Radios "System language" / "English" / "Français" (each language named in itself, whatever the current one) | The locale handed to `CoreProvider`; remembered in `localStorage` `hey-postie:locale`. |
 | About | "Hey Postie <version>", a "Source code" link, a "Licenses" button | `version` prop of `App` ("dev" when absent). The link goes through `onOpenLink`. |
 
@@ -114,10 +114,15 @@ off, the body is the fixed `HIDDEN_PREVIEW` sentence). The UI only remembers the
 in `localStorage`, under the same rules, and tells the core at startup. The core never reads
 `localStorage`.
 
-**Startup, no flash.** `App` reads the three values synchronously in `useState` initializers.
-`useTheme` applies the theme in a `useLayoutEffect`, before the browser paints, so the first frame
-already has the right `data-theme` (the tokens handle the system theme without JavaScript, see
-[design-system.md](design-system.md)). The locale given by the desktop (`pickLocale`) is the
+**Startup, no flash.** The desktop shell applies the stored theme before the bundle even loads:
+`apps/desktop/public/theme.js`, a plain `<script src>` in `index.html` ahead of the stylesheet (no
+inline script: the CSP is `script-src 'self'`), reads the same key and sets `data-theme` for
+`'light'` / `'dark'` only. `App` then reads the three values synchronously in `useState`
+initializers; `useTheme` applies the theme in a `useLayoutEffect`, before the browser paints, so
+the React side agrees from its first frame (the tokens handle the system theme without JavaScript,
+see [design-system.md](design-system.md)). The preview switch is told to the core synchronously
+during the first render (a ref guard), not in an effect: a letter arriving right after render
+already respects it. The locale given by the desktop (`pickLocale`) is the
 "system" language; a stored choice wins over it, and a change swaps the dictionary through
 `CoreProvider`, so the whole tree re-renders in the new language without a reload. The values
 and their setters reach the dialog through `SettingsProvider` / `useSettings()` (a context, like
@@ -128,8 +133,11 @@ dialogs: Esc has one card to close); closing it comes back to Settings. It reads
 `data/licenses.json`, a `{ name, version, license, repository? }[]`: today a hand-written list of
 the known runtime components (placeholder versions), to be replaced by a list the desktop build
 generates, of the same shape. Entries are grouped by license (alphabetical, names sorted inside),
-a search field filters by name or license, and a name with a `repository` is a link routed through
-`onOpenLink`. Importing the JSON needs `resolveJsonModule` in `packages/ui/tsconfig.json`.
+a search field filters by name or license (the count, or the empty sentence, is announced in a
+visually hidden `role="status"`), rows are keyed by `name@version`, and a name whose `repository`
+starts with `https://` is a link routed through `onOpenLink` (anything else stays plain text: the
+list is generated data). Coming back from Licenses puts the focus on the "Licenses" button
+(`focusLicenses`, set by `Main`). Importing the JSON needs `resolveJsonModule` in `packages/ui/tsconfig.json`.
 
 ## How the UI subscribes to the core
 
@@ -319,11 +327,12 @@ sent),
 `AccountMenu.test.tsx` (JID outside the menu, arrows incl. Up from outside, Esc, Tab out, click
 outside, focus back on the row before acting), `Settings.test.tsx` (theme radios set `data-theme`
 and persist, stored theme applied on the first render, unknown value ignored, storage refusing,
-preview switch hides the body through the fake notifier and persists, stored choice applied at
-startup, language switch re-renders at once with own-language labels, stored language at
+preview switch hides the body through the fake notifier and persists, stored choice respected by
+a letter arriving right after render, storage `getItem` throwing, language switch re-renders at once with own-language labels, stored language at
 startup, version or "dev", repository link through `onOpenLink`, Licenses in place of Settings and
-back), `Licenses.test.tsx` (every entry under its license, filter by name or license with the
-empty sentence, link through `onOpenLink`, grouping and sorting), `DeleteAccountDialog.test.tsx`
+back with the focus on "Licenses"), `Licenses.test.tsx` (every entry under its license, filter by
+name or license with the empty sentence, live count, two versions of one name and https-only
+links, link through `onOpenLink`, grouping and sorting), `DeleteAccountDialog.test.tsx`
 (two clicks away, button asleep until the JID matches, `deleteCurrent` recorded and Welcome
 shown, failure sentence, not closable while deleting, Esc with focus back on the row), `ChatList.test.tsx` (order, badge, sealed preview),
 `MessageList.test.tsx` (grouping, day labels, retry, undecryptable, links, load older),
