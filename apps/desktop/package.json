@@ -12,6 +12,7 @@
     "dev": "tauri dev",
     "bundle": "tauri build",
     "smoke": "tauri build --debug --no-bundle && src-tauri/target/debug/hey-postie --smoke",
+    "smoke:login": "HEY_POSTIE_SMOKE_LOGIN=alice@localhost:alice-pw RELAY_DEBUG=1 pnpm smoke",
     "tauri": "tauri"
   },
   "dependencies": {

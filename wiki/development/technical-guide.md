@@ -40,6 +40,7 @@ tasks/             agents' plans and lessons, untracked
 |---|---|
 | `pnpm desktop:dev` | Opens the app with Vite hot reload. |
 | `pnpm desktop:smoke` | Debug build, starts the app with `--smoke`, exits 0 when the webview has rendered. |
+| `pnpm desktop:smoke:login` | The same, plus a real sign-in as `alice` on the local Prosody (see the Desktop section). |
 | `pnpm check` | TypeScript, every package. |
 | `pnpm lint` | Biome (lint and format). `pnpm lint:fix` writes the fixes. |
 | `pnpm test` | Vitest, every package. |
@@ -162,6 +163,33 @@ STARTTLS negotiations and a self-signed certificate rejection against local fake
 - The webview reaches Rust through the repositories in `apps/desktop/app/repositories/` and the
   small modules in `apps/desktop/app/`, started once by `app/desktop.ts` when the page runs inside
   Tauri (`isTauri()`); in a plain browser (`pnpm app:dev`) none of this runs.
+
+### End-to-end smoke sign-in (`src-tauri/src/smoke.rs`, `app/smoke.ts`)
+
+`pnpm desktop:smoke` proves the shell boots. With credentials it also proves the whole sign-in
+path, relay and Converse included, against the local Prosody of `tools/xmpp-server/`, without a
+human clicking:
+
+```sh
+tools/xmpp-server/start.sh -d && tools/xmpp-server/users.sh
+pnpm --filter @hey-postie/desktop smoke:login
+# = HEY_POSTIE_SMOKE_LOGIN=alice@localhost:alice-pw RELAY_DEBUG=1 pnpm smoke
+```
+
+- `HEY_POSTIE_SMOKE_LOGIN="jid:password"` is read in debug builds only and only with `--smoke`
+  (`smoke::login_from_env`); release builds ignore it. The `smoke_login` command hands the pair
+  to the webview.
+- `app/smoke.ts` then calls `core.accounts.signIn({ remember: false })` (the keychain is left
+  alone) and emits `smoke-online` once `accounts.current().state` is `online`, or `smoke-failed`
+  with the `DomainError` code. Rust exits 0 or 1 accordingly, or 1 after 40 s. The plain
+  `smoke-ready` exit is kept when no login is given.
+- `smoke-log` events (the sign-in error with its chain of causes, `window.onerror`, unhandled
+  rejections) are printed to stderr as `smoke: webview …`: error names, codes and messages only,
+  never a stanza or a message body. `RELAY_DEBUG=1` adds the relay's own lines (byte counts).
+- Observed on 2026-10-15 at `24d7946`, both from the built app and through the Vite dev server
+  (`pnpm tauri dev -- -- --smoke` with the same variable): `relay DEBUG: trying port 5223 with
+  DirectTls`, `server opens the stream`, `client restarts the stream`, `server opens the stream`,
+  then `smoke: signed in, the account is online`. The same with `remember: true`.
 
 ### Transport (`app/repositories/transport.ts`)
 

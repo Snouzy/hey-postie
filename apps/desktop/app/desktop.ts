@@ -2,6 +2,7 @@ import type { Core } from '@hey-postie/core';
 import { trackWindowFocus } from './focus';
 import { openChatsFromXmppLinks } from './links';
 import { openChatOnNotificationClick } from './notificationClicks';
+import { runSmokeLogin } from './smoke';
 import { trackUnreadCount } from './unread';
 
 /** Everything the desktop shell adds around the interface, for the lifetime of the app. */
@@ -12,4 +13,5 @@ export async function startDesktopIntegrations(core: Core): Promise<void> {
     openChatOnNotificationClick(core),
     openChatsFromXmppLinks(core),
   ]);
+  await runSmokeLogin(core);
 }
