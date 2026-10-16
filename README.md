@@ -3,7 +3,8 @@
 A friendly XMPP chat client, end-to-end encrypted, for Mac, Windows and Linux. Free software.
 
 
-https://github.com/user-attachments/assets/da35dc1c-bed8-4f45-a692-4a8a2fc80826
+https://github.com/user-attachments/assets/9db9c88e-9c1c-4163-825b-9db26ada2a22
+
 
 
 **Status: in development. Nothing to download yet.**
