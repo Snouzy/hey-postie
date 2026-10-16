@@ -19,6 +19,12 @@
   box-shadow: var(--shadow-card);
 }
 
+/* A window inside the window: as wide as the settings need, never past the minimum window size. */
+.large {
+  width: min(880px, calc(100% - var(--space-8)));
+  height: min(640px, calc(100% - var(--space-8)));
+}
+
 .header {
   display: flex;
   align-items: center;

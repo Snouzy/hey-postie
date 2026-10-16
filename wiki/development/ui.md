@@ -89,19 +89,35 @@ dialog stays.
 
 ## Settings
 
-_Added 2026-10-15. Sources: `components/Settings.tsx`, `components/Licenses.tsx`,
-`core/settings.ts`, `core/useTheme.ts`, `core/SettingsProvider.tsx`, `data/licenses.json`,
-`components/Settings.test.tsx`, `components/Licenses.test.tsx`._
+_Added 2026-10-15; became a window with sections on 2026-10-16 (decision of the author, "Night
+of 2026-10-16"). Sources: `components/settings/` (`SettingsWindow.tsx`, `SettingsNav.tsx`,
+`sections.ts`, one `*Section.tsx` per section, `section.module.css`), `components/Licenses.tsx`,
+`components/OwnDevices.tsx`, `core/settings.ts`, `core/useTheme.ts`, `core/SettingsProvider.tsx`,
+`data/licenses.json`, `components/settings/SettingsWindow.test.tsx`, `components/Licenses.test.tsx`._
 
-"Settings…" in the `AccountMenu` opens `Settings`, a `Dialog` with four sections and no "Save":
-every change applies at once.
+"Settings…" in the `AccountMenu` opens `SettingsWindow`, a `Dialog size="large"` (a window inside
+the window, 880 × 640 at most, never past the app's minimum window of 900 × 600): the sections on
+the left (`SettingsNav`), the open one on the right. No "Save": every change applies at once. The
+window shows only what the core backs; a setting with nothing behind it (launch at login, sounds,
+avatar, status sentence, logs) is left out rather than shown dead.
 
-| Section | Control | Where the value lives |
+| Section | Content | Where the value lives |
 |---|---|---|
-| Appearance | Radios "Follow the system" / "Light" / "Dark" (`fieldset` + `legend`) | `data-theme` on `<html>` (`'light'` / `'dark'`, removed for "system": the tokens then follow `prefers-color-scheme`), remembered in `localStorage` `hey-postie:theme`. |
-| Notifications | A checkbox "Show the letter in notifications" | `core.notifications.setShowPreview(value)`; remembered in `localStorage` `hey-postie:notify-preview` (`off`, or absent). |
-| Language | Radios "System language" / "English" / "Français" (each language named in itself, whatever the current one) | The locale handed to `CoreProvider`; remembered in `localStorage` `hey-postie:locale`. |
-| About | "Hey Postie <version>", a "Source code" link, a "Licenses" button | `version` prop of `App` ("dev" when absent). The link goes through `onOpenLink`. |
+| General | Language as radios "System language" / "English" / "Français" (each language named in itself, whatever the current one). | The locale handed to `CoreProvider`; remembered in `localStorage` `hey-postie:locale`. |
+| Account | Display name and JID (read-only until a service can change them), whether the password is kept (`accounts.rememberedPassword`, nothing said until the keychain answers), "Sign out" and "Delete my account…" with a plain hint. | `accounts.signOut` through `Main`; delete opens `DeleteAccountDialog` **in place of** the window and comes back to it on close (focus on that button). |
+| Appearance | Radios "Follow the system" / "Light" / "Dark" (`fieldset` + `legend`). | `data-theme` on `<html>` (`'light'` / `'dark'`, removed for "system": the tokens then follow `prefers-color-scheme`), remembered in `localStorage` `hey-postie:theme`. |
+| Notifications | A checkbox "Show the letter in notifications" with its explanation, and a line saying a hall's bell is set in the hall's own pane. | `core.notifications.setShowPreview(value)`; remembered in `localStorage` `hey-postie:notify-preview` (`off`, or absent). |
+| Privacy and encryption | `OwnDevices` with this device's fingerprint stated above the list, then how trust works (spec 3.6: blind trust, verify after comparing, own devices follow the same rule) and why a stranger's picture waits for a click. | The rules live in the core; the sentences only explain them. |
+| Advanced | About: "Hey Postie <version>", the AGPL-3.0 note, "Website" and "Source code" links, a "Licenses" button. | `version` prop of `App` ("dev" when absent). Links go through `onOpenLink`. |
+
+**Keyboard.** `SettingsNav` is a vertical `role="tablist"` (six panels: past the two-or-three
+rule of the toggle buttons, see [Keyboard](#keyboard)): one Tab stop with a roving `tabindex`,
+arrows move and select at once, Home and End jump to the ends, Tab then enters the panel
+(`role="tabpanel"`, labelled by its tab, keyed by the section so a section mounts fresh). The
+active tab takes the focus when the window opens (`data-autofocus`, read by `Dialog`); Esc closes
+and the focus returns to the account row. `Main` keeps the open section, so a round trip to
+Licenses or to the delete dialog comes back to the same one, with the focus on the button that
+left (`returnFocus`).
 
 **Two kinds of state.** The theme and the language are *per-viewer conveniences*: they belong to
 this window, not to the account, carry nothing secret, and the core has no say in them. They are
@@ -125,11 +141,11 @@ during the first render (a ref guard), not in an effect: a letter arriving right
 already respects it. The locale given by the desktop (`pickLocale`) is the
 "system" language; a stored choice wins over it, and a change swaps the dictionary through
 `CoreProvider`, so the whole tree re-renders in the new language without a reload. The values
-and their setters reach the dialog through `SettingsProvider` / `useSettings()` (a context, like
-`CoreProvider`), so `Main` only mounts the dialog.
+and their setters reach the sections through `SettingsProvider` / `useSettings()` (a context, like
+`CoreProvider`), so `Main` only mounts the window.
 
-**Licenses.** The "Licenses" button closes Settings and opens `Licenses` in its place (no nested
-dialogs: Esc has one card to close); closing it comes back to Settings. It reads
+**Licenses.** The "Licenses" button (Advanced) closes the window and opens `Licenses` in its place (no
+nested dialogs: Esc has one card to close); closing it comes back to the window. It reads
 `data/licenses.json`, a `{ name, version, license, repository? }[]`: today a hand-written list of
 the known runtime components (placeholder versions), to be replaced by a list the desktop build
 generates, of the same shape. Entries are grouped by license (alphabetical, names sorted inside),
@@ -269,9 +285,11 @@ shows and asks._
   for the members whose `jid` the hall reveals (non-anonymous halls). Emptiness is decided from
   the loaded lists: known members without any device show Postie's "no key" sentence, not the
   hint; nothing shows while the lists are still being read.
-- **My devices** (`MyDevices`): a `Dialog` opened from the "My devices…" item of the
-  `AccountMenu` (`onMyDevices`, through `Sidebar` to `Main`). "Remove" replaces the list by a
-  confirmation inside the same dialog (no nested dialogs: Esc has one card to close), then
+- **My devices** (`OwnDevices`): the list and its confirmation, shown in the `MyDevices` `Dialog`
+  (the "My devices…" item of the `AccountMenu`, `onMyDevices` through `Sidebar` to `Main`) and in
+  the Privacy section of the settings window (`withFingerprint`: this device's fingerprint stated
+  above the list). "Remove" replaces the list by a
+  confirmation in place (no nested dialogs: Esc has one card to close), then
   `crypto.removeOwnDevice(id)`, one call at a time. Focus follows: the confirm button when asked,
   back to that row's "Remove" on cancel (or on a failure), the list once a device is gone. A
   `devices.changed` that no longer lists the device being confirmed drops the confirmation. The
@@ -390,7 +408,8 @@ opener) or, when no dialog is open, the details pane (listener in `Main`).
 "Browse" are plain `<button aria-pressed>` elements, not a `role="tablist"`: two buttons that
 swap one panel do not need the tab keyboard model (arrow keys, roving tabindex), and a pressed
 button is announced as such by screen readers. Decision of 2026-10-15; revisit if a screen grows
-past two or three panels. Enter in the composer sends, except while an
+past two or three panels. The settings window, with six sections, is the one real `tablist`
+(see [Settings](#settings)). Enter in the composer sends, except while an
 IME is composing (`isComposing`). Arrow keys move
 between rows of the chat list (`ChatList.moveWithArrows`). Every control is a `<button>`,
 `<input>` or `<a>`, so Tab reaches it; `:focus-visible` is styled once in `tokens.css`.
@@ -429,7 +448,11 @@ field type never from the server, CAPTCHA only from a data URL, errors clear on 
 password never appears in the document, values kept across Back, only the current form's fields
 sent),
 `AccountMenu.test.tsx` (JID outside the menu, arrows incl. Up from outside, Esc, Tab out, click
-outside, focus back on the row before acting), `Settings.test.tsx` (theme radios set `data-theme`
+outside, focus back on the row before acting), `settings/SettingsWindow.test.tsx` (six tabs with the
+focus on General, arrows / Home / End move and select with one Tab stop, Esc back to the row,
+account name and JID with the password line, sign out from the window, delete dialog in place and
+back with the focus on its button, own devices with this device's fingerprint and a removal,
+the AGPL note, both links through `onOpenLink`; and the former Settings tests: theme radios set `data-theme`
 and persist, stored theme applied on the first render, unknown value ignored, storage refusing,
 preview switch hides the body through the fake notifier and persists, stored choice respected by
 a letter arriving right after render, storage `getItem` throwing, language switch re-renders at once with own-language labels, stored language at

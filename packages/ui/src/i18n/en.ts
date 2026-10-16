@@ -194,11 +194,10 @@ export const en = {
   'composer.placeholderSealed': 'Write a sealed letter…',
 
   'settings.title': 'Settings',
-  'settings.appearance': 'Appearance',
+  'settings.theme': 'Theme',
   'settings.theme.system': 'Follow the system',
   'settings.theme.light': 'Light',
   'settings.theme.dark': 'Dark',
-  'settings.notifications': 'Notifications',
   'settings.showPreview': 'Show the letter in notifications',
   'settings.showPreviewHint': 'Off, I only say that a letter came.',
   'settings.language': 'Language',
@@ -206,6 +205,36 @@ export const en = {
   'settings.about': 'About',
   'settings.repository': 'Source code',
   'settings.licenses': 'Licenses',
+  'settings.sections': 'Settings sections',
+  'settings.section.general': 'General',
+  'settings.section.account': 'Account',
+  'settings.section.appearance': 'Appearance',
+  'settings.section.notifications': 'Notifications',
+  'settings.section.privacy': 'Privacy and encryption',
+  'settings.section.advanced': 'Advanced',
+  'settings.account.identity': 'Who you are',
+  'settings.account.password': 'Password',
+  'settings.account.remembered':
+    'Your password is kept in the system keychain, so I can sign you in next time.',
+  'settings.account.notRemembered': 'Your password is not kept: I will ask for it next time.',
+  'settings.account.leave': 'Leaving',
+  'settings.account.deleteHint':
+    'Deleting closes your letter box on the server, for good. I will ask you to type your address first.',
+  'settings.preview': 'What a notification shows',
+  'settings.notificationsRooms':
+    'Each hall has its own bell: open the hall, then "Members", to choose when it rings.',
+  'settings.privacy.thisFingerprint': 'This device’s fingerprint',
+  'settings.privacy.trust': 'How I trust a device',
+  'settings.privacy.trustExplain':
+    'A new device of a contact is used but shown as untrusted. Compare its fingerprint with them in person, then mark it verified; or block it. Once one of their devices is verified, I no longer trust their new ones blindly.',
+  'settings.privacy.ownDevicesExplain':
+    'Your own devices follow the same rule: a new one of yours is left out until you verify or unblock it, so a stolen password alone does not get your future keys.',
+  'settings.privacy.parcels': 'Parcels from strangers',
+  'settings.privacy.parcelsExplain':
+    'A picture from someone outside your contacts waits for a click: fetching it would tell them when you opened the chat.',
+  'settings.about.license':
+    'Free software under the AGPL-3.0 license. You may read, change and share it under the same terms.',
+  'settings.website': 'Website',
   'licenses.title': 'Licenses',
   'licenses.intro': 'The parts I am made of, and the terms they come with.',
   'licenses.search': 'Search by name or license',
