@@ -10,6 +10,11 @@
   overflow-y: hidden;
 }
 
+/* Only an id for the resizer's `aria-controls`: the pane inside keeps its own width and borders. */
+.details {
+  display: contents;
+}
+
 .center {
   flex: 1;
   min-width: 320px;

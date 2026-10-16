@@ -1,10 +1,16 @@
 .sidebar {
-  width: 300px;
+  /* Sized by the user (PaneResizer writes the variable), within the bounds of settings.ts. */
+  width: clamp(220px, var(--sidebar-width, 300px), 480px);
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
   border-right: 1px solid var(--line);
   background: var(--paper);
+}
+
+/* Folded: `display: flex` above would otherwise win over the attribute. */
+.sidebar[hidden] {
+  display: none;
 }
 
 .account {

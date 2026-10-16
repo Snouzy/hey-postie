@@ -43,6 +43,22 @@ describe('what scrolls', () => {
     expect(rule(stylesheet('MessageList.module.css'), '.scroller')).toMatch(/min-height:\s*0;/);
   });
 
+  it('sizes the side columns from the resizer variables, within their bounds', () => {
+    expect(rule(stylesheet('Sidebar.module.css'), '.sidebar')).toMatch(
+      /width:\s*clamp\(220px, var\(--sidebar-width, 300px\), 480px\);/,
+    );
+    for (const name of ['Details.module.css', 'RoomDetails.module.css', 'DetailsPane.module.css']) {
+      expect(stylesheet(name), name).toMatch(
+        /width:\s*clamp\(240px, var\(--details-width, 280px\), 480px\);/,
+      );
+    }
+    // The folded sidebar is `hidden`: the module's `display: flex` must not win over it.
+    expect(rule(stylesheet('Sidebar.module.css'), '.sidebar\\[hidden\\]')).toMatch(
+      /display:\s*none;/,
+    );
+    expect(rule(stylesheet('PaneResizer.module.css'), '.resizer')).toMatch(/cursor:\s*col-resize;/);
+  });
+
   it('never scrolls the window itself from the root', () => {
     for (const [file, css] of Object.entries(stylesheets)) {
       for (const [, selector = ''] of css.matchAll(/(?:^|\n)((?:html|body|#root)[^{]*)\{/g)) {

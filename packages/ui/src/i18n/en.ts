@@ -98,6 +98,8 @@ export const en = {
   'main.empty': 'No letter open. Pick a chat on the left, or start a new one.',
   'main.details': 'Details',
   'main.closeDetails': 'Close details',
+  'main.resizeSidebar': 'Resize the sidebar',
+  'main.resizeDetails': 'Resize the details pane',
   'banner.reconnecting': 'I am back on the bike to reach the server…',
   'banner.offline': 'I lost the line to the server.',
   'banner.signInAgain': 'Sign in again',

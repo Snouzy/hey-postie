@@ -15,6 +15,9 @@ import styles from './Sidebar.module.css';
 export type SidebarTab = 'chats' | 'contacts';
 
 interface SidebarProps {
+  id: string;
+  /** Folded: hidden and inert, its state kept for when it opens again. */
+  collapsed: boolean;
   account: Account;
   /** Direct chats and halls alike (`withRooms`). */
   chats: Chat[];
@@ -63,7 +66,12 @@ export function Sidebar(props: SidebarProps) {
     : props.contacts;
 
   return (
-    <nav className={styles.sidebar}>
+    <nav
+      id={props.id}
+      className={styles.sidebar}
+      hidden={props.collapsed || undefined}
+      inert={props.collapsed || undefined}
+    >
       <header className={styles.account}>
         <AccountMenu
           account={props.account}

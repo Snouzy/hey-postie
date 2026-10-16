@@ -606,9 +606,47 @@ _Added 2026-10-15. Sources: `components/ReactionBar.tsx`, `Reactions.tsx`, `core
   (`alice, bob`; in a hall the nick after the `/`). A click toggles that emoji. Nothing is patched
   locally: the row changes when `message.updated` brings the message back.
 
+## Panes
+
+_Added 2026-10-16, from the author's request to drag the two dividers of the main screen._
+
+The sidebar and the details pane are resized by dragging the divider between them and the
+conversation, and folded by dragging it past the pane's minimum. The divider is `PaneResizer`
+(`components/PaneResizer.tsx`): an 8px band over the existing 1px line, `role="separator"` with
+`aria-orientation="vertical"`, `aria-valuenow` (the pane's width, 0 when folded), `aria-valuemax`
+and `aria-controls` pointing at the pane (`id="sidebar"` on the `<nav>`, `id="details"` on a
+`display: contents` wrapper in `Main`). Bounds, in `core/settings.ts`: the sidebar 220 to 480px
+(default 300), the details 240 to 480px (default 280); a drag below the minimum minus 40px folds
+the pane, dragging back past that point unfolds it in the same gesture. The columns read their
+width from a CSS variable on `.main` (`--sidebar-width`, `--details-width`) through
+`clamp(min, var(--x), max)`, so the 200% zoom rule of [What scrolls](#what-scrolls) holds
+unchanged: the columns keep their width and `.main` scrolls sideways.
+
+**Performance.** The width is read once at `pointerdown` (with `setPointerCapture`); every
+`pointermove` only does arithmetic on it and writes the variable through one
+`requestAnimationFrame`. No React state moves per pixel: the state and the storage update once,
+on `pointerup` (or when the fold flips, which mounts or hides content). `body.resizing` keeps
+the `col-resize` cursor and disables text selection for the whole gesture.
+
+**Folded.** The sidebar is `hidden` and `inert` (mounted, so its tab and search survive) and the
+resizer stays at the window's edge as a thin grabber: drag it, press Enter on it, or Cmd/Ctrl+B
+to open it again. Cmd/Ctrl+K opens a folded sidebar before focusing the search. Folding the
+details pane by drag is the same as closing it: the header's "i" (or members) button opens it
+again at its last width.
+
+**Keyboard on the separator.** Left/Right move the divider by 16px (Shift: 64px): Right widens
+the sidebar and narrows the details. Home and End go to the pane's minimum and maximum. Enter or
+Space folds and unfolds. A double-click resets the pane to its default width.
+
+**Persisted.** `readPaneSizes` / `writePaneSizes` (`core/settings.ts`, `localStorage`
+`hey-postie:panes`, same try/catch rules as the other preferences): both widths, clamped on
+read, and whether the sidebar is folded. The details pane's open state is not persisted (it
+follows the chat). Tests: `PaneResizer.test.tsx`, `screens/Panes.test.tsx`, `layout.test.ts`.
+
 ## Keyboard
 
-Cmd/Ctrl+K focuses the search (listener in `Main`). `App` writes the effective locale on
+Cmd/Ctrl+K focuses the search (listener in `Main`; it opens a folded sidebar first).
+Cmd/Ctrl+B folds and unfolds the sidebar (see [Panes](#panes)). `App` writes the effective locale on
 `<html lang>`, so a screen reader changes voice with the dictionary. The "+" of the sidebar opens a menu
 (`AddMenu`, `role="menu"`): focus lands on the first item, arrow keys cycle, Esc, Tab out, a
 click outside or picking an item closes it. Picking an item puts the focus back on "+" before

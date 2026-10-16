@@ -16,6 +16,24 @@ const THEME_KEY = 'hey-postie:theme';
 const LOCALE_KEY = 'hey-postie:locale';
 const NOTIFY_PREVIEW_KEY = 'hey-postie:notify-preview';
 const WELCOMED_KEY = 'hey-postie:welcomed';
+const PANES_KEY = 'hey-postie:panes';
+
+/** The widths of the side columns of the main screen, and whether the sidebar is folded. */
+export interface PaneSizes {
+  sidebar: number;
+  details: number;
+  sidebarCollapsed: boolean;
+}
+
+/** The bounds of a resizable pane, in CSS pixels; a drag below `min - 40` folds it. */
+export interface PaneBounds {
+  min: number;
+  max: number;
+  default: number;
+}
+
+export const SIDEBAR_BOUNDS: PaneBounds = { min: 220, max: 480, default: 300 };
+export const DETAILS_BOUNDS: PaneBounds = { min: 240, max: 480, default: 280 };
 
 export function readTheme(): Theme {
   const stored = read(THEME_KEY);
@@ -52,6 +70,33 @@ export function readWelcomed(jid: string): boolean {
 export function writeWelcomed(jid: string) {
   if (readWelcomed(jid)) return;
   write(WELCOMED_KEY, JSON.stringify([...welcomedAccounts(), jid]));
+}
+
+export function clampPane(bounds: PaneBounds, width: unknown): number {
+  if (typeof width !== 'number' || !Number.isFinite(width)) return bounds.default;
+  return Math.round(Math.min(bounds.max, Math.max(bounds.min, width)));
+}
+
+/** The stored sizes, each clamped to its bounds; the defaults for anything missing or odd. */
+export function readPaneSizes(): PaneSizes {
+  let stored: Record<string, unknown> = {};
+  try {
+    const parsed: unknown = JSON.parse(read(PANES_KEY) ?? '{}');
+    if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+      stored = parsed as Record<string, unknown>;
+    }
+  } catch {
+    // A truncated value: the defaults.
+  }
+  return {
+    sidebar: clampPane(SIDEBAR_BOUNDS, stored.sidebar),
+    details: clampPane(DETAILS_BOUNDS, stored.details),
+    sidebarCollapsed: stored.sidebarCollapsed === true,
+  };
+}
+
+export function writePaneSizes(sizes: PaneSizes) {
+  write(PANES_KEY, JSON.stringify(sizes));
 }
 
 function welcomedAccounts(): string[] {

@@ -1,5 +1,6 @@
 import type { Account, Chat, Contact, Room } from '@hey-postie/core';
-import { useEffect, useRef, useState } from 'react';
+import { type CSSProperties, useEffect, useRef, useState } from 'react';
+import { flushSync } from 'react-dom';
 import { AddContact } from '../components/AddContact';
 import type { SaveFile } from '../components/Attachments';
 import { Conversation } from '../components/Conversation';
@@ -12,15 +13,17 @@ import { Licenses } from '../components/Licenses';
 import { MessageRequest } from '../components/MessageRequest';
 import { MyDevices } from '../components/MyDevices';
 import { NewChat } from '../components/NewChat';
+import { PaneResizer } from '../components/PaneResizer';
 import { Sidebar } from '../components/Sidebar';
 import { SettingsWindow } from '../components/settings/SettingsWindow';
 import type { SettingsSection } from '../components/settings/sections';
 import { WelcomeCard } from '../components/WelcomeCard';
 import { useCore, useText } from '../core/CoreProvider';
-import { readWelcomed, writeWelcomed } from '../core/settings';
+import { DETAILS_BOUNDS, readWelcomed, SIDEBAR_BOUNDS, writeWelcomed } from '../core/settings';
 import { useChats } from '../core/useChats';
 import { useContacts } from '../core/useContacts';
 import { useCoreEvent } from '../core/useCoreEvent';
+import { usePaneSizes } from '../core/usePaneSizes';
 import { isRequest, type RequestRow, useRequests } from '../core/useRequests';
 import { roomChat, useRooms, withRooms } from '../core/useRooms';
 import { useUploads } from '../core/useUploads';
@@ -69,6 +72,9 @@ export function Main({ account, onOpenLink, onSaveFile, onLeave }: MainProps) {
   // The first-launch card: once per account, and only for an empty address book.
   const [welcoming, setWelcoming] = useState(false);
   const searchRef = useRef<HTMLInputElement>(null);
+  const mainRef = useRef<HTMLDivElement>(null);
+  const panes = usePaneSizes();
+  const { sidebarCollapsed } = panes.sizes;
 
   // The list is the fresh source once the chat is in it (title, unread count).
   const chats = withRooms(directChats, rooms);
@@ -120,7 +126,12 @@ export function Main({ account, onOpenLink, onSaveFile, onLeave }: MainProps) {
     function onKeyDown(event: KeyboardEvent) {
       if ((event.metaKey || event.ctrlKey) && event.key === 'k') {
         event.preventDefault();
+        // A folded sidebar opens first: the field has to be on screen to take the focus.
+        if (sidebarCollapsed) flushSync(() => panes.update({ sidebarCollapsed: false }));
         searchRef.current?.focus({ preventScroll: true });
+      } else if ((event.metaKey || event.ctrlKey) && event.key === 'b') {
+        event.preventDefault();
+        panes.update({ sidebarCollapsed: !sidebarCollapsed });
       } else if (event.key === 'Escape' && !dialog) {
         // An open dialog takes Esc for itself (see Dialog).
         setDetailsOpen(false);
@@ -128,7 +139,7 @@ export function Main({ account, onOpenLink, onSaveFile, onLeave }: MainProps) {
     }
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [dialog]);
+  }, [dialog, sidebarCollapsed, panes.update]);
 
   // A notification click or an `xmpp:` link asks for a chat, by id (the bare JID for a direct chat).
   useCoreEvent('chat.requested', ({ chatId: requested }) => {
@@ -196,8 +207,19 @@ export function Main({ account, onOpenLink, onSaveFile, onLeave }: MainProps) {
   }
 
   return (
-    <div className={styles.main}>
+    <div
+      ref={mainRef}
+      className={styles.main}
+      style={
+        {
+          '--sidebar-width': `${panes.sizes.sidebar}px`,
+          '--details-width': `${panes.sizes.details}px`,
+        } as CSSProperties
+      }
+    >
       <Sidebar
+        id="sidebar"
+        collapsed={sidebarCollapsed}
         account={account}
         chats={chats}
         rooms={rooms}
@@ -219,6 +241,19 @@ export function Main({ account, onOpenLink, onSaveFile, onLeave }: MainProps) {
         onSignOut={() => void leave('welcome')}
         onDeleteAccount={() => setDialog('deleteAccount')}
         onSignInAgain={() => void leave('signIn')}
+      />
+      <PaneResizer
+        pane="left"
+        bounds={SIDEBAR_BOUNDS}
+        width={panes.sizes.sidebar}
+        collapsed={sidebarCollapsed}
+        target={mainRef}
+        variable="--sidebar-width"
+        controls="sidebar"
+        label={text('main.resizeSidebar')}
+        onResize={(sidebar) => panes.update({ sidebar })}
+        onCollapse={() => panes.update({ sidebarCollapsed: true })}
+        onExpand={() => panes.update({ sidebarCollapsed: false })}
       />
       <main className={styles.center}>
         {request ? (
@@ -271,18 +306,36 @@ export function Main({ account, onOpenLink, onSaveFile, onLeave }: MainProps) {
         )}
       </main>
       {chat && detailsOpen && (
-        <DetailsPane
-          chat={chat}
-          contact={contact}
-          room={room}
-          focusRequest={encryptionFocus}
-          onClose={() => setDetailsOpen(false)}
-          onRoomsChanged={refreshRooms}
-          onLeft={() => {
-            setSelected(null);
-            setDetailsOpen(false);
-          }}
-        />
+        <>
+          <PaneResizer
+            pane="right"
+            bounds={DETAILS_BOUNDS}
+            width={panes.sizes.details}
+            collapsed={false}
+            target={mainRef}
+            variable="--details-width"
+            controls="details"
+            label={text('main.resizeDetails')}
+            onResize={(details) => panes.update({ details })}
+            // Folding the details is closing them: the header's button opens them again.
+            onCollapse={() => setDetailsOpen(false)}
+            onExpand={() => {}}
+          />
+          <div id="details" className={styles.details}>
+            <DetailsPane
+              chat={chat}
+              contact={contact}
+              room={room}
+              focusRequest={encryptionFocus}
+              onClose={() => setDetailsOpen(false)}
+              onRoomsChanged={refreshRooms}
+              onLeft={() => {
+                setSelected(null);
+                setDetailsOpen(false);
+              }}
+            />
+          </div>
+        </>
       )}
       {leavingRoom && (
         <LeaveRoomDialog

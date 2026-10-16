@@ -105,6 +105,8 @@ export const fr: Record<MessageKey, string> = {
   'main.empty': 'Aucune lettre ouverte. Choisis une discussion à gauche, ou commences-en une.',
   'main.details': 'Détails',
   'main.closeDetails': 'Fermer les détails',
+  'main.resizeSidebar': 'Redimensionner la colonne de gauche',
+  'main.resizeDetails': 'Redimensionner le volet des détails',
   'banner.reconnecting': 'Je reprends le vélo pour rejoindre le serveur…',
   'banner.offline': 'J’ai perdu la ligne avec le serveur.',
   'banner.signInAgain': 'Se reconnecter',

@@ -1,0 +1,60 @@
+/*
+ * An 8px band straddling the pane's 1px line: 4px lent by each neighbour, so the line stays
+ * where it is and the hit zone sits over it. Nothing shows at rest; a 2px navy line on hover,
+ * focus and while dragging (it is the focus indicator too: the global ring would draw a tall
+ * rectangle around an 8px column).
+ */
+.resizer {
+  position: relative;
+  z-index: var(--z-sticky);
+  flex: 0 0 8px;
+  margin: 0 -4px;
+  cursor: col-resize;
+  touch-action: none;
+  outline: none;
+}
+
+.resizer::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 3px;
+  width: 2px;
+  background: transparent;
+  transition: background-color var(--motion-fast);
+}
+
+.resizer:hover::after,
+.resizer:focus-visible::after,
+.resizer[data-dragging]::after {
+  background: var(--navy);
+}
+
+/* Folded: the band sits at the window's edge, with a short grabber to say the pane is here. */
+.resizer[data-collapsed] {
+  margin: 0;
+  background: var(--paper);
+}
+
+.resizer[data-collapsed]::after {
+  top: 50%;
+  bottom: auto;
+  height: 32px;
+  transform: translateY(-50%);
+  border-radius: 1px;
+  background: var(--line-strong);
+}
+
+.resizer[data-collapsed]:hover::after,
+.resizer[data-collapsed]:focus-visible::after,
+.resizer[data-collapsed][data-dragging]::after {
+  background: var(--navy);
+}
+
+/* For the whole gesture: the cursor would otherwise flicker over what the pointer crosses, and
+   text would get selected on the way. */
+:global(body.resizing) {
+  cursor: col-resize;
+  user-select: none;
+}
