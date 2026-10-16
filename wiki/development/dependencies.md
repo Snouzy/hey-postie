@@ -9,7 +9,7 @@ listed at the end. Checked on 2026-10-15.
 |---|---|---|---|
 | `@converse/headless` | 14.0.0 | MPL-2.0 | XMPP engine: MUC, MAM, OMEMO (0.3 and 2), reactions, upload, smacks. Pulls `strophe.js` (MIT), `libomemo.js` (GPL-3.0), `dompurify` (Apache-2.0 or MPL-2.0), `dayjs` (MIT), `lodash-es` (MIT). Installed in `packages/core` on 2026-10-15; its `curve25519_compiled.wasm` and `emoji.json` are copied to `apps/desktop/public/`, `libomemo.esm.min.js` is bundled by Vite as a lazy chunk (see [converse.md](converse.md) §12). |
 | `react`, `react-dom` | 19.3.1 | MIT | Interface. |
-| `lucide-react` | latest 0.x | ISC | Icons. |
+| `lucide-react` | 1.57.0 | ISC | Icons. |
 | `@tauri-apps/api` and plugins (`notification`, `store`) | 2.x | MIT or Apache-2.0 | Bridge to the Rust side. |
 | `@tauri-apps/plugin-opener` | 2.7.2 | MIT or Apache-2.0 | `openUrl`: links in messages go to the system browser (`apps/desktop/app/openLink.ts`). Added 2026-10-15. |
 | `@tauri-apps/plugin-updater` | 2.14.0 | MIT or Apache-2.0 | `check()` for a newer release at startup (`apps/desktop/app/updater.ts`); `downloadAndInstall()` later, with the update screen. Added 2026-10-16. |

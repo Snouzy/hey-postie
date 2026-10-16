@@ -43,6 +43,16 @@ Sources: [Converse.js v14.0.0](https://newreleases.io/project/github/conversejs/
 
 When the protocol behavior is unclear, look at how [Gajim](https://github.com/gajim/gajim) does it.
 
+## Interface
+
+- Decision of 2026-10-16: the desktop app of [block/buzz](https://github.com/block/buzz)
+  (Apache-2.0) is the first reference for the interface: layout, interactions, keyboard. Not a code
+  base (Nostr, its own relay, no OMEMO, far too large). The brand stays ours.
+- Styling moves to Tailwind 4 with shadcn conventions, in one migration during a UI freeze, at
+  visual parity. Messages get two layouts (bubbles, lines) behind a setting. The text of a sealed
+  letter stays out of notifications unless the user turns it on.
+  Design: [specs/2026-10-16-buzz-ui-tailwind-design.md](../specs/2026-10-16-buzz-ui-tailwind-design.md).
+
 ## Process
 
 - Decision of 2026-10-15: no CI for now. `pnpm verify` runs locally before every commit; CI comes

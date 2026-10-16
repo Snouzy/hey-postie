@@ -30,3 +30,4 @@ Contributing: [CONTRIBUTING.md](../CONTRIBUTING.md). Rules for agents and develo
 Feature designs live in [`specs/`](specs/), one file per feature: `YYYY-MM-DD-<topic>-design.md`.
 
 - [Version 1 design](specs/2026-10-15-hey-postie-v1-design.md): architecture, data and flows, interface and brand, tests, milestones.
+- [Buzz as the UI reference, Tailwind](specs/2026-10-16-buzz-ui-tailwind-design.md): what we take from Buzz, the migration to Tailwind, two message layouts, sealed letters in notifications.
