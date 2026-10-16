@@ -84,6 +84,10 @@ export interface ChatRepository {
   maxFileSize(): Promise<number | null>;
   /** Sets this account's reactions on a message (XEP-0444); an empty list removes them all. */
   react(chatId: string, messageId: string, emojis: string[]): Promise<void>;
+  /** Replaces the body of one of our messages (XEP-0308); sealed when the message was. */
+  correct(chatId: string, messageId: string, body: string): Promise<Message>;
+  /** Takes one of our messages back (XEP-0424). `NotRetractable` when it cannot be addressed. */
+  retract(chatId: string, messageId: string): Promise<void>;
   markRead(chatId: string): Promise<void>;
   /** Sends our chat state (XEP-0085): `composing` when true, `paused` when false. */
   setComposing(chatId: string, composing: boolean): Promise<void>;
@@ -112,6 +116,8 @@ export interface RoomRepository {
   roomService(domain: string): Promise<string | null>;
   onChange(handler: (room: Room) => void): () => void;
   onMembersChange(handler: (jid: string, members: RoomMember[]) => void): () => void;
+  /** Removes someone's message from the hall as a moderator (XEP-0425); the server enforces it. */
+  moderate(jid: string, messageId: string, reason?: string): Promise<void>;
 }
 
 /**
@@ -154,4 +160,13 @@ export interface FileRepository {
 
 export interface Notifier {
   show(input: { title: string; body: string; chatId: string }): Promise<void>;
+}
+
+/**
+ * The messages the user hid on this device ("delete for me"): kept per account so that the
+ * server's history (MAM) cannot bring them back. Nothing is sent anywhere.
+ */
+export interface HiddenMessagesRepository {
+  list(account: string): Promise<string[]>;
+  add(account: string, messageId: string): Promise<void>;
 }

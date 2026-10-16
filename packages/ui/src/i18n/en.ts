@@ -91,6 +91,8 @@ export const en = {
   'error.StatusTooLong': 'That status is too long for my satchel. Keep it to 140 characters.',
   'error.AssistantNotAllowed': 'Claude may not send letters for you. You can allow it in Settings.',
   'error.InvalidPort': 'Pick a port between 1024 and 65535.',
+  'error.NotAllowed': 'I can’t do that with this letter.',
+  'error.NotRetractable': 'This letter can’t be taken back: the server never gave it an address.',
   'error.Unknown': 'Something went wrong on my round. Try again.',
 
   'main.tabs.chats': 'Chats',

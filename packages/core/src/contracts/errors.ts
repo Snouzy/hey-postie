@@ -19,6 +19,8 @@ export type ErrorCode =
   | 'EncryptionUnavailable'
   | 'StatusTooLong'
   | 'AssistantNotAllowed'
+  | 'NotAllowed'
+  | 'NotRetractable'
   | 'InvalidPort'
   | 'Unknown';
 

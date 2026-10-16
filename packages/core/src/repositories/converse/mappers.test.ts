@@ -122,6 +122,21 @@ describe('toMessage', () => {
     expect(fixed).toMatchObject({ body: 'hello', retracted: false, edited: true });
   });
 
+  it('tells who took a letter back, with the moderator’s reason', () => {
+    const own = toMessage(model({ ...incoming, retracted: '2026-10-15T10:01:00Z' }), context);
+    expect(own).toMatchObject({ retracted: true, retractedBy: 'sender' });
+    const moderated = toMessage(
+      model({ ...incoming, moderated: 'retracted', moderation_reason: 'spam' }),
+      context,
+    );
+    expect(moderated).toMatchObject({
+      body: '',
+      retracted: true,
+      retractedBy: 'moderator',
+      moderationReason: 'spam',
+    });
+  });
+
   it('does not treat text with a URL inside as an attachment', () => {
     const message = toMessage(model({ ...incoming, body: 'look https://a.b/c' }), context);
     expect(message.attachments).toEqual([]);
@@ -310,6 +325,7 @@ describe('toChat for a room', () => {
         off: () => undefined,
       },
       sendMessage: async () => undefined,
+      retractOwnMessage: () => undefined,
       sendFiles: async () => undefined,
       onReconnection: async () => undefined,
       clearUnreadMsgCounter: () => undefined,

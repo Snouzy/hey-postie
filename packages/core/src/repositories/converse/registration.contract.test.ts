@@ -4,7 +4,14 @@ import { createCore } from '../../container';
 import { DomainError } from '../../contracts/errors';
 import type { Core } from '../../contracts/services';
 import type { Account } from '../../contracts/types';
-import { FakeCrypto, FakeFile, FakeKeychain, FakeNotifier, FakeRoom } from '../../fakes';
+import {
+  FakeCrypto,
+  FakeFile,
+  FakeHiddenMessages,
+  FakeKeychain,
+  FakeNotifier,
+  FakeRoom,
+} from '../../fakes';
 import { createConverseRepositories } from './index';
 import { restoreNodeEvent, serveHeadlessAssets } from './test-support/realSocket';
 
@@ -63,6 +70,7 @@ describe.skipIf(!SERVER)('Converse registration against the XMPP test server', (
       room: new FakeRoom(),
       crypto: new FakeCrypto(),
       file: new FakeFile(),
+      hidden: new FakeHiddenMessages(),
       notifier: new FakeNotifier(),
     });
     core.events.on('account.changed', (account) => accounts.push(account));

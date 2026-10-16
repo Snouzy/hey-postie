@@ -43,6 +43,8 @@ export interface ChatModel extends ModelLike {
   sendFiles(files: File[]): Promise<void>;
   /** Synchronous on a direct chat, async on a room (`plugins/muc/muc.js` sends a marker first). */
   clearUnreadMsgCounter(): Promise<unknown> | undefined;
+  /** XEP-0424 (`model-with-messages.js:417`, `muc.js:860` in a room). */
+  retractOwnMessage(message: MessageModel): void | Promise<void>;
   getDisplayName(): string | null | undefined;
 }
 
@@ -58,6 +60,8 @@ export interface RoomModel extends ChatModel {
   isUserMentioned(message: MessageModel): boolean;
   join(nick?: string, password?: string): Promise<void>;
   close(): Promise<unknown>;
+  /** XEP-0425 (`muc.js:910`): null or an error stanza when the server refused. */
+  retractOtherMessage(message: MessageModel, reason?: string): Promise<unknown>;
 }
 
 export interface OccupantModel extends ModelLike {

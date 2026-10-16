@@ -86,6 +86,13 @@ export class FakeRoom implements RoomRepository {
     return [...(this.published.get(domain) ?? [])];
   }
 
+  /** Moderations sent, in order (XEP-0425). */
+  readonly moderated: { jid: string; messageId: string; reason?: string }[] = [];
+
+  async moderate(jid: string, messageId: string, reason?: string): Promise<void> {
+    this.moderated.push(reason === undefined ? { jid, messageId } : { jid, messageId, reason });
+  }
+
   onChange(handler: RoomHandler): () => void {
     this.roomHandlers.add(handler);
     return () => this.roomHandlers.delete(handler);

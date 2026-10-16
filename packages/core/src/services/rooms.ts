@@ -5,6 +5,8 @@ import type { RoomsService } from '../contracts/services';
 import { normalizeJid } from './jid';
 
 const DOMAIN = /^[a-z0-9-]+(\.[a-z0-9-]+)*$/;
+/** The longest moderation reason sent; the UI shows the same limit. */
+export const MAX_REASON_LENGTH = 140;
 
 export function createRoomsService(
   deps: Pick<CoreDependencies, 'room'>,
@@ -48,6 +50,19 @@ export function createRoomsService(
       const trimmed = domain.trim().toLowerCase();
       if (!DOMAIN.test(trimmed)) throw new DomainError('InvalidJid', 'InvalidJid: not a domain');
       return deps.room.roomService(trimmed);
+    },
+    async moderate(jid, messageId, reason) {
+      const roomJid = normalizeJid(jid).split('/')[0] ?? '';
+      const trimmed = reason?.trim() ?? '';
+      if (trimmed.length > MAX_REASON_LENGTH) {
+        throw new DomainError('StatusTooLong', `StatusTooLong: limit ${MAX_REASON_LENGTH}`);
+      }
+      const room = (await deps.room.list()).find((candidate) => candidate.jid === roomJid);
+      const me = room && (await deps.room.members(roomJid)).find((m) => m.nick === room.nick);
+      if (me?.role !== 'moderator') {
+        throw new DomainError('NotAllowed', 'NotAllowed: not a moderator of this hall');
+      }
+      await deps.room.moderate(roomJid, messageId, trimmed || undefined);
     },
     async browse(domain) {
       const trimmed = domain.trim().toLowerCase();

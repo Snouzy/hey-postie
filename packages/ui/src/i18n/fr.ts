@@ -99,6 +99,9 @@ export const fr: Record<MessageKey, string> = {
   'error.AssistantNotAllowed':
     'Claude ne peut pas envoyer de lettres pour toi. Tu peux l’autoriser dans les Réglages.',
   'error.InvalidPort': 'Choisis un port entre 1024 et 65535.',
+  'error.NotAllowed': 'Je ne peux pas faire ça avec cette lettre.',
+  'error.NotRetractable':
+    'Cette lettre ne peut pas être reprise : le serveur ne lui a jamais donné d’adresse.',
   'error.Unknown': 'Quelque chose a cloché pendant ma tournée. Réessaie.',
 
   'main.tabs.chats': 'Discussions',

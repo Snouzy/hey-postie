@@ -1,3 +1,4 @@
+import { DomainError } from '../contracts/errors';
 import type { ChatRepository } from '../contracts/repositories';
 import type { Chat, ChatState, Message } from '../contracts/types';
 
@@ -153,6 +154,27 @@ export class FakeChat implements ChatRepository {
       } else others.push({ emoji, fromJids: [this.myJid], mine: true });
     }
     this.update({ ...message, reactions: others });
+  }
+
+  /** Message ids taken back, in order (XEP-0424). */
+  readonly retracted: string[] = [];
+  /** Set to make the next retraction fail like a room message without a stanza id. */
+  retractFails = false;
+
+  async correct(chatId: string, messageId: string, body: string): Promise<Message> {
+    const current = await this.message(chatId, messageId);
+    if (!current) throw new DomainError('Unknown', 'Unknown: no such message');
+    const corrected = { ...current, body, edited: true };
+    this.update(corrected);
+    return corrected;
+  }
+
+  async retract(chatId: string, messageId: string): Promise<void> {
+    if (this.retractFails) throw new DomainError('NotRetractable');
+    const current = await this.message(chatId, messageId);
+    if (!current) throw new DomainError('Unknown', 'Unknown: no such message');
+    this.retracted.push(messageId);
+    this.update({ ...current, body: '', attachments: [], retracted: true, retractedBy: 'sender' });
   }
 
   async markRead(chatId: string): Promise<void> {

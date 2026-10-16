@@ -24,6 +24,8 @@ const SENTENCES: Record<ErrorCode, MessageKey> = {
   StatusTooLong: 'error.StatusTooLong',
   AssistantNotAllowed: 'error.AssistantNotAllowed',
   InvalidPort: 'error.InvalidPort',
+  NotAllowed: 'error.NotAllowed',
+  NotRetractable: 'error.NotRetractable',
   Unknown: 'error.Unknown',
 };
 

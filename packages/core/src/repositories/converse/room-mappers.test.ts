@@ -37,6 +37,8 @@ function room(attrs: Record<string, unknown>, status: number | null = ENTERED): 
       off: () => undefined,
     },
     sendMessage: async () => undefined,
+    retractOwnMessage: () => undefined,
+    retractOtherMessage: async () => undefined,
     sendFiles: async () => undefined,
     onReconnection: async () => undefined,
     clearUnreadMsgCounter: () => undefined,

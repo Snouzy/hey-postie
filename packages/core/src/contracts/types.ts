@@ -137,8 +137,15 @@ export interface Message {
   attachments: Attachment[];
   reactions: Reaction[];
   isMention: boolean;
-  /** XEP-0424: the sender took the message back; `body` and `attachments` are then empty. */
+  /**
+   * XEP-0424: the sender took the message back, or (XEP-0425) a moderator removed it from a hall;
+   * `body` and `attachments` are then empty.
+   */
   retracted?: boolean;
+  /** Who removed it, when `retracted`. */
+  retractedBy?: 'sender' | 'moderator';
+  /** The moderator's reason, when one was given. Untrusted text, like a body. */
+  moderationReason?: string;
   /** XEP-0308: the body is a correction of an earlier version. */
   edited?: boolean;
 }

@@ -21,6 +21,8 @@ const UPDATE_EVENTS = [
   'change:received',
   'change:is_error',
   'change:retracted',
+  'change:moderated',
+  'change:edited',
   'change:reactions',
   'change:body',
 ];
@@ -185,6 +187,27 @@ export class ConverseChatRepository implements ChatRepository {
     const model = chat.messages.get(messageId);
     if (!model) throw new DomainError('Unknown', 'Unknown: no such message');
     await sendReactions(loaded, chat, model, emojis);
+  }
+
+  /**
+   * XEP-0308 the Converse way: the message is marked `correcting`, and the next `sendMessage`
+   * replaces it (`model-with-messages.js:365`); a sealed message is corrected sealed.
+   */
+  async correct(chatId: string, messageId: string, body: string): Promise<Message> {
+    const chat = await this.find(chatId);
+    const model = chat.messages.get(messageId);
+    if (!model) throw new DomainError('Unknown', 'Unknown: no such message');
+    model.save({ correcting: true });
+    const corrected = await chat.sendMessage({ body });
+    if (!corrected) throw new DomainError('Unknown', 'Unknown: the correction could not be sent');
+    return this.mapMessage(corrected, chat);
+  }
+
+  async retract(chatId: string, messageId: string): Promise<void> {
+    const chat = await this.find(chatId);
+    const model = chat.messages.get(messageId);
+    if (!model) throw new DomainError('Unknown', 'Unknown: no such message');
+    await chat.retractOwnMessage(model);
   }
 
   async markRead(chatId: string): Promise<void> {
@@ -395,6 +418,8 @@ export class ConverseChatRepository implements ChatRepository {
     if (model.get('file') || model.get('dangling_reaction') || model.get('dangling_retraction')) {
       return false;
     }
+    // Converse marks our own retraction ephemeral; it stays, shown as "deleted".
+    if (model.get('retracted')) return true;
     return !model.get('is_ephemeral') || model.get('error_type') === 'Decryption';
   }
 }

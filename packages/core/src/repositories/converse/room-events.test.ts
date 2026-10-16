@@ -40,6 +40,8 @@ function roomModel(jid: string, initialized: Promise<unknown>): RoomModel {
     notifications: model({}),
     initialized,
     sendMessage: async () => undefined,
+    retractOwnMessage: () => undefined,
+    retractOtherMessage: async () => undefined,
     sendFiles: async () => undefined,
     onReconnection: async () => undefined,
     clearUnreadMsgCounter: () => undefined,

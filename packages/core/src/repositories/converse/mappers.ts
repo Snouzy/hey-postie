@@ -29,7 +29,8 @@ export interface MessageContext {
 export function toMessage(model: MessageModel, context: MessageContext): Message {
   const direction = model.get('sender') === 'me' ? 'out' : 'in';
   const undecryptable = model.get('error_type') === 'Decryption';
-  const retracted = Boolean(model.get('retracted'));
+  const moderated = model.get('moderated') === 'retracted';
+  const retracted = Boolean(model.get('retracted')) || moderated;
   const text =
     undecryptable || retracted ? '' : string(model.get('plaintext')) || string(model.get('body'));
   const files = retracted ? [] : attachments(string(model.get('oob_url')), text);
@@ -51,6 +52,9 @@ export function toMessage(model: MessageModel, context: MessageContext): Message
     retracted,
     edited: Boolean(model.get('edited')),
   };
+  if (retracted) message.retractedBy = moderated ? 'moderator' : 'sender';
+  const reason = string(model.get('moderation_reason'));
+  if (moderated && reason) message.moderationReason = reason;
   return nick ? { ...message, fromNick: nick } : message;
 }
 

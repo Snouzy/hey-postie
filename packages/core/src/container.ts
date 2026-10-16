@@ -2,6 +2,7 @@ import type {
   ChatRepository,
   CryptoRepository,
   FileRepository,
+  HiddenMessagesRepository,
   KeychainRepository,
   Notifier,
   RegistrationRepository,
@@ -31,6 +32,7 @@ export interface CoreDependencies {
   crypto: CryptoRepository;
   registration: RegistrationRepository;
   file: FileRepository;
+  hidden: HiddenMessagesRepository;
   notifier: Notifier;
 }
 

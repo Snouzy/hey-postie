@@ -110,6 +110,17 @@ export class ConverseRoomRepository implements RoomRepository {
     }
   }
 
+  /** XEP-0425; the server checks the role too, its refusal is `NotAllowed`. */
+  async moderate(jid: string, messageId: string, reason?: string): Promise<void> {
+    const room = await this.find(jid);
+    const model = room.messages.get(messageId);
+    if (!model) throw new DomainError('Unknown', 'Unknown: no such message');
+    const result = await room.retractOtherMessage(model, reason);
+    if (result === null || (result instanceof Element && result.getAttribute('type') === 'error')) {
+      throw new DomainError('NotAllowed', 'NotAllowed: the server refused the moderation');
+    }
+  }
+
   /** The occupants present in the room; affiliated members who are not in it are skipped. */
   async members(jid: string): Promise<RoomMember[]> {
     const chat = await this.find(jid);

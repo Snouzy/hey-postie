@@ -72,6 +72,16 @@ export interface ChatsService {
   send(chatId: string, body: string): Promise<Message>;
   /** Toggles one emoji of this account on a message. */
   toggleReaction(chatId: string, messageId: string, emoji: string): Promise<void>;
+  /**
+   * Corrects one of the user's own sent letters (any of them, not only the last). The body is
+   * trimmed; empty is `EmptyMessage`; someone else's, a retracted, a pending or a failed letter is
+   * `NotAllowed`. An unchanged body changes nothing.
+   */
+  edit(chatId: string, messageId: string, body: string): Promise<Message>;
+  /** Deletes one of the user's own letters for everyone (a request: some apps ignore it). */
+  retract(chatId: string, messageId: string): Promise<void>;
+  /** Hides a letter on this device only; it stays hidden after the history reloads. */
+  hideForMe(chatId: string, messageId: string): Promise<void>;
   markRead(chatId: string): Promise<void>;
   /**
    * Call with `true` on every keystroke, `false` when the draft is cleared. The service sends
@@ -93,6 +103,11 @@ export interface RoomsService {
   browse(domain: string): Promise<RoomInfo[]>;
   /** The conference service of the signed-in account's domain, discovered on the server, or null. */
   roomService(domain: string): Promise<string | null>;
+  /**
+   * Removes someone's letter from a hall, as a moderator only (`NotAllowed` otherwise). The
+   * reason is trimmed, at most 140 characters (`StatusTooLong` past it).
+   */
+  moderate(jid: string, messageId: string, reason?: string): Promise<void>;
 }
 
 /**

@@ -12,7 +12,7 @@ import { createTypingTracker } from './typing';
 export const MESSAGE_PAGE_SIZE = 50;
 
 export function createChatsService(
-  deps: Pick<CoreDependencies, 'chat' | 'roster'>,
+  deps: Pick<CoreDependencies, 'chat' | 'roster' | 'hidden'>,
   events: EventBus,
 ): ChatsService {
   /** The oldest message id loaded per chat, for `loadOlder`. */
@@ -62,6 +62,24 @@ export function createChatsService(
     events.emit('chat.typing', { chatId, fromJid, typing: state === 'composing' }),
   );
 
+  /** The letters hidden on this device ("delete for me"), for the signed-in account. */
+  const hiddenIds = async () => new Set(await deps.hidden.list(deps.chat.selfJid()));
+  const visible = async (messages: Message[]) => {
+    const hidden = await hiddenIds();
+    return messages.filter((message) => !hidden.has(message.id));
+  };
+
+  /** One of the user's own sent letters, still there: what edit and delete for everyone need. */
+  const ownSent = async (chatId: string, messageId: string): Promise<Message> => {
+    const message = await deps.chat.message(chatId, messageId);
+    if (!message) throw new DomainError('Unknown', 'Unknown: no such message');
+    const usable = message.direction === 'out' && !message.retracted;
+    const settled = message.status !== 'pending' && message.status !== 'failed';
+    if (!usable || !settled)
+      throw new DomainError('NotAllowed', 'NotAllowed: not a sent letter of ours');
+    return message;
+  };
+
   return {
     async list() {
       const [chats, contacts] = await Promise.all([deps.chat.list(), deps.roster.list()]);
@@ -78,7 +96,7 @@ export function createChatsService(
       );
       noteWritten(messages);
       remember(oldest, chatId, messages);
-      return messages;
+      return visible(messages);
     },
     async loadOlder(chatId) {
       const before = oldest.get(chatId);
@@ -88,7 +106,7 @@ export function createChatsService(
       );
       noteWritten(messages);
       remember(oldest, chatId, messages);
-      return messages;
+      return visible(messages);
     },
     async send(chatId, body) {
       const trimmed = body.trim();
@@ -119,6 +137,30 @@ export function createChatsService(
         run.catch(() => undefined),
       );
       return run;
+    },
+    async edit(chatId, messageId, body) {
+      const trimmed = body.trim();
+      if (!trimmed) throw new DomainError('EmptyMessage');
+      const message = await ownSent(chatId, messageId);
+      if (message.body === trimmed) return message;
+      const corrected = sanitize(await deps.chat.correct(chatId, messageId, trimmed));
+      events.emit('message.updated', corrected);
+      return corrected;
+    },
+    async retract(chatId, messageId) {
+      const message = await ownSent(chatId, messageId);
+      await deps.chat.retract(chatId, messageId);
+      events.emit('message.updated', {
+        ...message,
+        body: '',
+        attachments: [],
+        retracted: true,
+        retractedBy: 'sender',
+      });
+    },
+    async hideForMe(chatId, messageId) {
+      await deps.hidden.add(deps.chat.selfJid(), messageId);
+      events.emit('message.hidden', { chatId, messageId });
     },
     markRead(chatId) {
       return deps.chat.markRead(chatId);

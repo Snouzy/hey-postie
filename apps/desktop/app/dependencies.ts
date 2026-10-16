@@ -1,4 +1,5 @@
 import { type CoreDependencies, createConverseRepositories } from '@hey-postie/core';
+import { LocalHiddenMessages } from './repositories/hiddenMessages';
 import { TauriKeychain } from './repositories/keychain';
 import { TauriNotifier } from './repositories/notifier';
 import { TauriTransport } from './repositories/transport';
@@ -21,6 +22,7 @@ export function createTauriDependencies(): CoreDependencies {
     crypto,
     registration,
     file,
+    hidden: new LocalHiddenMessages(),
     notifier: new TauriNotifier(),
   };
 }

@@ -14,6 +14,8 @@ export interface CoreEvents {
   'account.changed': Account;
   'message.received': Message;
   'message.updated': Message;
+  /** The user hid a message on this device: the interface drops it from the list. */
+  'message.hidden': { chatId: string; messageId: string };
   'chat.updated': Chat;
   'contact.updated': Contact;
   /** A stranger asks to be a contact; the request stays in `contacts.requests()` until answered. */
