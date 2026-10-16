@@ -6,6 +6,7 @@ import { cn } from '../lib/cn';
 import { Attachments, type SaveFile } from './Attachments';
 import { Button } from './Button';
 import { Linkify } from './Linkify';
+import { actionsFor, type MessageAction, MessageActions } from './MessageActions';
 import { ReactionBar } from './ReactionBar';
 import { Reactions } from './Reactions';
 
@@ -20,6 +21,8 @@ const MENTION =
   'border-l-3 border-l-yellow bg-[color-mix(in_srgb,var(--yellow)_22%,var(--paper-raised))]';
 const BODY = 'm-0 whitespace-pre-wrap wrap-anywhere';
 const SEALED = `${BODY} flex items-center gap-2 font-heading [font-variation-settings:'SOFT'_100] italic text-ink-muted`;
+// A letter taken back or removed: its place stays, in Postie's quiet italic.
+const GONE = `${BODY} font-heading [font-variation-settings:'SOFT'_100] italic opacity-80`;
 // A sealed letter that left here: a drop of wax at the corner of the bubble.
 const WAX = 'absolute -top-1 -right-1 size-[10px] rounded-[50%] border-2 border-paper bg-red';
 // What to do with a letter I cannot open: plain text, and a way to the sender's devices.
@@ -47,6 +50,10 @@ interface MessageBubbleProps {
   onSaveFile: SaveFile;
   /** From a letter sealed for another device: opens the sender's devices in the details pane. */
   onShowDevices?: (() => void) | undefined;
+  /** Edit, delete for me or for everyone, remove from the hall: the conversation acts on it. */
+  onAction?: ((message: Message, action: MessageAction) => void) | undefined;
+  /** In a hall the user moderates: someone else's letter can be removed. */
+  canModerate?: boolean;
 }
 
 export function MessageBubble({
@@ -57,6 +64,8 @@ export function MessageBubble({
   onReact,
   onSaveFile,
   onShowDevices,
+  onAction,
+  canModerate = false,
 }: MessageBubbleProps) {
   const text = useText();
   const locale = useLocale();
@@ -64,7 +73,8 @@ export function MessageBubble({
   const wax = message.direction === 'out' && message.encryption === 'omemo';
   const mention = message.isMention && message.direction === 'in';
   // A parcel alone travels with an empty body: no empty line above the card.
-  const hasBody = sealed || message.body.length > 0 || message.attachments.length === 0;
+  const hasBody =
+    !message.retracted && (sealed || message.body.length > 0 || message.attachments.length === 0);
   const incoming = message.direction === 'in';
   const { status } = message;
 
@@ -80,10 +90,22 @@ export function MessageBubble({
           <span className={SR_ONLY}>{text('message.encrypted')}</span>
         </span>
       )}
-      {message.status !== 'pending' && (
-        <div className={cn(TOOLS, incoming ? 'right-2' : 'left-2')}>
+      {message.status !== 'pending' && !message.retracted && (
+        <div className={cn(TOOLS, 'flex gap-1', incoming ? 'right-2' : 'left-2')}>
           <ReactionBar onReact={(emoji) => onReact(message, emoji)} />
+          {onAction && (
+            <MessageActions
+              actions={actionsFor(message, canModerate)}
+              onPick={(action) => onAction(message, action)}
+            />
+          )}
         </div>
+      )}
+      {message.retracted && (
+        <p className={GONE}>
+          {text(message.retractedBy === 'moderator' ? 'message.removed' : 'message.deleted')}
+          {message.moderationReason && ` (${message.moderationReason})`}
+        </p>
       )}
       {hasBody && (
         <p className={sealed ? SEALED : BODY}>
@@ -112,6 +134,7 @@ export function MessageBubble({
       <span
         className={cn(META, (last || status === 'failed' || status === 'pending') && 'opacity-100')}
       >
+        {message.edited && !message.retracted && <span>{text('message.edited')}</span>}
         <time dateTime={message.sentAt.toISOString()}>{formatTime(locale, message.sentAt)}</time>
         {message.direction === 'out' && (
           <span

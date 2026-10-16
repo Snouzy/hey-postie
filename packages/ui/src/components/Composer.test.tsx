@@ -107,3 +107,36 @@ describe('Composer drafts', () => {
     expect(onSend).not.toHaveBeenCalled();
   });
 });
+
+describe('Composer editing', () => {
+  it('fills the field with the letter, and Esc cancels', () => {
+    const { core } = setupCore();
+    const onCancelEdit = vi.fn();
+    renderWithCore(
+      <Composer
+        onSend={vi.fn(async () => {})}
+        editing={{ id: 'm1', body: 'Helo' }}
+        onCancelEdit={onCancelEdit}
+      />,
+      core,
+    );
+    const area = screen.getByRole('textbox');
+    expect(area).toHaveValue('Helo');
+    expect(screen.getByText(/Editing a letter/)).toBeInTheDocument();
+    fireEvent.keyDown(area, { key: 'Escape' });
+    expect(onCancelEdit).toHaveBeenCalled();
+    expect(area).toHaveValue('');
+  });
+
+  it('asks for my last letter on ↑ in an empty field', () => {
+    const { core } = setupCore();
+    const onEditLast = vi.fn();
+    renderWithCore(<Composer onSend={vi.fn(async () => {})} onEditLast={onEditLast} />, core);
+    const area = screen.getByRole('textbox');
+    fireEvent.keyDown(area, { key: 'ArrowUp' });
+    expect(onEditLast).toHaveBeenCalledTimes(1);
+    fireEvent.change(area, { target: { value: 'typing' } });
+    fireEvent.keyDown(area, { key: 'ArrowUp' });
+    expect(onEditLast).toHaveBeenCalledTimes(1);
+  });
+});

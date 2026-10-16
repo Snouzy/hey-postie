@@ -19,4 +19,5 @@ export { MESSAGE_PAGE_SIZE } from './services/chats';
 export { INLINE_IMAGE_MAX_BYTES } from './services/files';
 export { domainOf, normalizeJid } from './services/jid';
 export { HIDDEN_PREVIEW } from './services/notifications';
+export { MAX_REASON_LENGTH } from './services/rooms';
 export { COMPOSING_REPEAT_MS, PAUSED_AFTER_MS } from './services/typing';

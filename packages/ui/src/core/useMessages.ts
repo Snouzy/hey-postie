@@ -54,6 +54,11 @@ export function useMessages(chat: Chat) {
     setMessages((current) => current.map((m) => (m.id === message.id ? message : m)));
   });
 
+  useCoreEvent('message.hidden', ({ chatId, messageId }) => {
+    if (chatId !== chat.id) return;
+    setMessages((current) => current.filter((m) => m.id !== messageId));
+  });
+
   useEffect(() => {
     const onFocus = () => void core.chats.markRead(chat.id).catch(() => {});
     window.addEventListener('focus', onFocus);

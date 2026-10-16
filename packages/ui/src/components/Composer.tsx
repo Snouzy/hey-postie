@@ -29,6 +29,11 @@ interface ComposerProps {
   /** A letter Claude prepared: added to the text (below what is there), then `onDraftTaken`. */
   draft?: string | undefined;
   onDraftTaken?: (() => void) | undefined;
+  /** A letter of mine being corrected: its text fills the field, Enter saves, Esc cancels. */
+  editing?: { id: string; body: string } | undefined;
+  onCancelEdit?: (() => void) | undefined;
+  /** ↑ in an empty field: the conversation picks my last letter to correct. */
+  onEditLast?: (() => void) | undefined;
 }
 
 /**
@@ -45,6 +50,9 @@ export function Composer({
   onComposing,
   draft,
   onDraftTaken,
+  editing,
+  onCancelEdit,
+  onEditLast,
 }: ComposerProps) {
   const text = useText();
   const placeholder = text(sealed ? 'composer.placeholderSealed' : 'composer.placeholder');
@@ -56,6 +64,26 @@ export function Composer({
   const fileInput = useRef<HTMLInputElement>(null);
   const emojiButton = useRef<HTMLButtonElement>(null);
   const canSend = body.trim().length > 0 && !sending && !disabled;
+
+  // A correction starts from the letter's text, with the caret at its end.
+  const editingId = editing?.id;
+  const editingBody = editing?.body;
+  useEffect(() => {
+    if (editingId === undefined || editingBody === undefined) return;
+    setBody(editingBody);
+    requestAnimationFrame(() => {
+      if (!area.current) return;
+      area.current.focus({ preventScroll: true });
+      area.current.setSelectionRange(editingBody.length, editingBody.length);
+      grow(area.current);
+    });
+  }, [editingId, editingBody]);
+
+  function cancelEdit() {
+    setBody('');
+    onCancelEdit?.();
+    if (area.current) area.current.style.height = 'auto';
+  }
 
   // Claude's draft joins what the user already wrote, never replaces it; the user sends it.
   useEffect(() => {
@@ -102,6 +130,12 @@ export function Composer({
     if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) {
       event.preventDefault();
       void send();
+    } else if (event.key === 'Escape' && editing) {
+      event.preventDefault();
+      cancelEdit();
+    } else if (event.key === 'ArrowUp' && !body && !editing && onEditLast) {
+      event.preventDefault();
+      onEditLast();
     } else if (event.key === 'Tab' && !event.shiftKey) {
       const completed = completeNick(body, event.currentTarget.selectionStart, nicks);
       if (!completed) return;
@@ -134,6 +168,18 @@ export function Composer({
 
   return (
     <div className="flex flex-col gap-2 border-t border-line bg-paper px-4 py-3">
+      {editing && (
+        <p className="m-0 flex items-center justify-between gap-2 rounded-sm bg-kraft-soft px-3 py-1 text-[13px] text-ink">
+          <span>{text('composer.editing')}</span>
+          <Button
+            variant="ghost"
+            className="px-2 py-[2px] text-[13px] leading-[1.3]"
+            onClick={cancelEdit}
+          >
+            {text('composer.cancelEdit')}
+          </Button>
+        </p>
+      )}
       {error && (
         <p
           className="m-0 font-heading text-[14px] text-red [font-variation-settings:'SOFT'_100]"

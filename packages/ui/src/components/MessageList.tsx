@@ -5,6 +5,7 @@ import { dayKey, dayLabel } from '../i18n/dates';
 import type { SaveFile } from './Attachments';
 import { Avatar } from './Avatar';
 import { Button } from './Button';
+import type { MessageAction } from './MessageActions';
 import { MessageBubble } from './MessageBubble';
 
 // `leading-[1.3]` again: cn drops the button's line height when a text size is given.
@@ -25,6 +26,9 @@ interface MessageListProps {
   onRetry: (message: Message) => void;
   onOpenLink: (url: string) => void;
   onReact: (message: Message, emoji: string) => void;
+  onAction?: ((message: Message, action: MessageAction) => void) | undefined;
+  /** In a hall the user moderates. */
+  canModerate?: boolean;
   onSaveFile: SaveFile;
   /** In a hall: the sender's nick above each run of incoming messages. */
   showSenders?: boolean;
@@ -66,6 +70,8 @@ export function MessageList({
   onRetry,
   onOpenLink,
   onReact,
+  onAction,
+  canModerate = false,
   onSaveFile,
   showSenders = false,
   onShowDevices,
@@ -156,6 +162,8 @@ export function MessageList({
                   onRetry={onRetry}
                   onOpenLink={onOpenLink}
                   onReact={onReact}
+                  onAction={onAction}
+                  canModerate={canModerate}
                   onSaveFile={onSaveFile}
                   onShowDevices={onShowDevices}
                 />

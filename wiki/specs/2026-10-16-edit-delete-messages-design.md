@@ -1,8 +1,8 @@
 # Edit and delete messages: design
 
-_Written on 2026-10-16. Asked by the author the same day; built **after** the move to Tailwind
-([2026-10-16-buzz-ui-tailwind-design.md](2026-10-16-buzz-ui-tailwind-design.md)), decision of the
-author on 2026-10-16. Not built yet._
+_Written on 2026-10-16. Asked by the author the same day; built after the move to Tailwind
+([2026-10-16-buzz-ui-tailwind-design.md](2026-10-16-buzz-ui-tailwind-design.md)), on 2026-10-16
+(section 8)._
 
 ## 1. Goal
 
@@ -98,6 +98,31 @@ matching methods over Converse; every service method has unit tests against fake
   retraction reach the other client; a moderation in a hall; a hidden message stays hidden after
   MAM.
 - UI: the toolbar per case, ↑ to edit, Esc to cancel, the placeholders, the confirmations.
+
+## 8. As built (2026-10-16)
+
+- **Any of my letters can be edited**, not only the last one (the open point, decided while
+  building: users expect it; some receivers may show a correction of an older letter as new).
+- Core: `ChatsService.edit`, `retract`, `hideForMe`; `RoomsService.moderate` (moderator only,
+  reason trimmed, 140 characters at most, `MAX_REASON_LENGTH`). Error codes `NotAllowed`,
+  `NotRetractable`. `Message.retractedBy` and `moderationReason`. Event `message.hidden`.
+- The hidden list is `HiddenMessagesRepository` (`contracts/repositories.ts`): an in-memory fake,
+  and `apps/desktop/app/repositories/hiddenMessages.ts` over the window's local storage (ids only,
+  per account), not IndexedDB: smaller, and ids are not secret.
+- Converse: `correct` marks the model `correcting` then `sendMessage`; `retract` calls
+  `retractOwnMessage` (a retracted letter stays displayable, Converse marks it ephemeral);
+  `moderate` calls `retractOtherMessage` and turns a refusal into `NotAllowed`; the mapper reads
+  `moderated: 'retracted'` and `moderation_reason`; `change:moderated` and `change:edited` are
+  watched.
+- UI: a "⋯" next to the React button in the bubble's hover toolbar (`MessageActions`, the actions
+  by `actionsFor`), editing in the composer (a kraft band, Enter saves through `chats.edit`, Esc
+  cancels, ↑ in an empty field edits my last letter), "edited" before the time, the deleted or
+  removed letter in Postie's italic in its place, and `DeleteMessageDialog` for everyone and for
+  the hall (with an optional reason).
+- Tests: the rules in `services/editDelete.test.ts`, the mapper, `MessageActions.test.tsx`,
+  `Composer.test.tsx` and the whole flow in `screens/EditDelete.test.tsx`.
+- Not yet: the MCP tools (`edit_message`, `retract_message`), and contract tests against the local
+  server (the moderation module is not enabled there yet).
 
 ## Points to check
 

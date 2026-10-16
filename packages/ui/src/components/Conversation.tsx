@@ -1,6 +1,6 @@
-import type { Chat, Contact, Room } from '@hey-postie/core';
+import type { Chat, Contact, Message, Room } from '@hey-postie/core';
 import { Info, Users } from 'lucide-react';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useCore, useText } from '../core/CoreProvider';
 import { useEncryption } from '../core/useEncryption';
 import { useFileDrop } from '../core/useFileDrop';
@@ -14,8 +14,10 @@ import type { SaveFile } from './Attachments';
 import { Avatar } from './Avatar';
 import { Button } from './Button';
 import { Composer } from './Composer';
+import { DeleteMessageDialog } from './DeleteMessageDialog';
 import { DropOverlay } from './DropOverlay';
 import { EmptyState } from './EmptyState';
+import { actionsFor, type MessageAction } from './MessageActions';
 import { MessageList } from './MessageList';
 import { PendingParcel } from './PendingParcel';
 import { PresenceDot } from './PresenceDot';
@@ -72,6 +74,37 @@ export function Conversation({
   // The details pane exists for a direct chat, or for a hall the app has a record of.
   const hasDetails = chat.kind === 'direct' || room !== undefined;
   const drop = useFileDrop(uploads.add, !outside);
+  const [editing, setEditing] = useState<{ id: string; body: string } | undefined>(undefined);
+  const [confirming, setConfirming] = useState<{
+    message: Message;
+    kind: 'deleteForEveryone' | 'moderate';
+  } | null>(null);
+  const self = room ? members.find((member) => member.nick === room.nick) : undefined;
+  const canModerate = self?.role === 'moderator';
+
+  /** Enter sends a new letter, or saves the correction under way. */
+  async function sendOrSave(body: string) {
+    if (!editing) return letters.send(body);
+    await core.chats.edit(chat.id, editing.id, body);
+    setEditing(undefined);
+  }
+
+  /** ↑ in an empty composer: my last letter that can still be corrected. */
+  function editLast() {
+    const last = [...letters.messages]
+      .reverse()
+      .find((message) => actionsFor(message, false).includes('edit'));
+    if (last) setEditing({ id: last.id, body: last.body });
+  }
+
+  function act(message: Message, action: MessageAction) {
+    if (action === 'edit') setEditing({ id: message.id, body: message.body });
+    else if (action === 'deleteForMe') {
+      core.chats
+        .hideForMe(chat.id, message.id)
+        .catch((caught: unknown) => letters.setError(errorKey(caught)));
+    } else setConfirming({ message, kind: action });
+  }
 
   // A parcel that landed: its message joins the list and the pending bubble goes.
   useEffect(() => {
@@ -159,6 +192,8 @@ export function Conversation({
         onRetry={letters.retry}
         onOpenLink={onOpenLink}
         onReact={letters.react}
+        onAction={act}
+        canModerate={canModerate}
         onSaveFile={onSaveFile}
         showSenders={chat.kind === 'room'}
         onShowDevices={hasDetails ? onOpenEncryption : undefined}
@@ -200,7 +235,10 @@ export function Conversation({
         {typingNames.length > 0 && typingLine(text, typingNames)}
       </p>
       <Composer
-        onSend={letters.send}
+        onSend={sendOrSave}
+        editing={editing}
+        onCancelEdit={() => setEditing(undefined)}
+        onEditLast={editLast}
         onAttach={uploads.add}
         nicks={nicks}
         disabled={outside}
@@ -209,6 +247,17 @@ export function Conversation({
         draft={draft}
         onDraftTaken={onDraftTaken}
       />
+      {confirming && (
+        <DeleteMessageDialog
+          kind={confirming.kind}
+          onClose={() => setConfirming(null)}
+          onConfirm={(reason) =>
+            confirming.kind === 'moderate'
+              ? core.rooms.moderate(chat.id, confirming.message.id, reason)
+              : core.chats.retract(chat.id, confirming.message.id)
+          }
+        />
+      )}
     </section>
   );
 }
