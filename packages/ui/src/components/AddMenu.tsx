@@ -43,8 +43,12 @@ export function AddMenu({ onNewChat, onJoinRoom, onAddContact }: AddMenuProps) {
     action();
   }
 
+  // A blur without relatedTarget is not a Tab out: WebKit (the Tauri webview on macOS) does not
+  // focus a button on mousedown, so a click on an item blurs the menu to nowhere first; closing
+  // here would unmount the item before its click. A click outside is heard on pointerdown.
   function onBlur(event: FocusEvent<HTMLDivElement>) {
-    if (!root.current?.contains(event.relatedTarget as Node | null)) setOpen(false);
+    const next = event.relatedTarget as Node | null;
+    if (next && !root.current?.contains(next)) setOpen(false);
   }
 
   // Focus is inside the menu while it is open, so the menu itself hears the keys.

@@ -50,6 +50,15 @@ describe('AccountMenu', () => {
     expect(screen.queryByRole('menu')).not.toBeInTheDocument();
   });
 
+  it('still acts on a click after a blur to nowhere (WebKit does not focus buttons on mousedown)', () => {
+    const { onDeleteAccount } = openMenu();
+    const item = screen.getByRole('menuitem', { name: 'Delete my account…' });
+    fireEvent.focusOut(item, { relatedTarget: null });
+    expect(screen.getByRole('menu')).toBeInTheDocument();
+    fireEvent.click(item);
+    expect(onDeleteAccount).toHaveBeenCalledOnce();
+  });
+
   it('puts the focus back on the row before acting, so a dialog returns there', () => {
     const { trigger, onDeleteAccount } = openMenu();
     onDeleteAccount.mockImplementation(() => expect(trigger).toHaveFocus());

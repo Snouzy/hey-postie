@@ -69,6 +69,16 @@ describe('Leave a hall from its row', () => {
     expect(screen.getByText(/No letter open/)).toBeInTheDocument();
   });
 
+  it('still opens the confirmation after a blur to nowhere (WebKit click)', async () => {
+    await withHall();
+    openMenu();
+    const item = screen.getByRole('menuitem', { name: 'Leave the hall…' });
+    fireEvent.focusOut(item, { relatedTarget: null });
+    expect(screen.getByRole('menu')).toBeInTheDocument();
+    fireEvent.click(item);
+    expect(await screen.findByRole('dialog')).toBeInTheDocument();
+  });
+
   it('confirms with the hall name, leaves through the service and drops the selection', async () => {
     const { deps, row } = await withHall();
     fireEvent.click(row);

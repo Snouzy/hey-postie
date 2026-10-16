@@ -565,7 +565,12 @@ Cmd/Ctrl+K focuses the search (listener in `Main`). `App` writes the effective l
 click outside or picking an item closes it. Picking an item puts the focus back on "+" before
 the dialog opens, so the dialog gives the focus back to "+" when it closes. The account row opens
 `AccountMenu` with the same keyboard rules (focus back on the row), and a room row's "⋯" or a
-right-click opens `RoomRowMenu` with the same rules again (see [Rooms](#rooms-halls)). Esc closes the open
+right-click opens `RoomRowMenu` with the same rules again (see [Rooms](#rooms-halls)). "Tab out" means a
+blur **with** a `relatedTarget` outside the menu: a blur to nowhere is ignored, because WebKit (the Tauri
+webview on macOS) does not focus a button on mousedown, so a click on an item first blurs the menu with
+`relatedTarget: null`; closing on it unmounted the item before its click (bug found by the author on
+2026-10-16, regression tests in `AccountMenu.test.tsx` and `LeaveRoom.test.tsx`). A click outside is
+heard on `pointerdown`, never through blur. Esc closes the open
 dialog (`Dialog` listens in the capture phase and stops the event there, so a confirmation over
 the details pane closes alone; it also traps Tab inside the card and gives the focus back to the
 opener) or, when no dialog is open, the details pane (listener in `Main`).

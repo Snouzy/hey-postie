@@ -46,9 +46,12 @@ export function RoomRowMenu({ room, open, onOpen, onClose, onLeave }: RoomRowMen
     onLeave(room);
   }
 
-  // Tab out: the menu goes away and the focus continues on its way.
+  // A blur without relatedTarget is not a Tab out: WebKit (the Tauri webview on macOS) does not
+  // focus a button on mousedown, so a click on an item blurs the menu to nowhere first; closing
+  // here would unmount the item before its click. A click outside is heard on pointerdown.
   function onBlur(event: FocusEvent<HTMLDivElement>) {
-    if (!menu.current?.contains(event.relatedTarget as Node | null)) onClose();
+    const next = event.relatedTarget as Node | null;
+    if (next && !menu.current?.contains(next)) onClose();
   }
 
   function onKeyDown(event: KeyboardEvent<HTMLDivElement>) {
