@@ -2,6 +2,10 @@
 
 A friendly XMPP chat client, end-to-end encrypted, for Mac, Windows and Linux. Free software.
 
+
+https://github.com/user-attachments/assets/da35dc1c-bed8-4f45-a692-4a8a2fc80826
+
+
 **Status: in development. Nothing to download yet.**
 
 Hey Postie is a modern replacement for Pidgin: one-to-one chats and rooms, OMEMO encryption, files
