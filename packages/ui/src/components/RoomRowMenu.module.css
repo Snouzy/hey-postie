@@ -1,8 +1,10 @@
 /* The "⋯" sits over the row's top-right corner, where the time is; shown on hover or focus. */
 .more {
   position: absolute;
-  top: var(--space-1);
+  /* Centred on the row, whatever its height (one line for a hall, two with a preview). */
+  top: 50%;
   right: var(--space-3);
+  transform: translateY(-50%);
   display: flex;
   align-items: center;
   justify-content: center;
