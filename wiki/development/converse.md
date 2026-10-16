@@ -295,7 +295,7 @@ installed package and by `repositories.test.ts`, which drives the real headless 
 ### Read markers (XEP-0333)
 
 _Added 2026-10-17 (spec 2026-10-17-conversation-slack, Lot A item 2). Sources: `read-markers.ts`,
-`chat.ts`, `engine.ts`, `mappers.ts`, `read-markers.test.ts`, `read.contract.test.ts`._
+`chat.ts`, `chat-messages.ts`, `engine.ts`, `mappers.ts`, `read-markers.test.ts`, `read.contract.test.ts`._
 
 - **Out.** `ChatRepository.setSendReadMarkers(send)` → `ConverseEngine.setSendDisplayed`: the
   setting is `['received', 'displayed', 'acknowledged']` when on (Converse's default),
@@ -381,7 +381,7 @@ account, so it ignores the read-markers setting.
 ### Replies and mentions
 
 _Added 2026-10-17 (spec 2026-10-17-conversation-slack, Lot B items 8 to 10). Sources:
-`replies.ts`, `mappers.ts`, `chat.ts`, `services/sanitize.ts`, `services/chats.ts`; tests
+`replies.ts`, `mappers.ts`, `chat-sending.ts`, `services/sanitize.ts`, `services/chats.ts`; tests
 `replies.test.ts`, `services/replies.test.ts`, `services/sanitize.test.ts`,
 `reply.contract.test.ts`. Converse 14.0.0 read in `shared/parsers.js:308-356`,
 `shared/model-with-messages.js:283-346, 949-956, 1025-1075`, `shared/message.js:186-203`,
@@ -400,7 +400,7 @@ _Added 2026-10-17 (spec 2026-10-17-conversation-slack, Lot B items 8 to 10). Sou
   code points and shifts the references; `createMessageStanza` writes `<reply>` and `<fallback>`
   in the clear, or OMEMO puts both inside the sealed content. The repository clears the two
   attributes after the send whatever happens, and sends (and corrections, which also go through
-  `sendMessage`) leave one at a time per chat (`oneAtATime`), because `sendMessage` awaits
+  `sendMessage`) leave one at a time per chat (`oneAtATime`, `chat-sending.ts`), because `sendMessage` awaits
   before reading them. A hall letter without a room stamp cannot be named: it leaves as a plain
   letter (XEP-0461 asks for the stanza id in groupchat). Assumed, not checked against another
   client: the direct-chat id is the stanza `id` (Converse's own lookup accepts `msgid` or
@@ -861,7 +861,7 @@ caught on the next `devices()` call (the bundle is re-fetched only when Converse
 ## 16. Parcels and reactions: what the repository does
 
 _Implementation of 2026-10-16, `upload.ts`, `reactions.ts`, `file.ts` and the `sendFile` /
-`maxFileSize` / `react` methods of `chat.ts`; verified by `parcel.test.ts` (mock connection, PUT
+`maxFileSize` / `react` methods of `chat.ts`, done by `ChatSender` in `chat-sending.ts` since 2026-10-16; verified by `parcel.test.ts` (mock connection, PUT
 through `test-support/fakeXhr.ts`), `file.test.ts` (WebCrypto fixture, `fetch` stubbed) and
 `parcel.contract.test.ts` against the local Prosody._
 
@@ -891,7 +891,7 @@ through `test-support/fakeXhr.ts`), `file.test.ts` (WebCrypto fixture, `fetch` s
   runs the model's own `uploadFile` before any collection listener (`shared/message.js:45`), so the
   observer replaces that method on the placeholder and turns the placeholder into Converse's own
   failure shape (ephemeral error, `upload: 'failure'`). Placeholders are never displayable
-  (`isDisplayable` drops `file: true`), so the chat list and `messages()` do not show an empty
+  (`isDisplayable` in `chat-messages.ts` drops `file: true`), so the chat list and `messages()` do not show an empty
   message while uploading. Converse parses no file size anywhere (no XEP-0447), so the mapper
   leaves `size: 0` and `sendFile` stamps the size of the uploaded `File` on the returned attachment.
   In a sealed chat the limit is checked against `file.size + 16` (the AES-GCM tag).
@@ -969,7 +969,7 @@ Observed on 2026-10-16:
 ## 17. Message requests, blocklist, presence, avatar, chat states: what the repository does
 
 _Contracts merged on 2026-10-16 (`feat/b-contracts`); implementation of 2026-10-16 in `roster.ts`,
-`xmpp.ts` and `chat.ts`. Verified by `hall.test.ts` (the real headless build over its
+`xmpp.ts`, `chat.ts` and `chat-states.ts`. Verified by `hall.test.ts` (the real headless build over its
 `MockConnection`, IQs answered by `autoAnswer`) and `hall.contract.test.ts` (the local Prosody,
 part of `pnpm test:contract`), both green on 2026-10-16._
 

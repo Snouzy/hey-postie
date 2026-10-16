@@ -31,7 +31,9 @@ tasks/             agents' plans and lessons, untracked
 - **Persistence**: `apps/desktop/app/repositories/keychain.ts` calls the Rust `keychain_*` commands;
   `packages/core/src/fakes/keychain.ts` keeps a `Map` in memory for tests.
   `packages/core/src/repositories/converse/` wraps `@converse/headless`: `engine.ts` owns the one
-  Converse instance; `xmpp.ts`, `roster.ts`, `chat.ts` (with `upload.ts` for XEP-0363 and
+  Converse instance; `xmpp.ts`, `roster.ts`, `chat.ts` (with `chat-history.ts` for pages and MAM,
+  `chat-sending.ts` for letters, corrections and files, `chat-states.ts` for typing,
+  `chat-messages.ts` for mapping models, `upload.ts` for XEP-0363 and
   `reactions.ts` for XEP-0444), `room.ts`, `crypto.ts` (OMEMO devices and trust over Converse's
   device lists, with `crypto-lists.ts`), `registration.ts` (XEP-0077 over a bare Strophe
   connection, plus account deletion and local wipe) and `file.ts` (attachment download and
