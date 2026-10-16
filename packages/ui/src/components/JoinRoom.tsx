@@ -6,7 +6,6 @@ import { errorKey } from '../i18n/errors';
 import { Button } from './Button';
 import { Dialog } from './Dialog';
 import { Field } from './Field';
-import styles from './JoinRoom.module.css';
 import { RoomBrowser } from './RoomBrowser';
 
 interface JoinRoomProps {
@@ -71,12 +70,12 @@ export function JoinRoom({ account, onJoined, onClose }: JoinRoomProps) {
 
   return (
     <Dialog title={text('joinRoom.title')} onClose={onClose}>
-      <div className={styles.tabs}>
+      <div className="flex border-b border-line">
         {(['address', 'browse'] as const).map((name) => (
           <button
             key={name}
             type="button"
-            className={styles.tab}
+            className="flex-1 cursor-pointer border-0 border-b-2 border-transparent bg-transparent p-2 font-semibold text-ink-muted transition-[color,border-color] duration-(--motion-fast) aria-pressed:border-b-navy aria-pressed:text-navy"
             aria-pressed={tab === name}
             onClick={() => setTab(name)}
           >
@@ -87,7 +86,7 @@ export function JoinRoom({ account, onJoined, onClose }: JoinRoomProps) {
       {tab === 'browse' ? (
         <RoomBrowser domain={browseDomain} onDomainChange={setBrowseDomain} onPick={pick} />
       ) : (
-        <form className={styles.form} onSubmit={submit}>
+        <form className="flex flex-col gap-3" onSubmit={submit}>
           <Field
             label={text('joinRoom.jid')}
             type="text"
@@ -114,11 +113,15 @@ export function JoinRoom({ account, onJoined, onClose }: JoinRoomProps) {
             />
           )}
           {error && (
-            <p id={errorId} className={styles.error} role="alert">
+            <p
+              id={errorId}
+              className="m-0 font-heading [font-variation-settings:'SOFT'_100] text-red"
+              role="alert"
+            >
               {text(error)}
             </p>
           )}
-          <div className={styles.actions}>
+          <div className="flex justify-end gap-2">
             <Button onClick={onClose}>{text('dialog.cancel')}</Button>
             <Button
               variant="primary"

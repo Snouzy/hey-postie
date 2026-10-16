@@ -6,7 +6,16 @@ import type { SaveFile } from './Attachments';
 import { Avatar } from './Avatar';
 import { Button } from './Button';
 import { MessageBubble } from './MessageBubble';
-import styles from './MessageList.module.css';
+
+// `leading-[1.3]` again: cn drops the button's line height when a text size is given.
+const OLDER = 'mx-0 my-3 self-center px-3 py-1 text-[13px] leading-[1.3]';
+const SCROLLER = 'flex min-h-0 flex-1 flex-col overflow-y-auto px-4 pb-4';
+// Sticky so the reader always knows which day they are in.
+const SEPARATOR =
+  'sticky top-0 z-sticky mx-0 mt-3 mb-0 self-center rounded-full border border-line bg-paper px-3 py-[2px] font-text text-[12px] font-semibold text-ink-muted';
+// Who speaks, in a hall: above the run, in the sender's column.
+const SENDER =
+  'inline-flex items-center gap-1 self-start px-3 text-[12px] font-semibold text-ink-muted';
 
 interface MessageListProps {
   messages: Message[];
@@ -110,7 +119,7 @@ export function MessageList({
   return (
     <div
       ref={scroller}
-      className={styles.scroller}
+      className={SCROLLER}
       onScroll={onScroll}
       role="log"
       aria-label={text('conversation.log')}
@@ -118,18 +127,23 @@ export function MessageList({
       tabIndex={0}
     >
       {hasOlder && (
-        <Button className={styles.older} onClick={() => void loadOlder()} disabled={loading}>
+        <Button className={OLDER} onClick={() => void loadOlder()} disabled={loading}>
           {text('message.loadOlder')}
         </Button>
       )}
       {messages.length === 0 && empty}
       {groupByDay(messages).map((day) => (
-        <section key={day.key} className={styles.day}>
-          <h3 className={styles.separator}>{dayLabel(locale, day.date, text)}</h3>
+        <section key={day.key} className="flex flex-col gap-3">
+          <h3 className={SEPARATOR}>{dayLabel(locale, day.date, text)}</h3>
           {day.runs.map((run) => (
-            <div key={run.messages[0]?.id} className={styles.run} data-from={run.fromJid}>
+            // A run of messages from one sender: tight spacing inside, room between runs.
+            <div
+              key={run.messages[0]?.id}
+              className="flex flex-col gap-[2px]"
+              data-from={run.fromJid}
+            >
               {showSenders && run.messages[0]?.direction === 'in' && (
-                <span className={styles.sender}>
+                <span className={SENDER}>
                   <Avatar name={senderOf(run.messages[0])} jid={run.fromJid} size={20} />
                   {senderOf(run.messages[0])}
                 </span>

@@ -4,7 +4,6 @@ import { useCoreEvent } from '../../core/useCoreEvent';
 import type { MessageKey } from '../../i18n';
 import { errorKey } from '../../i18n/errors';
 import { Button } from '../Button';
-import styles from './BlockedContacts.module.css';
 
 /**
  * The blocked addresses (`contacts.blocked()`, followed through the `contacts.blocked` event,
@@ -46,16 +45,19 @@ export function BlockedContacts() {
 
   return (
     <>
-      <p className={styles.hint}>{text('settings.privacy.blockedExplain')}</p>
+      <p className="m-0 text-[13px] text-ink-muted">{text('settings.privacy.blockedExplain')}</p>
       {jids.length === 0 ? (
-        <p className={styles.empty}>{text('settings.privacy.blockedEmpty')}</p>
+        <p className="m-0 text-ink-muted">{text('settings.privacy.blockedEmpty')}</p>
       ) : (
-        <ul className={styles.list} aria-label={text('settings.privacy.blocked')}>
+        <ul
+          className="m-0 flex list-none flex-col gap-2 p-0"
+          aria-label={text('settings.privacy.blocked')}
+        >
           {jids.map((jid) => (
-            <li key={jid} className={styles.row}>
-              <code className={styles.jid}>{jid}</code>
+            <li key={jid} className="flex items-center justify-between gap-2">
+              <code className="font-mono text-[12px] wrap-anywhere">{jid}</code>
               <Button
-                className={styles.action}
+                className="shrink-0 px-3 py-[2px] text-[13px]"
                 disabled={unblocking === jid}
                 aria-label={`${text('settings.privacy.unblock')} ${jid}`}
                 onClick={() => void unblock(jid)}
@@ -67,7 +69,7 @@ export function BlockedContacts() {
         </ul>
       )}
       {error && (
-        <p className={styles.error} role="alert">
+        <p className="m-0 font-heading text-red [font-variation-settings:'SOFT'_100]" role="alert">
           {text(error)}
         </p>
       )}

@@ -1,8 +1,12 @@
 import { DoorOpen, MessageSquarePlus, Plus, UserPlus } from 'lucide-react';
 import { type FocusEvent, type KeyboardEvent, useEffect, useId, useRef, useState } from 'react';
 import { useText } from '../core/CoreProvider';
-import styles from './AddMenu.module.css';
 import { Button } from './Button';
+
+const MENU =
+  'absolute top-[calc(100%+var(--space-1))] right-0 z-float flex min-w-[180px] flex-col rounded-sm border border-line bg-paper-raised p-1 shadow-card';
+const ITEM =
+  'flex w-full cursor-pointer items-center gap-2 rounded-sm border-none bg-transparent px-3 py-2 text-left text-ink transition-[background-color] duration-(--motion-fast) hover:bg-paper focus-visible:bg-paper';
 
 interface AddMenuProps {
   onNewChat: () => void;
@@ -74,7 +78,7 @@ export function AddMenu({ onNewChat, onJoinRoom, onAddContact }: AddMenuProps) {
   ];
 
   return (
-    <div ref={root} className={styles.root}>
+    <div ref={root} className="relative">
       <Button
         ref={trigger}
         variant="ghost"
@@ -89,7 +93,7 @@ export function AddMenu({ onNewChat, onJoinRoom, onAddContact }: AddMenuProps) {
       {open && (
         <div
           id={menuId}
-          className={styles.menu}
+          className={MENU}
           role="menu"
           aria-label={text('main.add')}
           onKeyDown={onKeyDown}
@@ -100,7 +104,7 @@ export function AddMenu({ onNewChat, onJoinRoom, onAddContact }: AddMenuProps) {
               key={label}
               type="button"
               role="menuitem"
-              className={styles.item}
+              className={ITEM}
               onClick={() => pick(action)}
             >
               <Icon size={16} aria-hidden />

@@ -3,7 +3,17 @@ import { DoorOpen, Ellipsis } from 'lucide-react';
 import { type FocusEvent, type KeyboardEvent, useEffect, useId, useRef } from 'react';
 import { useText } from '../core/CoreProvider';
 import { Popover } from './Popover';
-import styles from './RoomRowMenu.module.css';
+
+/**
+ * The "⋯" sits over the row's top-right corner, where the time is, centred on the row whatever its
+ * height (one line for a hall, two with a preview). Shown while the row (an `li`) is hovered or
+ * holds the focus, and while its menu is open.
+ */
+const MORE =
+  'absolute top-1/2 right-3 flex size-7 -translate-y-1/2 cursor-pointer items-center justify-center rounded-sm border-none bg-paper-raised p-0 text-ink-muted opacity-0 transition-opacity duration-(--motion-fast) hover:bg-paper hover:text-ink aria-expanded:bg-paper aria-expanded:text-ink aria-expanded:opacity-100 [li:focus-within>&]:opacity-100 [li:hover>&]:opacity-100';
+
+const ITEM =
+  'flex cursor-pointer items-center gap-2 rounded-sm border-none bg-transparent p-2 text-left whitespace-nowrap text-ink hover:bg-paper focus-visible:bg-paper data-[tone=danger]:text-red';
 
 interface RoomRowMenuProps {
   room: Room;
@@ -68,7 +78,7 @@ export function RoomRowMenu({ room, open, onOpen, onClose, onLeave }: RoomRowMen
       <button
         ref={more}
         type="button"
-        className={styles.more}
+        className={MORE}
         aria-label={text('chatList.more')}
         title={text('chatList.more')}
         aria-haspopup="menu"
@@ -83,7 +93,7 @@ export function RoomRowMenu({ room, open, onOpen, onClose, onLeave }: RoomRowMen
           <div
             ref={menu}
             id={menuId}
-            className={styles.menu}
+            className="flex min-w-[180px] flex-col"
             role="menu"
             aria-label={room.name}
             onKeyDown={onKeyDown}
@@ -92,7 +102,7 @@ export function RoomRowMenu({ room, open, onOpen, onClose, onLeave }: RoomRowMen
             <button
               type="button"
               role="menuitem"
-              className={styles.item}
+              className={ITEM}
               data-tone="danger"
               onClick={pick}
             >

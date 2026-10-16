@@ -10,7 +10,7 @@
     }
   },
   "javascript": { "formatter": { "quoteStyle": "single", "semicolons": "always" } },
-  "css": { "formatter": { "quoteStyle": "single" } },
+  "css": { "formatter": { "quoteStyle": "single" }, "parser": { "tailwindDirectives": true } },
   "files": {
     "includes": [
       "**",
@@ -20,7 +20,8 @@
       "!**/.astro",
       "!pnpm-lock.yaml",
       "!apps/desktop/public",
-      "!apps/site/public"
+      "!apps/site/public",
+      "!packages/ui/src/theme/tailwind.css"
     ]
   },
   "overrides": [

@@ -1,19 +1,22 @@
 import { type InputHTMLAttributes, useId } from 'react';
-import styles from './Field.module.css';
+import { cn } from '../lib/cn';
 
 interface FieldProps extends InputHTMLAttributes<HTMLInputElement> {
   label: string;
 }
 
+const INPUT =
+  'rounded-sm border border-line-strong bg-paper-raised px-3 py-2 text-ink transition-[border-color] duration-(--motion-fast) focus-visible:border-navy disabled:opacity-60';
+
 /** A labelled text input. The label is always visible: placeholders alone are not enough. */
 export function Field({ label, className, ...rest }: FieldProps) {
   const id = useId();
   return (
-    <div className={[styles.field, className].filter(Boolean).join(' ')}>
-      <label htmlFor={id} className={styles.label}>
+    <div className={cn('flex flex-col gap-1', className)}>
+      <label htmlFor={id} className="text-[13px] font-semibold text-ink-muted">
         {label}
       </label>
-      <input id={id} className={styles.input} {...rest} />
+      <input id={id} className={INPUT} {...rest} />
     </div>
   );
 }

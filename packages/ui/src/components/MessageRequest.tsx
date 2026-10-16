@@ -9,7 +9,6 @@ import type { SaveFile } from './Attachments';
 import { BlockContactDialog } from './BlockContactDialog';
 import { Button } from './Button';
 import { MessageList } from './MessageList';
-import styles from './MessageRequest.module.css';
 
 interface MessageRequestProps {
   row: RequestRow;
@@ -67,24 +66,37 @@ export function MessageRequest({
     );
 
   return (
-    <section className={styles.request} aria-label={row.name}>
-      <header className={styles.header}>
-        <h2 className={styles.title}>{row.name}</h2>
-        <p className={styles.address}>{row.jid}</p>
-        <p className={styles.explain}>{text('requests.explain')}</p>
+    // `min-h-0`: the column never outgrows the window (see Conversation).
+    <section className="flex min-h-0 min-w-0 flex-1 flex-col bg-paper" aria-label={row.name}>
+      {/* The stranger's card, on kraft like a parcel waiting at the door. */}
+      <header className="m-4 flex flex-col gap-2 bg-kraft-soft p-4">
+        <h2 className="m-0 text-[20px] wrap-anywhere">{row.name}</h2>
+        <p className="m-0 text-[13px] text-ink-muted wrap-anywhere">{row.jid}</p>
+        {/* Postie speaks (here and in the hint below): the heading font. */}
+        <p className="m-0 font-heading [font-variation-settings:'SOFT'_100] text-[14px]">
+          {text('requests.explain')}
+        </p>
         {row.message && (
-          <blockquote className={styles.note}>
-            <span className={styles.noteLabel}>{text('requests.theirNote')}</span>
-            <span className={styles.noteText}>{row.message}</span>
+          // Their note is text, never Postie's voice.
+          <blockquote className="m-0 flex flex-col gap-1 rounded-sm border-l-[3px] border-line bg-paper px-3 py-2">
+            <span className="text-[12px] font-bold tracking-[0.04em] text-ink-muted uppercase">
+              {text('requests.theirNote')}
+            </span>
+            <span className="whitespace-pre-wrap wrap-anywhere">{row.message}</span>
           </blockquote>
         )}
-        <p className={styles.hint}>{text('requests.accepting')}</p>
+        <p className="m-0 font-heading [font-variation-settings:'SOFT'_100] text-[14px] text-ink-muted">
+          {text('requests.accepting')}
+        </p>
         {error && (
-          <p className={styles.error} role="alert">
+          <p
+            className="m-0 px-0 py-2 font-heading [font-variation-settings:'SOFT'_100] text-[14px] text-red"
+            role="alert"
+          >
             {text(error)}
           </p>
         )}
-        <div className={styles.actions}>
+        <div className="mt-2 flex flex-wrap gap-2">
           <Button variant="primary" onClick={() => void accept()} disabled={busy} aria-busy={busy}>
             {text('requests.accept')}
           </Button>
@@ -98,7 +110,9 @@ export function MessageRequest({
       </header>
       {row.chat && (
         <>
-          <h3 className={styles.held}>{text('requests.lettersHeld')}</h3>
+          <h3 className="mx-4 mt-0 mb-2 font-text text-[12px] font-bold tracking-[0.04em] uppercase text-ink-muted">
+            {text('requests.lettersHeld')}
+          </h3>
           <HeldLetters
             key={row.chat.id}
             chat={row.chat}
@@ -146,7 +160,10 @@ function HeldLetters({
         onSaveFile={onSaveFile}
       />
       {letters.error && (
-        <p className={styles.error} role="alert">
+        <p
+          className="m-0 px-0 py-2 font-heading [font-variation-settings:'SOFT'_100] text-[14px] text-red"
+          role="alert"
+        >
           {text(letters.error)}
         </p>
       )}

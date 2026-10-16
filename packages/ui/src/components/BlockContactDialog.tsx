@@ -2,9 +2,11 @@ import { useState } from 'react';
 import { useCore, useText } from '../core/CoreProvider';
 import type { MessageKey } from '../i18n';
 import { errorKey } from '../i18n/errors';
-import styles from './BlockContactDialog.module.css';
 import { Button } from './Button';
 import { Dialog } from './Dialog';
+
+// Postie's voice, never a joke: the heading font in mailbox red.
+const ERROR = "m-0 font-heading text-red [font-variation-settings:'SOFT'_100]";
 
 interface BlockContactDialogProps {
   jid: string;
@@ -41,14 +43,14 @@ export function BlockContactDialog({ jid, name, onClose, onBlocked }: BlockConta
 
   return (
     <Dialog title={text('requests.blockTitle')} onClose={onClose} closable={!busy}>
-      <p className={styles.sentence}>{text('requests.confirmBlock').replace('{name}', name)}</p>
-      <p className={styles.address}>{jid}</p>
+      <p className="m-0 wrap-anywhere">{text('requests.confirmBlock').replace('{name}', name)}</p>
+      <p className="m-0 text-[13px] wrap-anywhere text-ink-muted">{jid}</p>
       {error && (
-        <p className={styles.error} role="alert">
+        <p className={ERROR} role="alert">
           {text(error)}
         </p>
       )}
-      <div className={styles.actions}>
+      <div className="flex justify-end gap-2">
         <Button onClick={onClose} disabled={busy}>
           {text('dialog.cancel')}
         </Button>

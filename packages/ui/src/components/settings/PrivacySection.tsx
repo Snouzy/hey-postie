@@ -1,7 +1,7 @@
 import { useText } from '../../core/CoreProvider';
 import { OwnDevices } from '../OwnDevices';
 import { BlockedContacts } from './BlockedContacts';
-import styles from './section.module.css';
+import { sectionStyles as styles } from './sectionStyles';
 
 /**
  * Postie Seal: my devices (with "Remove"), and how trust works (spec 3.6). The rules live in

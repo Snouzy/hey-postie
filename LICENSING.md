@@ -27,6 +27,7 @@ The app ships these components, each under its own license. The full list, with 
 | Strophe.js | XMPP over WebSocket | MIT |
 | Tauri 2 and its plugins, with the Rust crates they pull in | Desktop shell | MIT or Apache-2.0 |
 | React | Interface | MIT |
+| Tailwind CSS, clsx, tailwind-merge, class-variance-authority | Interface styles | MIT, Apache-2.0 for class-variance-authority |
 | Fraunces, Figtree | Fonts | SIL Open Font License 1.1 |
 | Lucide | Icons | ISC |
 

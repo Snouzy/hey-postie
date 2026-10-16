@@ -2,7 +2,7 @@ import type { Account } from '@hey-postie/core';
 import { useEffect, useState } from 'react';
 import { useCore, useText } from '../../core/CoreProvider';
 import { Button } from '../Button';
-import styles from './section.module.css';
+import { sectionStyles as styles } from './sectionStyles';
 
 interface AccountSectionProps {
   titleId: string;

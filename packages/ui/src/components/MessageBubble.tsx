@@ -2,12 +2,40 @@ import type { Message, MessageStatus } from '@hey-postie/core';
 import { AlertCircle, Check, CheckCheck, Clock, Stamp } from 'lucide-react';
 import { useLocale, useText } from '../core/CoreProvider';
 import { formatTime } from '../i18n/dates';
+import { cn } from '../lib/cn';
 import { Attachments, type SaveFile } from './Attachments';
 import { Button } from './Button';
 import { Linkify } from './Linkify';
-import styles from './MessageBubble.module.css';
 import { ReactionBar } from './ReactionBar';
 import { Reactions } from './Reactions';
+
+const SR_ONLY = 'absolute h-px w-px overflow-hidden [clip:rect(0_0_0_0)]';
+const BUBBLE =
+  'group/bubble relative flex max-w-[min(70%,560px)] flex-col gap-1 rounded-bubble px-3 py-2 shadow-card';
+// Incoming: cream paper. Outgoing: the uniform navy.
+const INCOMING = 'self-start rounded-bl-sm bg-paper-raised text-ink';
+const OUTGOING = 'self-end rounded-br-sm bg-navy text-navy-contrast [&_a]:[color:inherit]';
+// Someone said my name: a touch of stamp yellow, and a bar on the left.
+const MENTION =
+  'border-l-3 border-l-yellow bg-[color-mix(in_srgb,var(--yellow)_22%,var(--paper-raised))]';
+const BODY = 'm-0 whitespace-pre-wrap wrap-anywhere';
+const SEALED = `${BODY} flex items-center gap-2 font-heading [font-variation-settings:'SOFT'_100] italic text-ink-muted`;
+// A sealed letter that left here: a drop of wax at the corner of the bubble.
+const WAX = 'absolute -top-1 -right-1 size-[10px] rounded-[50%] border-2 border-paper bg-red';
+// What to do with a letter I cannot open: plain text, and a way to the sender's devices.
+const HELP = 'm-0 flex flex-wrap items-center gap-2 text-[13px] text-ink-muted';
+// `leading-[1.3]` again: cn drops the button's line height when a text size is given.
+const SMALL_ACTION = 'px-3 py-[2px] text-[13px] leading-[1.3]';
+const SHOWN_ON_HOVER =
+  'opacity-0 transition-opacity duration-(--motion-fast) group-hover/bubble:opacity-100 group-focus-within/bubble:opacity-100';
+const META = `flex items-center justify-end gap-2 text-[11px] ${SHOWN_ON_HOVER}`;
+// The stamp: delivery status at the bottom right of an outgoing bubble, in the bubble's own
+// contrast color so it reads on navy in both themes.
+const STAMP = 'inline-flex items-center gap-[2px] text-navy-contrast';
+// Failed and read need to stand out: a small chip on paper, with ink or mailbox red.
+const STAMP_CHIP = 'rounded-sm bg-paper-raised px-1 text-ink';
+// The hover toolbar (React): floats at the top corner away from the edge, shown on hover or focus.
+const TOOLS = `absolute top-[-14px] ${SHOWN_ON_HOVER}`;
 
 interface MessageBubbleProps {
   message: Message;
@@ -37,31 +65,31 @@ export function MessageBubble({
   const mention = message.isMention && message.direction === 'in';
   // A parcel alone travels with an empty body: no empty line above the card.
   const hasBody = sealed || message.body.length > 0 || message.attachments.length === 0;
-  const classes = [
-    styles.bubble,
-    styles[message.direction],
-    last ? styles.last : '',
-    mention ? styles.mention : '',
-  ].join(' ');
+  const incoming = message.direction === 'in';
+  const { status } = message;
 
   return (
-    <div className={classes} data-status={message.status} data-message-id={message.id}>
-      {mention && <span className={styles.srOnly}>{text('message.mention')}</span>}
+    <div
+      className={cn(BUBBLE, incoming ? INCOMING : OUTGOING, mention && MENTION)}
+      data-status={status}
+      data-message-id={message.id}
+    >
+      {mention && <span className={SR_ONLY}>{text('message.mention')}</span>}
       {wax && (
-        <span className={styles.wax} title={text('message.encrypted')}>
-          <span className={styles.srOnly}>{text('message.encrypted')}</span>
+        <span className={WAX} title={text('message.encrypted')}>
+          <span className={SR_ONLY}>{text('message.encrypted')}</span>
         </span>
       )}
       {message.status !== 'pending' && (
-        <div className={styles.tools}>
+        <div className={cn(TOOLS, incoming ? 'right-2' : 'left-2')}>
           <ReactionBar onReact={(emoji) => onReact(message, emoji)} />
         </div>
       )}
       {hasBody && (
-        <p className={sealed ? styles.sealed : styles.body}>
+        <p className={sealed ? SEALED : BODY}>
           {sealed ? (
             <>
-              <Stamp size={16} className={styles.seal} aria-hidden />
+              <Stamp size={16} className="shrink-0 text-red" aria-hidden />
               {text('message.undecryptable')}
             </>
           ) : (
@@ -70,10 +98,10 @@ export function MessageBubble({
         </p>
       )}
       {sealed && (
-        <p className={styles.help}>
+        <p className={HELP}>
           {text('message.undecryptableHelp')}
           {onShowDevices && (
-            <Button className={styles.helpAction} onClick={onShowDevices}>
+            <Button className={SMALL_ACTION} onClick={onShowDevices}>
               {text('message.checkDevices')}
             </Button>
           )}
@@ -81,17 +109,30 @@ export function MessageBubble({
       )}
       <Attachments message={message} onSaveFile={onSaveFile} />
       <Reactions reactions={message.reactions} onToggle={(emoji) => onReact(message, emoji)} />
-      <span className={styles.meta}>
+      <span
+        className={cn(META, (last || status === 'failed' || status === 'pending') && 'opacity-100')}
+      >
         <time dateTime={message.sentAt.toISOString()}>{formatTime(locale, message.sentAt)}</time>
         {message.direction === 'out' && (
-          <span className={styles.stamp} title={text(`status.${message.status}`)}>
+          <span
+            className={cn(
+              STAMP,
+              (status === 'read' || status === 'failed') && STAMP_CHIP,
+              status === 'failed' && 'text-red',
+            )}
+            title={text(`status.${message.status}`)}
+          >
             <StatusIcon status={message.status} />
-            <span className={styles.stampLabel}>{text(`status.${message.status}`)}</span>
+            <span className={SR_ONLY}>{text(`status.${message.status}`)}</span>
           </span>
         )}
       </span>
       {message.status === 'failed' && (
-        <Button variant="danger" className={styles.retry} onClick={() => onRetry(message)}>
+        <Button
+          variant="danger"
+          className={cn('self-end bg-paper-raised', SMALL_ACTION)}
+          onClick={() => onRetry(message)}
+        >
           {text('message.retry')}
         </Button>
       )}

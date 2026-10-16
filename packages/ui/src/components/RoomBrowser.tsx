@@ -8,7 +8,6 @@ import { Postie } from '../illustrations/Postie';
 import { Button } from './Button';
 import { EmptyState } from './EmptyState';
 import { Field } from './Field';
-import styles from './RoomBrowser.module.css';
 
 interface RoomBrowserProps {
   domain: string;
@@ -40,8 +39,8 @@ export function RoomBrowser({ domain, onDomainChange, onPick }: RoomBrowserProps
   }
 
   return (
-    <div className={styles.browser}>
-      <form className={styles.form} onSubmit={browse}>
+    <div className="flex flex-col gap-3">
+      <form className="flex items-end gap-2 [&>:first-child]:flex-1" onSubmit={browse}>
         <Field
           label={text('joinRoom.domain')}
           type="text"
@@ -54,12 +53,15 @@ export function RoomBrowser({ domain, onDomainChange, onPick }: RoomBrowserProps
         </Button>
       </form>
       {error && (
-        <p className={styles.error} role="alert">
+        <p className="m-0 font-heading [font-variation-settings:'SOFT'_100] text-red" role="alert">
           {text(error)}
         </p>
       )}
       {browsing && (
-        <p className={styles.status} role="status">
+        <p
+          className="m-0 font-heading [font-variation-settings:'SOFT'_100] text-ink-muted"
+          role="status"
+        >
           {text('joinRoom.browsing')}
         </p>
       )}
@@ -71,14 +73,20 @@ export function RoomBrowser({ domain, onDomainChange, onPick }: RoomBrowserProps
         />
       )}
       {rooms && rooms.length > 0 && (
-        <ul className={styles.list}>
+        <ul className="m-0 flex max-h-[240px] list-none flex-col gap-[2px] overflow-y-auto p-0">
           {rooms.map((room) => (
             <li key={room.jid}>
-              <button type="button" className={styles.row} onClick={() => onPick(room.jid)}>
-                <span className={styles.name}>{room.name}</span>
-                <span className={styles.jid}>{room.jid}</span>
+              <button
+                type="button"
+                className="flex w-full cursor-pointer flex-col gap-[2px] rounded-sm border-0 bg-transparent px-3 py-2 text-left text-ink transition-[background-color] duration-(--motion-fast) hover:bg-paper focus-visible:bg-paper"
+                onClick={() => onPick(room.jid)}
+              >
+                <span className="font-semibold">{room.name}</span>
+                <span className="font-mono text-[12px] text-ink-muted wrap-anywhere">
+                  {room.jid}
+                </span>
                 {room.membersCount !== undefined && (
-                  <span className={styles.count}>
+                  <span className="inline-flex items-center gap-1 text-[12px] text-ink-muted">
                     <Users size={12} aria-hidden />
                     {text('joinRoom.membersCount').replace('{count}', String(room.membersCount))}
                   </span>

@@ -6,7 +6,7 @@ import { useCore, useText } from '../core/CoreProvider';
 import type { MessageKey } from '../i18n';
 import { errorKey } from '../i18n/errors';
 import { Postie } from '../illustrations/Postie';
-import styles from './CreateAccount.module.css';
+import { createAccountLayout as layout } from './createAccountLayout';
 import { RegistrationForm } from './RegistrationForm';
 
 interface CreateAccountProps {
@@ -63,12 +63,12 @@ export function CreateAccount({ onBack, onOpenLink, onCreatedButNotSignedIn }: C
   const mood = asking ? 'thinking' : error ? 'oops' : 'sealed';
 
   return (
-    <main className={styles.screen}>
+    <main className={layout.screen}>
       <Postie mood={mood} label={text(`postie.alt.${mood}`)} size={140} />
-      <h1 className={styles.title}>{text('createAccount.title')}</h1>
-      <form className={styles.form} onSubmit={askServer} aria-busy={asking}>
-        <h2 className={styles.step}>{text('createAccount.where')}</h2>
-        <p id={helpId} className={styles.help}>
+      <h1 className={layout.title}>{text('createAccount.title')}</h1>
+      <form className={layout.form} onSubmit={askServer} aria-busy={asking}>
+        <h2 className={layout.step}>{text('createAccount.where')}</h2>
+        <p id={helpId} className={layout.help}>
           {text('createAccount.domainHelp')}
         </p>
         <Field
@@ -90,7 +90,7 @@ export function CreateAccount({ onBack, onOpenLink, onCreatedButNotSignedIn }: C
           required
         />
         <a
-          className={styles.link}
+          className={layout.link}
           href={DIRECTORY_URL}
           target="_blank"
           rel="noreferrer"
@@ -101,10 +101,10 @@ export function CreateAccount({ onBack, onOpenLink, onCreatedButNotSignedIn }: C
         >
           {text('createAccount.directory')}
         </a>
-        <p className={styles.message} role={error ? 'alert' : 'status'}>
+        <p className={layout.message} role={error ? 'alert' : 'status'}>
           {asking ? text('createAccount.askingServer') : error ? text(error) : ''}
         </p>
-        <div className={styles.actions}>
+        <div className={layout.actions}>
           <Button variant="ghost" onClick={onBack} disabled={asking}>
             {text('createAccount.back')}
           </Button>

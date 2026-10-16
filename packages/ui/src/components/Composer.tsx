@@ -4,9 +4,15 @@ import { useText } from '../core/CoreProvider';
 import type { MessageKey } from '../i18n';
 import { errorKey } from '../i18n/errors';
 import { Button } from './Button';
-import styles from './Composer.module.css';
 import { completeNick, grow, insertAt, pastedImages } from './composerText';
 import { EmojiPicker } from './EmojiPicker';
+
+const AREA =
+  'max-h-[200px] flex-1 resize-none rounded border border-line-strong bg-paper-raised px-3 py-2 leading-[1.4] text-ink transition-[border-color] duration-(--motion-fast) focus-visible:border-navy';
+// Paperclip and smile: the same footprint as the send button, so the row stays level.
+const TOOL = 'size-10 shrink-0';
+// The real file input stays in the accessibility tree; the paperclip is its visible face.
+const FILE_INPUT = 'absolute h-px w-px overflow-hidden [clip:rect(0_0_0_0)]';
 
 interface ComposerProps {
   onSend: (body: string) => Promise<void>;
@@ -110,18 +116,21 @@ export function Composer({
   }
 
   return (
-    <div className={styles.composer}>
+    <div className="flex flex-col gap-2 border-t border-line bg-paper px-4 py-3">
       {error && (
-        <p className={styles.error} role="alert">
+        <p
+          className="m-0 font-heading text-[14px] text-red [font-variation-settings:'SOFT'_100]"
+          role="alert"
+        >
           {text(error)}
         </p>
       )}
-      <div className={styles.row}>
+      <div className="flex items-end gap-2">
         {onAttach && (
           <>
             <input
               ref={fileInput}
-              className={styles.fileInput}
+              className={FILE_INPUT}
               type="file"
               multiple
               // The paperclip is the Tab stop; the input stays in the tree for its own name.
@@ -135,7 +144,7 @@ export function Composer({
             />
             <Button
               variant="ghost"
-              className={styles.tool}
+              className={TOOL}
               aria-label={text('composer.attach')}
               disabled={disabled}
               onClick={() => fileInput.current?.click()}
@@ -147,7 +156,7 @@ export function Composer({
         <Button
           ref={emojiButton}
           variant="ghost"
-          className={styles.tool}
+          className={TOOL}
           aria-label={text('composer.emoji')}
           aria-haspopup="dialog"
           aria-expanded={pickerOpen}
@@ -161,7 +170,7 @@ export function Composer({
         )}
         <textarea
           ref={area}
-          className={styles.area}
+          className={AREA}
           rows={1}
           value={body}
           placeholder={placeholder}
@@ -177,7 +186,7 @@ export function Composer({
         />
         <Button
           variant="primary"
-          className={styles.send}
+          className="size-10 p-2"
           onClick={() => void send()}
           disabled={!canSend}
           aria-label={text('composer.send')}

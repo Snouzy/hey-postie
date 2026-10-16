@@ -3,7 +3,6 @@ import { useText } from '../core/CoreProvider';
 import { useDevices } from '../core/useDevices';
 import { useTrustAction } from '../core/useTrustAction';
 import { DeviceList } from './DeviceList';
-import styles from './Encryption.module.css';
 import { RetryNotice } from './RetryNotice';
 
 interface EncryptionSectionProps {
@@ -28,17 +27,28 @@ export function EncryptionSection({ jid, focusRequest = 0 }: EncryptionSectionPr
   }, [focusRequest]);
 
   return (
-    <section ref={section} className={styles.section} aria-labelledby={headingId} tabIndex={-1}>
-      <h3 id={headingId} className={styles.heading}>
+    <section
+      ref={section}
+      className="flex flex-col gap-2 focus-visible:outline-offset-(--space-1)"
+      aria-labelledby={headingId}
+      tabIndex={-1}
+    >
+      <h3
+        id={headingId}
+        className="m-0 font-text text-[12px] font-bold tracking-[0.04em] uppercase text-ink-muted"
+      >
         {text('crypto.section')}
       </h3>
       {error ? (
         <RetryNotice error={error} onRetry={reload} />
       ) : devices.length === 0 ? (
-        <p className={styles.empty}>{text('crypto.empty')}</p>
+        // Postie's words: no key to show, in his voice.
+        <p className="m-0 font-heading [font-variation-settings:'SOFT'_100] text-ink-muted">
+          {text('crypto.empty')}
+        </p>
       ) : (
         <>
-          <p className={styles.hint}>{text('crypto.compare')}</p>
+          <p className="m-0 text-[13px] text-ink-muted">{text('crypto.compare')}</p>
           <DeviceList
             devices={devices}
             label={text('crypto.section')}
@@ -48,7 +58,7 @@ export function EncryptionSection({ jid, focusRequest = 0 }: EncryptionSectionPr
         </>
       )}
       {trust.error && (
-        <p className={styles.error} role="alert">
+        <p className="m-0 font-heading [font-variation-settings:'SOFT'_100] text-red" role="alert">
           {text(trust.error)}
         </p>
       )}

@@ -1,7 +1,6 @@
 import { Lock, LockOpen } from 'lucide-react';
 import { useText } from '../core/CoreProvider';
 import { Button } from './Button';
-import styles from './SealToggle.module.css';
 
 interface SealToggleProps {
   encrypted: boolean;
@@ -16,7 +15,8 @@ export function SealToggle({ encrypted, pending, onToggle }: SealToggleProps) {
   return (
     <Button
       variant="ghost"
-      className={encrypted ? styles.sealed : undefined}
+      // The closed lock takes the wax color: sealed letters leave here.
+      className={encrypted ? 'text-red' : undefined}
       onClick={onToggle}
       disabled={pending}
       aria-busy={pending}

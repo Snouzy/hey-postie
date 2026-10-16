@@ -1,7 +1,6 @@
 import { useText } from '../core/CoreProvider';
 import { Button } from './Button';
 import { Dialog } from './Dialog';
-import styles from './Lightbox.module.css';
 
 interface LightboxProps {
   name: string;
@@ -16,8 +15,8 @@ export function Lightbox({ name, url, onSave, onClose }: LightboxProps) {
   const text = useText();
   return (
     <Dialog title={name} onClose={onClose}>
-      <img className={styles.image} src={url} alt={name} />
-      <div className={styles.actions}>
+      <img className="mx-auto my-0 block max-h-[70vh] max-w-full rounded-sm" src={url} alt={name} />
+      <div className="flex justify-end">
         <Button variant="primary" onClick={onSave}>
           {text('parcel.save')}
         </Button>

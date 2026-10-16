@@ -1,6 +1,6 @@
 import { useText } from '../../core/CoreProvider';
 import { useSettings } from '../../core/SettingsProvider';
-import styles from './section.module.css';
+import { sectionStyles as styles } from './sectionStyles';
 
 /**
  * Whether a notification may carry the letter's text (a rule of the core, see

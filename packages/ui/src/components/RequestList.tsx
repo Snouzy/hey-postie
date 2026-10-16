@@ -4,7 +4,15 @@ import { useLocale, useText } from '../core/CoreProvider';
 import type { RequestRow } from '../core/useRequests';
 import { formatRecent } from '../i18n/dates';
 import { moveWithArrows } from './ChatList';
-import styles from './RequestList.module.css';
+
+/** The same uppercase heading as the address book, but a button that folds the group. */
+const HEADING =
+  'flex w-full cursor-pointer items-center gap-1 rounded-sm border-none bg-transparent px-3 py-2 text-left font-text text-[12px] font-bold tracking-[0.04em] text-ink-muted uppercase hover:bg-fill-hover';
+/** The count on stamp yellow: a stranger at the door is worth a look. */
+const BADGE =
+  'min-w-5 shrink-0 rounded-full bg-yellow px-[6px] py-0 text-center text-[12px] leading-[20px] font-bold tracking-normal text-on-yellow';
+const ROW =
+  'flex w-full cursor-pointer flex-col gap-[2px] rounded-sm border-none bg-transparent px-3 py-2 text-left text-ink transition-[background-color] duration-(--motion-fast) hover:bg-fill-hover aria-[current=true]:bg-fill-chosen';
 
 interface RequestListProps {
   rows: RequestRow[];
@@ -24,40 +32,38 @@ export function RequestList({ rows, selectedJid, onSelect }: RequestListProps) {
   const Chevron = open ? ChevronDown : ChevronRight;
 
   return (
-    <section className={styles.group}>
-      <button
-        type="button"
-        className={styles.heading}
-        aria-expanded={open}
-        onClick={() => setOpen(!open)}
-      >
+    <section className="mb-2 border-b border-line px-2 pt-0 pb-2">
+      <button type="button" className={HEADING} aria-expanded={open} onClick={() => setOpen(!open)}>
         <Chevron size={14} aria-hidden />
-        <span className={styles.title}>{text('requests.title')}</span>
-        <span className={styles.badge}>
+        <span className="flex-1">{text('requests.title')}</span>
+        <span className={BADGE}>
           {rows.length}
-          <span className={styles.srOnly}> {text('requests.waiting')}</span>
+          <span className="sr-only"> {text('requests.waiting')}</span>
         </span>
       </button>
       {open && (
-        <ul className={styles.list} onKeyDown={moveWithArrows}>
+        <ul className="m-0 flex list-none flex-col gap-[2px] p-0" onKeyDown={moveWithArrows}>
           {rows.map((row) => (
             <li key={row.jid}>
               <button
                 type="button"
                 data-row=""
-                className={styles.row}
+                className={ROW}
                 aria-current={row.jid === selectedJid ? 'true' : undefined}
                 onClick={() => onSelect(row)}
               >
-                <span className={styles.top}>
-                  <span className={styles.name}>{row.name}</span>
+                <span className="flex w-full items-center justify-between gap-2">
+                  <span className="min-w-0 flex-1 truncate font-semibold">{row.name}</span>
                   {row.at.getTime() > 0 && (
-                    <time className={styles.time} dateTime={row.at.toISOString()}>
+                    <time
+                      className="shrink-0 text-[12px] text-ink-muted"
+                      dateTime={row.at.toISOString()}
+                    >
                       {formatRecent(locale, row.at)}
                     </time>
                   )}
                 </span>
-                <span className={styles.preview}>
+                <span className="w-full truncate text-[13px] text-ink-muted">
                   {row.message ?? row.chat?.lastMessage?.body ?? row.jid}
                 </span>
               </button>

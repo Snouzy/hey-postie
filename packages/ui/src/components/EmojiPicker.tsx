@@ -1,7 +1,6 @@
 import { type KeyboardEvent, useCallback, useEffect, useRef, useState } from 'react';
 import { useText } from '../core/CoreProvider';
 import { EMOJI_CATEGORIES, EMOJIS, type EmojiCategory, searchEmojis } from '../data/emoji';
-import styles from './EmojiPicker.module.css';
 import { Popover } from './Popover';
 
 interface EmojiPickerProps {
@@ -10,7 +9,7 @@ interface EmojiPickerProps {
   onClose: () => void;
 }
 
-/** Must match `grid-template-columns` in the stylesheet: the arrows move by it. */
+/** Must match `grid-cols-8` of the grid: the arrows move by it. */
 export const COLUMNS = 8;
 
 const STEPS: Record<string, number> = {
@@ -19,6 +18,23 @@ const STEPS: Record<string, number> = {
   ArrowDown: COLUMNS,
   ArrowUp: -COLUMNS,
 };
+
+const SEARCH =
+  'rounded-full border border-line-strong bg-paper px-3 py-1 text-ink focus-visible:border-navy';
+const CATEGORIES =
+  'flex flex-nowrap gap-1 overflow-x-auto overflow-y-hidden scroll-smooth [scrollbar-width:none] motion-reduce:scroll-auto [&::-webkit-scrollbar]:hidden';
+// Toggle buttons, like the sidebar tabs: the pressed one wears the navy underline.
+const CATEGORY =
+  'flex-none cursor-pointer border-0 border-b-2 border-transparent bg-transparent px-2 py-[2px] text-[12px] whitespace-nowrap text-ink-muted aria-pressed:border-b-navy aria-pressed:text-navy';
+// grid-cols-8 is repeat(8, minmax(0, 1fr)): a wide glyph (a flag, a family) never widens its
+// column past the card. Rows get an explicit height: `aspect-ratio` on a <button> is not honoured
+// by WebKit, and a cell without padding would then be only as tall as its glyph.
+const GRID =
+  'grid max-h-[240px] auto-rows-[36px] grid-cols-8 gap-1 overflow-x-hidden overflow-y-auto';
+const CELL =
+  'inline-flex h-[36px] min-w-0 cursor-pointer items-center justify-center overflow-hidden rounded-sm border-0 bg-transparent p-0 text-[22px] leading-[1] hover:bg-paper focus-visible:bg-paper';
+const EMPTY =
+  "col-span-full mx-0 my-2 text-center font-heading text-[14px] text-ink-muted [font-variation-settings:'SOFT'_100]";
 
 /**
  * Search field, categories, then a grid of buttons whose accessible name is the shortname. The
@@ -73,10 +89,10 @@ export function EmojiPicker({ anchor, onPick, onClose }: EmojiPickerProps) {
 
   return (
     <Popover anchor={anchor} label={text('emoji.title')} onClose={onClose}>
-      <div className={styles.picker}>
+      <div className="flex w-[320px] flex-col gap-2">
         <input
           ref={search}
-          className={styles.search}
+          className={SEARCH}
           type="search"
           value={query}
           placeholder={text('emoji.search')}
@@ -89,13 +105,13 @@ export function EmojiPicker({ anchor, onPick, onClose }: EmojiPickerProps) {
           }}
         />
         {!searching && (
-          <div className={styles.strip} data-fade={fade}>
-            <div ref={strip} className={styles.categories} onScroll={measure}>
+          <div className="hp-emoji-strip" data-fade={fade}>
+            <div ref={strip} className={CATEGORIES} onScroll={measure}>
               {EMOJI_CATEGORIES.map((name) => (
                 <button
                   key={name}
                   type="button"
-                  className={styles.category}
+                  className={CATEGORY}
                   data-category={name}
                   aria-pressed={name === category}
                   onClick={() => setCategory(name)}
@@ -106,12 +122,12 @@ export function EmojiPicker({ anchor, onPick, onClose }: EmojiPickerProps) {
             </div>
           </div>
         )}
-        <div ref={grid} className={styles.grid}>
+        <div ref={grid} className={GRID}>
           {shown.map((entry, index) => (
             <button
               key={entry.shortname}
               type="button"
-              className={styles.cell}
+              className={CELL}
               tabIndex={index === current ? 0 : -1}
               aria-label={entry.shortname}
               title={entry.shortname}
@@ -122,7 +138,7 @@ export function EmojiPicker({ anchor, onPick, onClose }: EmojiPickerProps) {
               {entry.emoji}
             </button>
           ))}
-          {shown.length === 0 && <p className={styles.empty}>{text('emoji.empty')}</p>}
+          {shown.length === 0 && <p className={EMPTY}>{text('emoji.empty')}</p>}
         </div>
       </div>
     </Popover>

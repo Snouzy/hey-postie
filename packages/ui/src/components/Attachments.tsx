@@ -1,7 +1,6 @@
 import type { Attachment, Message } from '@hey-postie/core';
 import { useEffect, useState } from 'react';
 import { useCore } from '../core/CoreProvider';
-import styles from './Attachments.module.css';
 import { InlineImage } from './InlineImage';
 import { ParcelCard } from './ParcelCard';
 
@@ -45,9 +44,9 @@ export function Attachments({ message, onSaveFile }: AttachmentsProps) {
   }
 
   return (
-    <ul className={styles.list}>
+    <ul className="m-0 flex list-none flex-col gap-2 p-0">
       {attachments.map((attachment) => (
-        <li key={attachment.url} className={styles.item}>
+        <li key={attachment.url} className="flex">
           {inline(attachment) ? (
             <InlineImage attachment={attachment} onSaveFile={onSaveFile} />
           ) : (

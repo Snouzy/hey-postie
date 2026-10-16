@@ -3,7 +3,8 @@
 _Created 2026-10-15. Sources: `packages/ui/src/App.tsx`, `packages/ui/src/core/`,
 `packages/ui/src/screens/`, `packages/ui/src/components/`._
 
-The UI is React 19, TypeScript, CSS Modules, no router, no UI library. It reaches the core only
+The UI is React 19, TypeScript, Tailwind utilities over the Postal tokens (see
+[design-system.md](design-system.md#how-styles-are-written)), no router, no UI library. It reaches the core only
 through `useCore()` (services) and `core.events`; it never imports Converse, Tauri or storage
 (AGENTS.md, section 2). The desktop app renders `<App core locale onOpenLink? version? />`.
 
@@ -143,7 +144,7 @@ dialog stays.
 
 _Added 2026-10-15; became a window with sections on 2026-10-16 (decision of the author, "Night
 of 2026-10-16"). Sources: `components/settings/` (`SettingsWindow.tsx`, `SettingsNav.tsx`,
-`sections.ts`, one `*Section.tsx` per section, `section.module.css`), `components/Licenses.tsx`,
+`sections.ts`, one `*Section.tsx` per section, `sectionStyles.ts`), `components/Licenses.tsx`,
 `components/OwnDevices.tsx`, `core/settings.ts`, `core/useTheme.ts`, `core/SettingsProvider.tsx`,
 `data/licenses.json`, `components/settings/SettingsWindow.test.tsx`, `components/Licenses.test.tsx`._
 
@@ -742,7 +743,7 @@ are `min-height: 100%` and let the window scroll when the zoom makes them taller
 
 ## Adding a screen
 
-1. Create `screens/<Name>.tsx` and `screens/<Name>.module.css`; read data through `useCore()`
+1. Create `screens/<Name>.tsx`, styled with utilities; read data through `useCore()`
    and the hooks above, never through a repository.
 2. Add its texts to **both** `i18n/en.ts` and `i18n/fr.ts` (`i18n/index.test.ts` fails otherwise).
 3. Add a row to the table in `Screens` (`App.tsx`): which account state and which user action show it.

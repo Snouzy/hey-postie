@@ -4,9 +4,12 @@ import { useState } from 'react';
 import { useText } from '../core/CoreProvider';
 import { useAttachment } from '../core/useAttachment';
 import type { SaveFile } from './Attachments';
-import styles from './InlineImage.module.css';
 import { Lightbox } from './Lightbox';
 import { RetryNotice } from './RetryNotice';
+
+const SR_ONLY = 'absolute h-px w-px overflow-hidden [clip:rect(0_0_0_0)]';
+// The parcel came sealed: a small lock on kraft at the corner.
+const LOCK = 'absolute top-1 right-1 inline-flex rounded-sm bg-kraft-ink p-[2px] text-paper';
 
 interface InlineImageProps {
   attachment: Attachment;
@@ -27,21 +30,31 @@ export function InlineImage({ attachment, onSaveFile }: InlineImageProps) {
     return <RetryNotice error="parcel.fetchFailed" onRetry={loaded.retry} />;
   }
   if (loaded.status === 'loading') {
-    return <div className={styles.skeleton} role="status" aria-label={text('parcel.loading')} />;
+    return (
+      <div
+        className="hp-image-skeleton h-[160px] w-[240px] rounded-sm"
+        role="status"
+        aria-label={text('parcel.loading')}
+      />
+    );
   }
   return (
     <>
       <button
         type="button"
-        className={styles.frame}
+        className="relative block cursor-zoom-in overflow-hidden rounded-sm border-none bg-transparent p-0"
         aria-label={`${text('parcel.view')} ${attachment.name}`}
         onClick={() => setOpen(true)}
       >
-        <img className={styles.image} src={loaded.url} alt={attachment.name} />
+        <img
+          className="block max-h-[320px] max-w-full rounded-sm"
+          src={loaded.url}
+          alt={attachment.name}
+        />
         {sealed && (
-          <span className={styles.lock} title={text('parcel.sealed')}>
+          <span className={LOCK} title={text('parcel.sealed')}>
             <Lock size={12} aria-hidden />
-            <span className={styles.srOnly}>{text('parcel.sealed')}</span>
+            <span className={SR_ONLY}>{text('parcel.sealed')}</span>
           </span>
         )}
       </button>

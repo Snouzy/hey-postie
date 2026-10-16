@@ -1,0 +1,42 @@
+/* Styles of the panes group that utilities cannot say cleanly (keyframes, pseudo-elements, scrollbars). */
+
+@layer components {
+  /*
+   * The line of the pane resizer (PaneResizer.tsx). Nothing shows at rest; a 2px navy line on
+   * hover, focus and while dragging (it is the focus indicator too: the global ring would draw a
+   * tall rectangle around an 8px column).
+   */
+  .hp-pane-resizer::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 3px;
+    width: 2px;
+    background: transparent;
+    transition: background-color var(--motion-fast);
+  }
+
+  /* Folded: a short grabber, at the window's edge, to say the pane is here. */
+  .hp-pane-resizer[data-collapsed]::after {
+    top: 50%;
+    bottom: auto;
+    height: 32px;
+    transform: translateY(-50%);
+    border-radius: 1px;
+    background: var(--line-strong);
+  }
+
+  .hp-pane-resizer:hover::after,
+  .hp-pane-resizer:focus-visible::after,
+  .hp-pane-resizer[data-dragging]::after {
+    background: var(--navy);
+  }
+
+  /* For the whole resize gesture (PaneResizer puts the class on body): the cursor would otherwise
+     flicker over what the pointer crosses, and text would get selected on the way. */
+  body.resizing {
+    cursor: col-resize;
+    user-select: none;
+  }
+}

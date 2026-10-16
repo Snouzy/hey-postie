@@ -2,7 +2,6 @@ import { type FormEvent, useId, useState } from 'react';
 import { useCore, useText } from '../core/CoreProvider';
 import type { MessageKey } from '../i18n';
 import { errorKey } from '../i18n/errors';
-import styles from './AddContact.module.css';
 import { Button } from './Button';
 import { Dialog } from './Dialog';
 import { Field } from './Field';
@@ -32,7 +31,7 @@ export function AddContact({ onClose }: AddContactProps) {
 
   return (
     <Dialog title={text('addContact.title')} onClose={onClose}>
-      <form className={styles.form} onSubmit={submit}>
+      <form className="flex flex-col gap-3" onSubmit={submit}>
         <Field
           label={text('addContact.jid')}
           type="text"
@@ -50,11 +49,15 @@ export function AddContact({ onClose }: AddContactProps) {
           onChange={(e) => setName(e.target.value)}
         />
         {error && (
-          <p id={errorId} className={styles.error} role="alert">
+          <p
+            id={errorId}
+            className="m-0 font-heading text-red [font-variation-settings:'SOFT'_100]"
+            role="alert"
+          >
             {text(error)}
           </p>
         )}
-        <div className={styles.actions}>
+        <div className="flex justify-end gap-2">
           <Button onClick={onClose}>{text('dialog.cancel')}</Button>
           <Button variant="primary" type="submit" disabled={!jid.trim()}>
             {text('addContact.submit')}

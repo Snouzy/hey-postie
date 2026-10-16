@@ -1,8 +1,14 @@
 import { Bell, type LucideIcon, Palette, ShieldCheck, Sliders, User, Wrench } from 'lucide-react';
 import type { KeyboardEvent } from 'react';
 import { useText } from '../../core/CoreProvider';
-import styles from './SettingsWindow.module.css';
 import { SETTINGS_SECTIONS, type SettingsSection, sectionTitleKey } from './sections';
+
+// Narrower than the app's minimum window (640px, as in `SettingsWindow`): the nav becomes a row
+// above the panel.
+const NAV =
+  'flex flex-[0_0_200px] flex-col gap-1 border-r border-line pr-6 [@media(max-width:640px)]:flex-none [@media(max-width:640px)]:flex-row [@media(max-width:640px)]:flex-wrap [@media(max-width:640px)]:border-r-0 [@media(max-width:640px)]:border-b [@media(max-width:640px)]:p-0 [@media(max-width:640px)]:pb-3';
+const TAB =
+  'flex cursor-pointer items-center gap-2 rounded-sm border-none bg-transparent px-3 py-2 text-left text-ink hover:bg-kraft-soft aria-selected:bg-kraft-soft aria-selected:font-semibold aria-selected:text-navy';
 
 interface SettingsNavProps {
   active: SettingsSection;
@@ -53,7 +59,7 @@ export function SettingsNav({ active, onSelect, tabId, panelId, autofocus }: Set
 
   return (
     <div
-      className={styles.nav}
+      className={NAV}
       role="tablist"
       aria-orientation="vertical"
       aria-label={text('settings.sections')}
@@ -68,7 +74,7 @@ export function SettingsNav({ active, onSelect, tabId, panelId, autofocus }: Set
             id={tabId(section)}
             type="button"
             role="tab"
-            className={styles.tab}
+            className={TAB}
             aria-selected={selected}
             aria-controls={panelId(section)}
             tabIndex={selected ? 0 : -1}

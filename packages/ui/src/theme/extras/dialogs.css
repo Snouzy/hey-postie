@@ -1,0 +1,48 @@
+/* Styles of the dialogs group that utilities cannot say cleanly (keyframes, pseudo-elements, scrollbars). */
+
+/* Dialog backdrop and Popover card fade in (`animate-[dialog-fade_…]`). */
+@keyframes dialog-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@layer components {
+  /* EmojiPicker: one line of categories that scrolls sideways; the strip paints a fade on the edge
+     that hides more (`data-fade` is set from the scroll position). */
+  .hp-emoji-strip {
+    position: relative;
+  }
+
+  .hp-emoji-strip::before,
+  .hp-emoji-strip::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 28px;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity var(--motion-fast);
+  }
+
+  .hp-emoji-strip::before {
+    left: 0;
+    background: linear-gradient(to right, var(--paper-raised), transparent);
+  }
+
+  .hp-emoji-strip::after {
+    right: 0;
+    background: linear-gradient(to left, var(--paper-raised), transparent);
+  }
+
+  .hp-emoji-strip[data-fade='left']::before,
+  .hp-emoji-strip[data-fade='both']::before,
+  .hp-emoji-strip[data-fade='right']::after,
+  .hp-emoji-strip[data-fade='both']::after {
+    opacity: 1;
+  }
+}

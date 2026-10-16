@@ -1,0 +1,80 @@
+/*
+ * Tailwind reads the Postal tokens (tokens.css stays their one source, light and dark).
+ * No preflight: the base styles of tokens.css are ours. A utility that reads a token follows the
+ * theme by itself, so there is no `dark:` variant. See wiki/development/design-system.md.
+ *
+ * `@theme inline reference`: the utilities read the tokens directly and Tailwind writes no variable
+ * of its own, which would otherwise redefine ours as themselves (`--radius: var(--radius)`).
+ * Biome cannot parse that line, so biome.json leaves this file out.
+ */
+@layer theme, base, components, utilities;
+@import 'tailwindcss/theme.css' layer(theme);
+@import 'tailwindcss/utilities.css' layer(utilities);
+/* What utilities cannot say cleanly, one file per area. */
+@import './extras/screens.css';
+@import './extras/messages.css';
+@import './extras/sidebar.css';
+@import './extras/panes.css';
+@import './extras/dialogs.css';
+
+/* The components live in this package, which the app sees through node_modules: name it. */
+@source '..';
+
+@theme inline reference {
+  --color-*: initial;
+  --color-transparent: transparent;
+  --color-current: currentColor;
+  --color-paper: var(--paper);
+  --color-paper-raised: var(--paper-raised);
+  --color-ink: var(--ink);
+  --color-ink-muted: var(--ink-muted);
+  --color-navy: var(--navy);
+  --color-navy-contrast: var(--navy-contrast);
+  --color-red: var(--red);
+  --color-kraft: var(--kraft);
+  --color-kraft-ink: var(--kraft-ink);
+  --color-kraft-soft: var(--kraft-soft);
+  --color-yellow: var(--yellow);
+  --color-on-yellow: var(--on-yellow);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --color-fill-hover: var(--fill-hover);
+  --color-fill-chosen: var(--fill-chosen);
+
+  --font-*: initial;
+  --font-heading: var(--font-heading);
+  --font-text: var(--font-text);
+  --font-mono: var(--font-mono);
+
+  --radius-*: initial;
+  --radius-sm: var(--radius-sm);
+  --radius: var(--radius);
+  --radius-bubble: var(--radius-bubble);
+  --radius-full: 999px;
+
+  --shadow-*: initial;
+  --shadow-card: var(--shadow-card);
+
+  /* The spacing scale is 4px, like --space-1: `p-2` is --space-2, `p-4` is --space-4. */
+  --spacing: 4px;
+
+  /* The CSS default curve, as the stylesheets had before Tailwind. */
+  --default-transition-timing-function: ease;
+}
+
+/* Layers, lowest first (theme/layers.test.ts checks every component goes through them). */
+@utility z-sticky {
+  z-index: var(--z-sticky);
+}
+@utility z-float {
+  z-index: var(--z-float);
+}
+@utility z-popover {
+  z-index: var(--z-popover);
+}
+@utility z-dialog {
+  z-index: var(--z-dialog);
+}
+

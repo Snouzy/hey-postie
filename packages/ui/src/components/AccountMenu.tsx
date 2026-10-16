@@ -4,11 +4,26 @@ import { type FocusEvent, type KeyboardEvent, useEffect, useId, useRef, useState
 import { useCore, useText } from '../core/CoreProvider';
 import type { MessageKey } from '../i18n';
 import { errorKey } from '../i18n/errors';
-import styles from './AccountMenu.module.css';
+import { cn } from '../lib/cn';
 import { Avatar } from './Avatar';
 import { PresenceDot } from './PresenceDot';
 
 const SHOWS: readonly PresenceShow[] = ['online', 'away', 'dnd'];
+
+const TRIGGER =
+  'flex w-full cursor-pointer items-center gap-2 rounded-sm border-none bg-transparent p-2 text-left text-ink transition-[background-color] duration-(--motion-fast) hover:bg-paper-raised aria-expanded:bg-paper-raised';
+/** `hp-account-card` (theme/extras/sidebar.css): the card fades in when it opens. */
+const CARD =
+  'hp-account-card absolute top-[calc(100%+var(--space-1))] right-0 left-0 z-float flex flex-col rounded border border-line bg-paper-raised p-2 shadow-card';
+/** The presence picker: three radios with their dot, then the status sentence and its counter. */
+const PRESENCE = 'm-0 flex flex-col gap-1 border-none p-2 disabled:opacity-60';
+const STATUS =
+  'mb-2 flex flex-wrap items-center gap-x-2 gap-y-1 border-b border-line p-2 has-[input:disabled]:opacity-60';
+const LEGEND = 'p-0 text-[12px] font-semibold text-ink-muted';
+const STATUS_INPUT =
+  'min-w-0 flex-1 rounded-sm border border-line-strong bg-paper px-2 py-1 text-ink transition-[border-color] duration-(--motion-fast) focus-visible:border-navy';
+const ITEM =
+  'flex cursor-pointer items-center gap-2 rounded-sm border-none bg-transparent p-2 text-left text-ink hover:bg-paper focus-visible:bg-paper data-[tone=danger]:text-red';
 
 interface AccountMenuProps {
   account: Account;
@@ -117,11 +132,11 @@ export function AccountMenu({
   }
 
   return (
-    <div ref={root} className={styles.root}>
+    <div ref={root} className="relative min-w-0 flex-1">
       <button
         ref={trigger}
         type="button"
-        className={styles.trigger}
+        className={TRIGGER}
         // The name stays the display name, as before; the dot keeps its own title for the eye.
         aria-label={account.displayName}
         title={text('accountMenu.open')}
@@ -132,18 +147,21 @@ export function AccountMenu({
       >
         <Avatar name={account.displayName} jid={account.jid} avatarUrl={account.avatarUrl} />
         <PresenceDot presence={online ? show : 'offline'} />
-        <span className={styles.name}>{account.displayName}</span>
+        <span className="min-w-0 flex-1 truncate font-semibold">{account.displayName}</span>
         <ChevronDown size={16} aria-hidden />
       </button>
       {open && (
         // biome-ignore lint/a11y/noStaticElementInteractions: the keys are handled for the controls inside
-        <div className={styles.card} onKeyDown={onCardKeyDown} onBlur={onBlur}>
-          <p className={styles.jid}>{account.jid}</p>
-          <fieldset className={styles.presence} disabled={!online}>
-            <legend className={styles.legend}>{text('accountMenu.presence')}</legend>
+        <div className={CARD} onKeyDown={onCardKeyDown} onBlur={onBlur}>
+          <p className="m-0 p-2 font-mono text-[12px] wrap-anywhere text-ink-muted">
+            {account.jid}
+          </p>
+          <fieldset className={PRESENCE} disabled={!online}>
+            <legend className={cn(LEGEND, 'mb-1')}>{text('accountMenu.presence')}</legend>
             {SHOWS.map((value) => (
-              <label key={value} className={styles.choice}>
+              <label key={value} className="flex cursor-pointer items-center gap-2">
                 <input
+                  className="m-0 accent-navy"
                   type="radio"
                   name="presence"
                   value={value}
@@ -155,13 +173,13 @@ export function AccountMenu({
               </label>
             ))}
           </fieldset>
-          <div className={styles.status}>
-            <label htmlFor={statusId} className={styles.legend}>
+          <div className={STATUS}>
+            <label htmlFor={statusId} className={cn(LEGEND, 'm-0 w-full')}>
               {text('accountMenu.status')}
             </label>
             <input
               id={statusId}
-              className={styles.statusInput}
+              className={STATUS_INPUT}
               type="text"
               value={status}
               placeholder={text('accountMenu.statusPlaceholder')}
@@ -172,55 +190,48 @@ export function AccountMenu({
             />
             <span
               id={`${statusId}-count`}
-              className={styles.counter}
+              className="text-[11px] text-ink-muted tabular-nums data-[over]:text-red"
               data-over={status.length > MAX_STATUS_LENGTH ? '' : undefined}
             >
               {status.length}/{MAX_STATUS_LENGTH}
             </span>
             {error && (
-              <p className={styles.error} role="alert">
+              <p
+                className="m-0 w-full font-heading text-[13px] text-red [font-variation-settings:'SOFT'_100]"
+                role="alert"
+              >
                 {text(error)}
               </p>
             )}
           </div>
           <div
             id={menuId}
-            className={styles.menu}
+            className="flex flex-col"
             role="menu"
             aria-label={text('accountMenu.open')}
             onKeyDown={onKeyDown}
           >
-            <button
-              type="button"
-              role="menuitem"
-              className={styles.item}
-              onClick={() => pick(onSignOut)}
-            >
+            <button type="button" role="menuitem" className={ITEM} onClick={() => pick(onSignOut)}>
               <LogOut size={16} aria-hidden />
               {text('main.signOut')}
             </button>
             <button
               type="button"
               role="menuitem"
-              className={styles.item}
+              className={ITEM}
               onClick={() => pick(onMyDevices)}
             >
               <KeyRound size={16} aria-hidden />
               {text('accountMenu.devices')}
             </button>
-            <button
-              type="button"
-              role="menuitem"
-              className={styles.item}
-              onClick={() => pick(onSettings)}
-            >
+            <button type="button" role="menuitem" className={ITEM} onClick={() => pick(onSettings)}>
               <Settings size={16} aria-hidden />
               {text('accountMenu.settings')}
             </button>
             <button
               type="button"
               role="menuitem"
-              className={styles.item}
+              className={ITEM}
               data-tone="danger"
               onClick={() => pick(onDeleteAccount)}
             >

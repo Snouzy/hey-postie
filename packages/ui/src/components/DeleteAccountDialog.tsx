@@ -3,9 +3,12 @@ import { useCore, useText } from '../core/CoreProvider';
 import type { MessageKey } from '../i18n';
 import { errorKey } from '../i18n/errors';
 import { Button } from './Button';
-import styles from './DeleteAccountDialog.module.css';
 import { Dialog } from './Dialog';
 import { Field } from './Field';
+
+// Postie speaks here, hence the heading font. Room reserved so the card does not jump.
+const MESSAGE =
+  "m-0 min-h-[1.5em] font-heading text-[15px] text-ink-muted [font-variation-settings:'SOFT'_100] [&[role=alert]]:text-red";
 
 interface DeleteAccountDialogProps {
   jid: string;
@@ -43,8 +46,8 @@ export function DeleteAccountDialog({ jid, onClose, onDeleted }: DeleteAccountDi
 
   return (
     <Dialog title={text('deleteAccount.title')} onClose={onClose} closable={!deleting}>
-      <form className={styles.form} onSubmit={submit} aria-busy={deleting}>
-        <p id={explainId} className={styles.explain}>
+      <form className="flex flex-col gap-3" onSubmit={submit} aria-busy={deleting}>
+        <p id={explainId} className="m-0 leading-[1.5]">
           {text('deleteAccount.explain')}
         </p>
         <Field
@@ -60,10 +63,10 @@ export function DeleteAccountDialog({ jid, onClose, onDeleted }: DeleteAccountDi
           onChange={(e) => setTyped(e.target.value)}
           disabled={deleting}
         />
-        <p className={styles.message} role={error ? 'alert' : 'status'}>
+        <p className={MESSAGE} role={error ? 'alert' : 'status'}>
           {deleting ? text('deleteAccount.deleting') : error ? text(error) : ''}
         </p>
-        <div className={styles.actions}>
+        <div className="flex justify-end gap-2">
           <Button onClick={onClose} disabled={deleting}>
             {text('dialog.cancel')}
           </Button>

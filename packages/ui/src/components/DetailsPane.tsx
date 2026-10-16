@@ -4,7 +4,6 @@ import { useText } from '../core/CoreProvider';
 import { Postie } from '../illustrations/Postie';
 import { Button } from './Button';
 import { Details } from './Details';
-import styles from './DetailsPane.module.css';
 import { EmptyState } from './EmptyState';
 import { RoomDetails } from './RoomDetails';
 
@@ -51,7 +50,10 @@ export function DetailsPane({
   }
   if (!room) {
     return (
-      <aside className={styles.pane} aria-label={text('main.details')}>
+      <aside
+        className="flex w-[clamp(240px,var(--details-width,280px),480px)] shrink-0 flex-col items-end gap-4 border-l border-line bg-paper p-4 [&>:last-child]:self-stretch"
+        aria-label={text('main.details')}
+      >
         <Button variant="ghost" onClick={onClose} aria-label={text('main.closeDetails')}>
           <X size={18} aria-hidden />
         </Button>

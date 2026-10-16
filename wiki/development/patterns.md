@@ -122,3 +122,36 @@ export function createCore(deps: CoreDependencies): Core {
 
 Adding a service means: its interface in `contracts/services.ts`, its factory in `services/`, one
 line here, and the field on `Core`.
+
+## Utility classes over tokens
+
+**What.** Components are styled with Tailwind utility classes written in the markup
+(`className="rounded-bubble bg-paper-raised p-4"`). The utilities read the design tokens of
+`packages/ui/src/theme/tokens.css` through `theme/tailwind.css`; nothing else defines a colour,
+a radius or a layer. Conditional classes go through `cn()` (`packages/ui/src/lib/cn.ts`).
+
+**Why.** One styling system for every component, the same as our first UI reference (Buzz,
+[spec](../specs/2026-10-16-buzz-ui-tailwind-design.md)), so its components port with little
+rewriting. A class sits next to the element it styles: no stylesheet to keep in sync, no dead rule.
+The tokens stay the one source, so light and dark keep working with no `dark:` variant.
+
+**Example.** `packages/ui/src/components/ChatList.tsx`: the chosen row is
+`aria-[current=true]:bg-fill-chosen`, the row under the pointer `hover:bg-fill-hover`.
+
+## Variants with `cva`
+
+**What.** A component with a few named looks declares them once with `cva` (class-variance-authority)
+and picks one by prop: `Button` has `primary`, `secondary`, `ghost`, `danger`.
+
+**Why.** The variants of a component are listed in one place and typed (`VariantProps`), instead of
+`if` branches building class strings. Use it only when a component has variants; a plain class
+string is enough otherwise.
+
+**Example.** `packages/ui/src/components/Button.tsx`:
+
+```ts
+const button = cva('inline-flex … rounded-full px-4 py-2', {
+  variants: { variant: { primary: 'bg-navy text-navy-contrast', ghost: 'p-2 text-ink-muted' } },
+  defaultVariants: { variant: 'secondary' },
+});
+```

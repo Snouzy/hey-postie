@@ -1,5 +1,4 @@
 import { type ReactNode, useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
-import styles from './Popover.module.css';
 
 interface PopoverProps {
   /** The button that opened it: the card sits above it (below when there is no room). */
@@ -13,6 +12,9 @@ interface PopoverProps {
 }
 
 const MARGIN = 8;
+
+const CARD =
+  'fixed z-popover rounded border border-line bg-paper-raised p-2 shadow-card animate-[dialog-fade_var(--motion-fast)_ease-out]';
 
 /**
  * A small floating card next to its opener. Positioned on the viewport (not inside the scrolling
@@ -78,7 +80,7 @@ export function Popover({ anchor, label, onClose, prefer = 'above', children }: 
   return (
     <div
       ref={card}
-      className={styles.card}
+      className={CARD}
       role="dialog"
       aria-label={label}
       style={position ?? { visibility: 'hidden' }}

@@ -1,2 +1,3 @@
-@import './fonts.css';
-@import './tokens.css';
+@import './tailwind.css';
+@import './fonts.css' layer(base);
+@import './tokens.css' layer(base);

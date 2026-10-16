@@ -1,6 +1,5 @@
 import { type KeyboardEvent, type PointerEvent, type RefObject, useEffect, useRef } from 'react';
 import { clampPane, type PaneBounds } from '../core/settings';
-import styles from './PaneResizer.module.css';
 
 /** Dragged this far under the minimum, the pane folds instead of fighting the bound. */
 const COLLAPSE_SLACK = 40;
@@ -8,6 +7,13 @@ const KEY_STEP = 16;
 const KEY_STEP_LARGE = 64;
 /** On `body` for the whole gesture: the cursor stays, nothing gets selected on the way. */
 const BODY_CLASS = 'resizing';
+/*
+ * An 8px band straddling the pane's 1px line: 4px lent by each neighbour, so the line stays where
+ * it is and the hit zone sits over it. Folded, it sits at the window's edge on the paper. The line
+ * it draws (and the global ring it replaces) lives in theme/extras/panes.css.
+ */
+const RESIZER =
+  'hp-pane-resizer relative z-sticky -mx-1 flex-[0_0_8px] cursor-col-resize touch-none outline-none data-collapsed:m-0 data-collapsed:bg-paper';
 
 interface PaneResizerProps {
   /** Which side of the divider the pane sits on. */
@@ -202,7 +208,7 @@ export function PaneResizer({
       aria-valuenow={visualWidth}
       data-pane={pane}
       data-collapsed={collapsed || undefined}
-      className={styles.resizer}
+      className={RESIZER}
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}

@@ -13,8 +13,7 @@ import { useAccount } from '../core/useAccount';
 import type { MessageKey } from '../i18n';
 import { errorKey } from '../i18n/errors';
 import { Postie } from '../illustrations/Postie';
-import layout from './CreateAccount.module.css';
-import styles from './RegistrationForm.module.css';
+import { createAccountLayout as layout } from './createAccountLayout';
 
 interface RegistrationFormProps {
   form: ServerForm;
@@ -115,7 +114,7 @@ export function RegistrationForm(props: RegistrationFormProps) {
         <h2 className={layout.step}>{text('createAccount.who')}</h2>
         <p className={layout.help}>
           {form.instructions ? `${form.instructions} ` : ''}
-          <span className={styles.domain}>@{form.domain}</span>
+          <span className="font-mono text-[14px] text-ink">@{form.domain}</span>
         </p>
         {visible.map((field, index) => (
           <Field
@@ -138,7 +137,7 @@ export function RegistrationForm(props: RegistrationFormProps) {
             required={field.required || field.name === 'username' || field.name === 'password'}
           />
         ))}
-        <p id={passwordHelpId} className={styles.fieldHelp}>
+        <p id={passwordHelpId} className="m-0 -mt-2 text-[13px] text-ink-muted">
           {text('createAccount.passwordHelp')}
         </p>
         <Field
@@ -155,8 +154,9 @@ export function RegistrationForm(props: RegistrationFormProps) {
         />
         {captcha && (
           <>
+            {/* The server's puzzle, shown as it comes: no scaling tricks that would make it harder to read. */}
             <img
-              className={styles.captcha}
+              className="max-w-full self-start rounded-sm border border-line bg-paper"
               src={captcha.image}
               alt={text('createAccount.captchaAlt')}
             />

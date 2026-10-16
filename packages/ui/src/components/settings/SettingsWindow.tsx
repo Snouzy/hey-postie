@@ -9,7 +9,6 @@ import { GeneralSection } from './GeneralSection';
 import { NotificationsSection } from './NotificationsSection';
 import { PrivacySection } from './PrivacySection';
 import { SettingsNav } from './SettingsNav';
-import styles from './SettingsWindow.module.css';
 import type { SettingsSection } from './sections';
 
 interface SettingsWindowProps {
@@ -50,7 +49,9 @@ export function SettingsWindow({
 
   return (
     <Dialog title={text('settings.title')} onClose={onClose} size="large">
-      <div className={styles.window}>
+      {/* Fills the large Dialog card: the nav column, a rule, the scrolling panel. Narrower than the
+          app's minimum window (640px), the nav becomes a row above the panel. */}
+      <div className="flex min-h-0 flex-1 gap-6 [@media(max-width:640px)]:flex-col">
         <SettingsNav
           active={section}
           onSelect={onSelectSection}
@@ -61,7 +62,7 @@ export function SettingsWindow({
         <div
           key={section}
           id={panelId(section)}
-          className={styles.panel}
+          className="min-w-0 flex-1 overflow-y-auto pr-2"
           role="tabpanel"
           aria-labelledby={tabId(section)}
         >

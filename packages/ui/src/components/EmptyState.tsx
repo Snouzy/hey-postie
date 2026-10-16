@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
+import { cn } from '../lib/cn';
 import { Button } from './Button';
-import styles from './EmptyState.module.css';
 
 interface EmptyStateProps {
   /** Postie, in the pose that fits the place. */
@@ -14,6 +14,11 @@ interface EmptyStateProps {
   size?: 'compact' | 'full';
 }
 
+const SIZE = {
+  compact: 'px-4 py-6',
+  full: 'flex-1 justify-center gap-3 p-8',
+} as const;
+
 /** A place with nothing in it yet: Postie, a title, one sentence, at most one button. */
 export function EmptyState({
   illustration,
@@ -23,12 +28,19 @@ export function EmptyState({
   size = 'compact',
 }: EmptyStateProps) {
   return (
-    <div className={`${styles.empty} ${styles[size]}`}>
+    <div className={cn('flex flex-col items-center gap-2 text-center', SIZE[size])}>
       {illustration}
-      <p className={styles.title}>{title}</p>
-      {sentence && <p className={styles.sentence}>{sentence}</p>}
+      <p
+        className={cn(
+          "m-0 max-w-[320px] font-heading text-[16px] text-ink [font-variation-settings:'SOFT'_100]",
+          size === 'full' && 'text-[22px]',
+        )}
+      >
+        {title}
+      </p>
+      {sentence && <p className="m-0 max-w-[320px] text-[14px] text-ink-muted">{sentence}</p>}
       {action && (
-        <Button variant="primary" className={styles.action} onClick={action.onClick}>
+        <Button variant="primary" className="mt-2" onClick={action.onClick}>
           {action.label}
         </Button>
       )}

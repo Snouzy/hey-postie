@@ -6,8 +6,9 @@ import type { MessageKey } from '../i18n';
 import { errorKey } from '../i18n/errors';
 import { Button } from './Button';
 import { DeviceList } from './DeviceList';
-import styles from './OwnDevices.module.css';
 import { RetryNotice } from './RetryNotice';
+
+const FINGERPRINT = 'font-mono text-[12px] wrap-anywhere';
 
 interface OwnDevicesProps {
   /** States this device's fingerprint in a sentence above the list (the settings window). */
@@ -89,11 +90,9 @@ export function OwnDevices({ withFingerprint = false }: OwnDevicesProps) {
     <>
       {removing ? (
         <>
-          <p className={styles.confirm}>{text('crypto.confirmRemove')}</p>
-          <code className={styles.fingerprint}>
-            {core.crypto.formatFingerprint(removing.fingerprint)}
-          </code>
-          <div className={styles.actions}>
+          <p className="m-0">{text('crypto.confirmRemove')}</p>
+          <code className={FINGERPRINT}>{core.crypto.formatFingerprint(removing.fingerprint)}</code>
+          <div className="flex justify-end gap-2">
             <Button onClick={cancel}>{text('dialog.cancel')}</Button>
             <Button ref={confirm} variant="danger" onClick={() => void remove(removing)}>
               {text('crypto.remove')}
@@ -101,20 +100,22 @@ export function OwnDevices({ withFingerprint = false }: OwnDevicesProps) {
           </div>
         </>
       ) : (
-        <div ref={body} className={styles.body} tabIndex={-1}>
+        <div ref={body} className="flex flex-col gap-3" tabIndex={-1}>
           {withFingerprint && thisDevice && (
-            <p className={styles.thisDevice}>
+            <p className="m-0 flex flex-col gap-1 text-[13px]">
               {text('settings.privacy.thisFingerprint')}
-              <code className={styles.fingerprint}>
+              <code className={FINGERPRINT}>
                 {core.crypto.formatFingerprint(thisDevice.fingerprint)}
               </code>
             </p>
           )}
-          <p className={styles.hint}>{text('crypto.myDevicesHint')}</p>
+          <p className="m-0 text-[13px] text-ink-muted">{text('crypto.myDevicesHint')}</p>
           {loadError ? (
             <RetryNotice error={loadError} onRetry={reload} />
           ) : devices.length === 0 ? (
-            <p className={styles.empty}>{text('crypto.myDevicesEmpty')}</p>
+            <p className="m-0 font-heading text-ink-muted [font-variation-settings:'SOFT'_100]">
+              {text('crypto.myDevicesEmpty')}
+            </p>
           ) : (
             <DeviceList
               devices={devices}
@@ -127,7 +128,7 @@ export function OwnDevices({ withFingerprint = false }: OwnDevicesProps) {
         </div>
       )}
       {error && (
-        <p className={styles.error} role="alert">
+        <p className="m-0 font-heading text-red [font-variation-settings:'SOFT'_100]" role="alert">
           {text(error)}
         </p>
       )}

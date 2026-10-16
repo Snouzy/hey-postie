@@ -1,7 +1,7 @@
 import { useText } from '../../core/CoreProvider';
 import { useSettings } from '../../core/SettingsProvider';
 import { THEMES, type Theme } from '../../core/settings';
-import styles from './section.module.css';
+import { sectionStyles as styles } from './sectionStyles';
 
 /** The theme, applied at once (`useTheme`). No font size: the tokens have none to offer yet. */
 export function AppearanceSection({ titleId }: { titleId: string }) {

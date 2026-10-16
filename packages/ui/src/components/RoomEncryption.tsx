@@ -4,7 +4,6 @@ import { useText } from '../core/CoreProvider';
 import { useMemberDevices } from '../core/useMemberDevices';
 import { useTrustAction } from '../core/useTrustAction';
 import { DeviceList } from './DeviceList';
-import styles from './Encryption.module.css';
 import { RetryNotice } from './RetryNotice';
 
 interface RoomEncryptionProps {
@@ -34,21 +33,34 @@ export function RoomEncryption({ members, focusRequest = 0 }: RoomEncryptionProp
   }, [focusRequest]);
 
   return (
-    <section ref={section} className={styles.section} aria-labelledby={headingId} tabIndex={-1}>
-      <h3 id={headingId} className={styles.heading}>
+    <section
+      ref={section}
+      className="flex flex-col gap-2 focus-visible:outline-offset-(--space-1)"
+      aria-labelledby={headingId}
+      tabIndex={-1}
+    >
+      <h3
+        id={headingId}
+        className="m-0 font-text text-[12px] font-bold tracking-[0.04em] uppercase text-ink-muted"
+      >
         {text('crypto.section')}
       </h3>
       {error ? (
         <RetryNotice error={error} onRetry={reload} />
       ) : loaded && withDevices.length === 0 ? (
-        <p className={styles.empty}>{text('crypto.roomEmpty')}</p>
+        // Postie's words: no key to show, in his voice.
+        <p className="m-0 font-heading [font-variation-settings:'SOFT'_100] text-ink-muted">
+          {text('crypto.roomEmpty')}
+        </p>
       ) : (
         withDevices.length > 0 && (
           <>
-            <p className={styles.hint}>{text('crypto.compare')}</p>
+            <p className="m-0 text-[13px] text-ink-muted">{text('crypto.compare')}</p>
             {withDevices.map((member) => (
               <div key={member.jid}>
-                <h4 className={styles.member}>{member.nick}</h4>
+                <h4 className="mx-0 mt-2 mb-1 text-[13px] font-semibold wrap-anywhere">
+                  {member.nick}
+                </h4>
                 <DeviceList
                   devices={byJid.get(member.jid) ?? []}
                   label={member.nick}
@@ -61,7 +73,7 @@ export function RoomEncryption({ members, focusRequest = 0 }: RoomEncryptionProp
         )
       )}
       {trust.error && (
-        <p className={styles.error} role="alert">
+        <p className="m-0 font-heading [font-variation-settings:'SOFT'_100] text-red" role="alert">
           {text(trust.error)}
         </p>
       )}

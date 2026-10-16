@@ -3,7 +3,10 @@ import { useId, useRef } from 'react';
 import { useCore, useText } from '../core/CoreProvider';
 import type { DeviceAction } from '../core/useTrustAction';
 import { Button } from './Button';
-import styles from './DeviceList.module.css';
+
+/** The trust stamp: a small inked rectangle, its color says the state. */
+const STAMP =
+  'shrink-0 rounded-sm border border-current px-2 py-px text-[11px] font-bold tracking-[0.04em] text-ink-muted uppercase data-[trust=blocked]:text-red data-[trust=trusted]:text-navy data-[trust=verified]:text-success';
 
 interface DeviceListProps {
   devices: Device[];
@@ -32,7 +35,7 @@ export function DeviceList({ devices, label, actions, onAction, thisDeviceId }: 
   }
 
   return (
-    <ul className={styles.list} aria-label={label}>
+    <ul className="m-0 flex list-none flex-col gap-3 p-0" aria-label={label}>
       {devices.map((device) => {
         const fingerprint = core.crypto.formatFingerprint(device.fingerprint);
         const codeId = `${prefix}-${device.deviceId}`;
@@ -46,30 +49,32 @@ export function DeviceList({ devices, label, actions, onAction, thisDeviceId }: 
               if (element) rows.current.set(device.deviceId, element);
               else rows.current.delete(device.deviceId);
             }}
-            className={styles.device}
+            className="flex flex-col gap-1"
             data-device={device.deviceId}
             tabIndex={-1}
           >
-            <code id={codeId} className={styles.fingerprint}>
+            {/* Groups of eight, as the user reads them aloud on the phone. */}
+            <code id={codeId} className="font-mono text-[12px] wrap-anywhere">
               {fingerprint}
             </code>
-            <div className={styles.row}>
+            <div className="flex items-center justify-between gap-2">
               {actions === 'trust' && (
-                <span className={styles.stamp} data-trust={device.trust}>
+                <span className={STAMP} data-trust={device.trust}>
                   {text(`crypto.trust.${device.trust}`)}
                 </span>
               )}
               {mine && (
-                <span className={styles.stamp} data-trust="verified">
+                <span className={STAMP} data-trust="verified">
                   {text('crypto.thisDevice')}
                 </span>
               )}
-              <span className={styles.actions}>
+              <span className="flex gap-1">
                 {available.map((action) => (
                   <Button
                     key={action}
                     variant={action === 'verify' ? 'secondary' : 'danger'}
-                    className={styles.action}
+                    // `leading` again: cn drops the button's line height when the font size changes.
+                    className="px-3 py-[2px] text-[13px] leading-[1.3]"
                     aria-describedby={codeId}
                     onClick={() => void act(device, action)}
                   >

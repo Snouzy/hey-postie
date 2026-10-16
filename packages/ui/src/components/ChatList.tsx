@@ -4,10 +4,17 @@ import { type KeyboardEvent, useState } from 'react';
 import { useLocale, useText } from '../core/CoreProvider';
 import { formatRecent } from '../i18n/dates';
 import { Postie } from '../illustrations/Postie';
+import { cn } from '../lib/cn';
 import { Avatar } from './Avatar';
-import styles from './ChatList.module.css';
 import { EmptyState } from './EmptyState';
 import { RoomRowMenu } from './RoomRowMenu';
+
+const ROW =
+  'flex w-full cursor-pointer items-center gap-2 rounded-sm border-none bg-transparent px-3 py-2 text-left text-ink transition-[background-color] duration-(--motion-fast) hover:bg-fill-hover aria-[current=true]:bg-fill-chosen';
+/** The top line (title, time) and the bottom one (preview, badge) beside the avatar. */
+const LINE = 'flex w-full items-center justify-between gap-2';
+const BADGE =
+  'min-w-5 shrink-0 rounded-full px-[6px] py-0 text-center text-[12px] leading-[20px] font-bold';
 
 interface ChatListProps {
   chats: Chat[];
@@ -57,15 +64,16 @@ export function ChatList({
   }
 
   return (
-    <ul className={styles.list} onKeyDown={moveWithArrows}>
+    <ul className="m-0 flex list-none flex-col gap-[2px] px-2 py-0" onKeyDown={moveWithArrows}>
       {chats.map((chat) => {
         const room = onLeaveRoom && chat.kind === 'room' ? roomOf(chat) : undefined;
         return (
-          <li key={chat.id} className={styles.item} data-menu={room ? '' : undefined}>
+          // A row with a menu: the "⋯" (RoomRowMenu) sits over the time's corner.
+          <li key={chat.id} className="group/row relative">
             <button
               type="button"
               data-row=""
-              className={styles.row}
+              className={ROW}
               aria-current={chat.id === selectedId ? 'true' : undefined}
               onClick={() => onSelect(chat)}
               onContextMenu={
@@ -78,23 +86,30 @@ export function ChatList({
               }
             >
               <Avatar name={chat.title} jid={chat.peerJid} avatarUrl={avatarOf(chat)} size={36} />
-              <span className={styles.lines}>
-                <span className={styles.top}>
+              <span className="flex min-w-0 flex-1 flex-col gap-[2px]">
+                <span className={LINE}>
                   {chat.kind === 'room' && (
                     <>
-                      <Users size={14} className={styles.hall} aria-hidden />
-                      <span className={styles.srOnly}>{text('chatList.room')} </span>
+                      <Users size={14} className="shrink-0 text-ink-muted" aria-hidden />
+                      <span className="sr-only">{text('chatList.room')} </span>
                     </>
                   )}
-                  <span className={styles.title}>{chat.title}</span>
+                  <span className="min-w-0 flex-1 truncate font-semibold">{chat.title}</span>
                   {chat.lastMessage && (
-                    <time className={styles.time} dateTime={chat.lastMessage.sentAt.toISOString()}>
+                    <time
+                      // The "⋯" takes the corner while the row is hovered or holds the focus.
+                      className={cn(
+                        'shrink-0 text-[12px] text-ink-muted',
+                        room && 'group-focus-within/row:invisible group-hover/row:invisible',
+                      )}
+                      dateTime={chat.lastMessage.sentAt.toISOString()}
+                    >
                       {formatRecent(locale, chat.lastMessage.sentAt)}
                     </time>
                   )}
                 </span>
-                <span className={styles.bottom}>
-                  <span className={styles.preview}>
+                <span className={LINE}>
+                  <span className="min-w-0 flex-1 truncate text-[13px] text-ink-muted">
                     {chat.lastMessage?.encryption === 'undecryptable'
                       ? text('chatList.undecryptablePreview')
                       : (chat.lastMessage?.body ?? '')}
@@ -124,17 +139,19 @@ function Badge({ mentions, unread }: { mentions: number; unread: number }) {
   const text = useText();
   if (mentions > 0) {
     return (
-      <span className={styles.badge}>
+      // The stamp: the mentions count on stamp yellow.
+      <span className={cn(BADGE, 'bg-yellow text-on-yellow')}>
         {mentions}
-        <span className={styles.srOnly}> {text('chatList.mentions')}</span>
+        <span className="sr-only"> {text('chatList.mentions')}</span>
       </span>
     );
   }
   if (unread > 0) {
     return (
-      <span className={`${styles.badge} ${styles.muted}`}>
+      // Unread letters without a mention: the count, without the stamp.
+      <span className={cn(BADGE, 'bg-line text-ink')}>
         {unread}
-        <span className={styles.srOnly}> {text('chatList.unread')}</span>
+        <span className="sr-only"> {text('chatList.unread')}</span>
       </span>
     );
   }

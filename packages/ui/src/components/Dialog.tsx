@@ -1,8 +1,8 @@
 import { X } from 'lucide-react';
 import { type KeyboardEvent, type ReactNode, useEffect, useId, useRef } from 'react';
 import { useText } from '../core/CoreProvider';
+import { cn } from '../lib/cn';
 import { Button } from './Button';
-import styles from './Dialog.module.css';
 
 interface DialogProps {
   title: string;
@@ -13,6 +13,15 @@ interface DialogProps {
   size?: 'small' | 'large';
   children: ReactNode;
 }
+
+// Above the sticky day chips of the conversation behind it.
+const BACKDROP =
+  'fixed inset-0 z-dialog flex items-center justify-center bg-[rgb(0_0_0/0.35)] animate-[dialog-fade_var(--motion)_ease-out]';
+const CARD =
+  'flex max-h-[calc(100%_-_var(--space-8))] w-[min(400px,calc(100%_-_var(--space-8)))] flex-col gap-4 overflow-y-auto rounded bg-paper-raised p-6 shadow-card';
+// A window inside the window: as wide as the settings need, never past the minimum window size.
+const LARGE =
+  'h-[min(640px,calc(100%_-_var(--space-8)))] w-[min(880px,calc(100%_-_var(--space-8)))]';
 
 const FOCUSABLE = 'input, textarea, select, button, a[href], [tabindex]';
 
@@ -71,18 +80,18 @@ export function Dialog({ title, onClose, closable = true, size = 'small', childr
   }
 
   return (
-    <div ref={backdrop} className={styles.backdrop}>
+    <div ref={backdrop} className={BACKDROP}>
       <div
         ref={card}
-        className={size === 'large' ? `${styles.card} ${styles.large}` : styles.card}
+        className={cn(CARD, size === 'large' && LARGE)}
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
         tabIndex={-1}
         onKeyDown={cycleFocus}
       >
-        <header className={styles.header}>
-          <h2 id={titleId} className={styles.title}>
+        <header className="flex items-center justify-between">
+          <h2 id={titleId} className="text-[22px]">
             {title}
           </h2>
           <Button

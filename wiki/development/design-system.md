@@ -76,8 +76,28 @@ First person, short sentences, nods to postal life. Never a joke in an error. Bo
 
 ## Components
 
-_Checked on 2026-10-15. Sources: `packages/ui/src/components/`, one `.module.css` per component,
-tokens only, no hard-coded color._ Motion goes only through `var(--motion)` / `var(--motion-fast)`.
+_Checked on 2026-10-15; styles moved to Tailwind on 2026-10-16, at pixel parity. Sources:
+`packages/ui/src/components/`, Tailwind utilities in each component, tokens only, no hard-coded
+color._ Motion goes only through `var(--motion)` / `var(--motion-fast)`.
+
+### How styles are written
+
+- `theme/tokens.css` holds every value, light and dark (the tables above). `theme/tailwind.css`
+  maps them to utilities: colors `bg-paper`, `text-ink-muted`, `border-line`…; fonts `font-heading`,
+  `font-text`, `font-mono`; radii `rounded-sm` (8), `rounded` (12), `rounded-bubble` (16),
+  `rounded-full`; `shadow-card`; layers `z-sticky`, `z-float`, `z-popover`, `z-dialog`. The
+  spacing unit is 4px: `p-2` is `--space-2`. No other palette exists, so a colour off the tokens
+  cannot be written.
+- No `dark:` variant: a utility reads a token, and the token changes with the theme.
+- No preflight: the base styles (body, headings, `button`, `input`, `textarea`, `select` inherit
+  the font, the focus ring) stay in `tokens.css`, in the `base` layer.
+- Text sizes are pixel values (`text-[13px]`); `cn()` keeps a line height when a size is merged in.
+- What utilities cannot say cleanly (keyframes, the parcel shimmer, the emoji strip fades, the
+  resizer line) lives in `theme/extras/<area>.css`, inside `@layer components`, with classes
+  prefixed `hp-`.
+- `hover:` applies only on devices that can hover (Tailwind 4); nothing changes on desktop.
+- Parity is checked with screenshots of the interface on fakes (see
+  [technical-guide.md](technical-guide.md#run-and-verify), `preview`).
 
 | Component | Rule |
 |---|---|

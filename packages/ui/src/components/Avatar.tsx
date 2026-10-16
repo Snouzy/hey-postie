@@ -1,4 +1,10 @@
-import styles from './Avatar.module.css';
+/** A round stamp: the picture, or the initials on a soft wash of the person's colour (`--tone`). */
+const AVATAR =
+  'inline-flex shrink-0 items-center justify-center rounded-[50%] bg-[color-mix(in_srgb,var(--tone)_24%,var(--paper-raised))] object-cover leading-none font-bold tracking-[0.02em] text-(--tone) select-none';
+
+/** `--tone` from the `data-tone` attribute, which `toneOf` picks from the JID. */
+const TONES_BY_DATA =
+  'data-[tone=navy]:[--tone:var(--navy)] data-[tone=kraft]:[--tone:var(--kraft-ink)] data-[tone=success]:[--tone:var(--success)] data-[tone=warning]:[--tone:var(--warning)] data-[tone=red]:[--tone:var(--red)]';
 
 interface AvatarProps {
   /** The name shown next to the avatar; gives the initials when there is no picture. */
@@ -19,10 +25,15 @@ const TONES = ['navy', 'kraft', 'success', 'warning', 'red'] as const;
 export function Avatar({ name, jid, avatarUrl, size = 32 }: AvatarProps) {
   const style = { width: size, height: size, fontSize: Math.round(size * 0.4) };
   if (avatarUrl) {
-    return <img className={styles.avatar} src={avatarUrl} alt="" style={style} />;
+    return <img className={AVATAR} src={avatarUrl} alt="" style={style} />;
   }
   return (
-    <span className={styles.avatar} data-tone={toneOf(jid)} style={style} aria-hidden>
+    <span
+      className={`${AVATAR} ${TONES_BY_DATA}`}
+      data-tone={toneOf(jid)}
+      style={style}
+      aria-hidden
+    >
       {initialsOf(name)}
     </span>
   );

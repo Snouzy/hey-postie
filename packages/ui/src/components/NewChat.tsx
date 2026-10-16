@@ -5,7 +5,6 @@ import type { MessageKey } from '../i18n';
 import { errorKey } from '../i18n/errors';
 import { Dialog } from './Dialog';
 import { Field } from './Field';
-import styles from './NewChat.module.css';
 import { NewChatPicker, pickerRowId } from './NewChatPicker';
 import { type PickerRow, pickerRows } from './pickerRows';
 
@@ -21,6 +20,8 @@ interface NewChatProps {
   onJoined: (room: Room) => void;
   onClose: () => void;
 }
+
+const NOTE = "m-0 font-heading [font-variation-settings:'SOFT'_100]";
 
 /**
  * "New chat": one search field over the address book and the halls, with the typed text as an
@@ -109,7 +110,11 @@ export function NewChat({
 
   return (
     <Dialog title={text('newChat.title')} onClose={onClose} closable={!joining}>
-      <form ref={form} className={styles.form} onSubmit={(event) => event.preventDefault()}>
+      <form
+        ref={form}
+        className="flex min-w-[360px] flex-col gap-3"
+        onSubmit={(event) => event.preventDefault()}
+      >
         <Field
           label={text('newChat.search')}
           type="text"
@@ -130,11 +135,11 @@ export function NewChat({
           aria-describedby={shownError ? errorId : undefined}
         />
         {shownError && (
-          <p id={errorId} className={styles.error} role="alert">
+          <p id={errorId} className={`${NOTE} text-red`} role="alert">
             {text(shownError)}
           </p>
         )}
-        {nobody && <p className={styles.nobody}>{text('newChat.nobody')}</p>}
+        {nobody && <p className={`${NOTE} text-ink-muted`}>{text('newChat.nobody')}</p>}
         <NewChatPicker id={listId} rows={rows} activeIndex={activeIndex} onPick={pick} />
       </form>
     </Dialog>

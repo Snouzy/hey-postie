@@ -3,7 +3,6 @@ import { useText } from '../core/CoreProvider';
 import licenses from '../data/licenses.json';
 import { Dialog } from './Dialog';
 import { Field } from './Field';
-import styles from './Licenses.module.css';
 
 interface LicensesProps {
   onClose: () => void;
@@ -35,7 +34,7 @@ export function Licenses({ onClose, onOpenLink, entries = licenses }: LicensesPr
 
   return (
     <Dialog title={text('licenses.title')} onClose={onClose}>
-      <p className={styles.intro}>{text('licenses.intro')}</p>
+      <p className="m-0 text-[13px] text-ink-muted">{text('licenses.intro')}</p>
       <Field
         label={text('licenses.search')}
         type="search"
@@ -45,21 +44,28 @@ export function Licenses({ onClose, onOpenLink, entries = licenses }: LicensesPr
         onChange={(event) => setQuery(event.target.value)}
       />
       {/* What the search found, for screen readers; the empty sentence is also visible below. */}
-      <p role="status" className={styles.srOnly}>
+      <p role="status" className="absolute h-px w-px overflow-hidden [clip:rect(0_0_0_0)]">
         {found.length === 0 ? text('licenses.empty') : `${found.length} ${text('licenses.found')}`}
       </p>
-      <div className={styles.list}>
+      <div className="flex max-h-[320px] flex-col gap-3 overflow-y-auto">
         {groups.length === 0 ? (
-          <p className={styles.empty}>{text('licenses.empty')}</p>
+          <p className="m-0 font-heading text-ink-muted [font-variation-settings:'SOFT'_100]">
+            {text('licenses.empty')}
+          </p>
         ) : (
           groups.map(([license, entries]) => (
-            <section key={license} className={styles.group} aria-label={license}>
-              <h3 className={styles.heading}>{license}</h3>
-              <ul className={styles.entries}>
+            <section key={license} className="flex flex-col gap-1" aria-label={license}>
+              <h3 className="m-0 font-text text-[12px] font-bold tracking-[0.04em] text-ink-muted uppercase">
+                {license}
+              </h3>
+              <ul className="m-0 flex list-none flex-col gap-1 p-0">
                 {entries.map((entry) => {
                   const url = linkUrl(entry.repository);
                   return (
-                    <li key={`${entry.name}@${entry.version}`} className={styles.entry}>
+                    <li
+                      key={`${entry.name}@${entry.version}`}
+                      className="flex items-baseline justify-between gap-2 [&_a]:text-navy"
+                    >
                       {url ? (
                         <a href={url} rel="noreferrer" onClick={(event) => open(event, url)}>
                           {entry.name}
@@ -67,7 +73,7 @@ export function Licenses({ onClose, onOpenLink, entries = licenses }: LicensesPr
                       ) : (
                         <span>{entry.name}</span>
                       )}
-                      <span className={styles.version}>{entry.version}</span>
+                      <span className="font-mono text-[12px] text-ink-muted">{entry.version}</span>
                     </li>
                   );
                 })}

@@ -14,7 +14,6 @@ import type { SaveFile } from './Attachments';
 import { Avatar } from './Avatar';
 import { Button } from './Button';
 import { Composer } from './Composer';
-import styles from './Conversation.module.css';
 import { DropOverlay } from './DropOverlay';
 import { EmptyState } from './EmptyState';
 import { MessageList } from './MessageList';
@@ -89,20 +88,30 @@ export function Conversation({
   }
 
   return (
-    <section className={styles.conversation} aria-label={chat.title} {...drop.handlers}>
+    // `relative`: the drop overlay covers the column. `min-h-0`: without it the column grows to its
+    // messages' height instead of letting the list scroll.
+    <section
+      className="relative flex min-h-0 min-w-0 flex-1 flex-col bg-paper"
+      aria-label={chat.title}
+      {...drop.handlers}
+    >
       {drop.dragging && <DropOverlay />}
-      <header className={styles.header}>
-        <div className={styles.peer}>
+      <header className="flex items-center justify-between gap-2 border-b border-line px-4 py-3">
+        <div className="flex min-w-0 items-center gap-2">
           <Avatar name={chat.title} jid={chat.peerJid} avatarUrl={contact?.avatarUrl} />
           {contact && <PresenceDot presence={contact.presence} />}
-          <h2 className={styles.title}>{chat.title}</h2>
+          <h2 className="truncate text-[20px]">{chat.title}</h2>
+          {/* One line; the full topic sits in the title attribute. */}
           {room && (
-            <p className={styles.topic} title={room.topic}>
+            <p
+              className="m-0 ml-2 min-w-0 flex-1 truncate text-[13px] text-ink-muted"
+              title={room.topic}
+            >
               {room.topic || text('room.topicEmpty')}
             </p>
           )}
         </div>
-        <div className={styles.tools}>
+        <div className="flex shrink-0 items-center gap-1">
           <SealToggle
             encrypted={seal.encrypted}
             pending={seal.pending}
@@ -121,12 +130,19 @@ export function Conversation({
         </div>
       </header>
       {seal.error && (
-        <p className={styles.error} role="alert">
+        <p
+          className="m-0 px-4 py-2 font-heading [font-variation-settings:'SOFT'_100] text-[14px] text-red"
+          role="alert"
+        >
           {text(seal.error)}
         </p>
       )}
+      {/* Postie at the door of a hall the user is not in. */}
       {outside && (
-        <div className={styles.outside} role="status">
+        <div
+          className="mx-4 mt-3 mb-0 flex flex-wrap items-center justify-between gap-2 rounded-sm bg-kraft-soft px-3 py-2 font-heading [font-variation-settings:'SOFT'_100] text-[14px]"
+          role="status"
+        >
           {text('room.notJoined')}
           {room && <Button onClick={() => void joinAgain()}>{text('room.joinAgain')}</Button>}
         </div>
@@ -164,11 +180,18 @@ export function Conversation({
           ))}
       />
       {letters.error && (
-        <p className={styles.error} role="alert">
+        <p
+          className="m-0 px-4 py-2 font-heading [font-variation-settings:'SOFT'_100] text-[14px] text-red"
+          role="alert"
+        >
           {text(letters.error)}
         </p>
       )}
-      <p className={styles.typing} aria-live="polite">
+      {/* Who is writing, just above the composer; keeps its line so the layout never jumps. */}
+      <p
+        className="m-0 min-h-[18px] truncate px-4 py-0 text-[13px] text-ink-muted italic"
+        aria-live="polite"
+      >
         {typingNames.length > 0 && typingLine(text, typingNames)}
       </p>
       <Composer

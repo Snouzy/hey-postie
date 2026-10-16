@@ -10,9 +10,25 @@ import { Button } from './Button';
 import { ChatList } from './ChatList';
 import { ContactList } from './ContactList';
 import { RequestList } from './RequestList';
-import styles from './Sidebar.module.css';
 
 export type SidebarTab = 'chats' | 'contacts';
+
+/**
+ * Sized by the user (PaneResizer writes the variable), within the bounds of settings.ts. Folded,
+ * it is `hidden`: `[&[hidden]]:hidden` keeps `flex` from winning over the attribute.
+ */
+const SIDEBAR =
+  'flex w-[clamp(220px,var(--sidebar-width,300px),480px)] shrink-0 flex-col border-r border-line bg-paper [&[hidden]]:hidden';
+const TAB =
+  'flex-1 cursor-pointer border-0 border-b-2 border-b-transparent bg-transparent p-2 font-semibold text-ink-muted transition-[color,border-color] duration-(--motion-fast) aria-pressed:border-b-navy aria-pressed:text-navy';
+/** The input's own ring is off (it would sit inside the pill): the pill wears it instead. */
+const SEARCH =
+  'flex flex-1 items-center gap-2 rounded-full border border-line-strong bg-paper-raised px-3 py-0 text-ink-muted focus-within:border-navy focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-navy';
+const SEARCH_INPUT =
+  'min-w-0 flex-1 border-none bg-transparent px-0 py-2 text-ink outline-none placeholder:overflow-hidden placeholder:text-ellipsis';
+/** Connection banner: Postie speaks, so the heading font. */
+const BANNER =
+  "mx-3 my-0 flex flex-wrap items-center justify-between gap-2 rounded-sm bg-kraft-soft px-3 py-2 font-heading text-[14px] [font-variation-settings:'SOFT'_100] data-[tone=error]:text-red";
 
 interface SidebarProps {
   id: string;
@@ -68,11 +84,11 @@ export function Sidebar(props: SidebarProps) {
   return (
     <nav
       id={props.id}
-      className={styles.sidebar}
+      className={SIDEBAR}
       hidden={props.collapsed || undefined}
       inert={props.collapsed || undefined}
     >
-      <header className={styles.account}>
+      <header className="flex items-center gap-2 px-3 py-2">
         <AccountMenu
           account={props.account}
           onSignOut={props.onSignOut}
@@ -83,28 +99,28 @@ export function Sidebar(props: SidebarProps) {
       </header>
 
       {props.account.state === 'connecting' && (
-        <p className={styles.banner} role="status">
+        <p className={BANNER} role="status">
           {text('banner.reconnecting')}
         </p>
       )}
       {(props.account.state === 'offline' || props.account.state === 'error') && (
-        <div className={styles.banner} data-tone="error" role="alert">
+        <div className={BANNER} data-tone="error" role="alert">
           {text('banner.offline')}
           <Button onClick={props.onSignInAgain}>{text('banner.signInAgain')}</Button>
         </div>
       )}
       {props.error && (
-        <p className={styles.banner} data-tone="error" role="alert">
+        <p className={BANNER} data-tone="error" role="alert">
           {text(props.error)}
         </p>
       )}
 
-      <div className={styles.tabs}>
+      <div className="flex border-b border-line px-3 py-0">
         {(['chats', 'contacts'] as const).map((name) => (
           <button
             key={name}
             type="button"
-            className={styles.tab}
+            className={TAB}
             aria-pressed={tab === name}
             onClick={() => setTab(name)}
           >
@@ -113,11 +129,12 @@ export function Sidebar(props: SidebarProps) {
         ))}
       </div>
 
-      <div className={styles.toolbar}>
-        <label className={styles.search}>
+      <div className="flex items-center gap-2 p-3">
+        <label className={SEARCH}>
           <Search size={16} aria-hidden />
           <input
             ref={props.searchRef}
+            className={SEARCH_INPUT}
             type="search"
             value={query}
             placeholder={text(searchKey)}
@@ -132,7 +149,7 @@ export function Sidebar(props: SidebarProps) {
         />
       </div>
 
-      <div className={styles.body}>
+      <div className="min-h-0 flex-1 overflow-y-auto">
         {tab === 'chats' ? (
           <>
             <RequestList

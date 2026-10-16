@@ -1,33 +1,20 @@
 import { describe, expect, it } from 'vitest';
+import { components, source, stylesheets } from './sources';
 
-/** Vite's `import.meta.glob`, which vitest provides; the package has no `vite/client` types. */
-type GlobMeta = {
-  glob(pattern: string, options: { query: string; eager: true; import: 'default' }): unknown;
-};
-
-/** Every stylesheet of the package, by path relative to this file, as text. */
-const stylesheets = (import.meta as unknown as GlobMeta).glob('../**/*.css', {
-  query: '?raw',
-  eager: true,
-  import: 'default',
-}) as Record<string, string>;
-
-/** One stylesheet by its file name (Vite keys the ones next to this file as `./name`). */
-function stylesheet(name: string): string {
-  return Object.entries(stylesheets).find(([path]) => path.endsWith(`/${name}`))?.[1] ?? '';
-}
-
-const tokens = stylesheet('tokens.css');
-const dialog = stylesheet('Dialog.module.css');
-const list = stylesheet('MessageList.module.css');
+const tokens = source(stylesheets, 'tokens.css');
+const tailwind = source(stylesheets, 'tailwind.css');
 
 /**
  * jsdom lays nothing out, so the stacking itself cannot be seen here. What can: that every
- * component stacks through the `--z-*` scale of the tokens, and that the dialog is its top.
+ * component stacks through the `--z-*` scale of the tokens (the `z-*` utilities of tailwind.css),
+ * and that the dialog is its top.
  */
 describe('layers', () => {
   const scale = new Map(
-    [...tokens.matchAll(/(--z-[a-z]+):\s*(\d+);/g)].map(([, name, value]) => [name, Number(value)]),
+    [...tokens.matchAll(/(--z-[a-z]+):\s*(\d+);/g)].map(([, name, value]) => [
+      name ?? '',
+      Number(value),
+    ]),
   );
 
   it('defines the scale once, lowest first, with the dialog on top', () => {
@@ -36,19 +23,31 @@ describe('layers', () => {
     expect(Math.max(...scale.values())).toBe(scale.get('--z-dialog'));
   });
 
+  it('gives each layer of the scale its utility', () => {
+    for (const name of scale.keys()) {
+      expect(tailwind).toMatch(
+        new RegExp(`@utility ${name.slice(2)} \\{\\s*z-index: var\\(${name}\\);`),
+      );
+    }
+  });
+
   it('is the only way a component sets a z-index', () => {
-    expect(Object.keys(stylesheets).length).toBeGreaterThan(10);
-    for (const [file, css] of Object.entries(stylesheets)) {
-      if (file.endsWith('tokens.css')) continue;
-      for (const [, value = ''] of css.matchAll(/z-index:\s*([^;]+);/g)) {
-        expect(value, file).toMatch(/^var\(--z-[a-z]+\)$/);
-        expect(scale.has(value.slice(4, -1)), `${file}: ${value}`).toBe(true);
+    expect(Object.keys(components).length).toBeGreaterThan(10);
+    for (const [file, code] of Object.entries(components)) {
+      for (const [utility = ''] of code.matchAll(/(?<![\w-])-?z-[\w[\]()-]+/g)) {
+        expect(scale.has(`--${utility}`), `${file}: ${utility}`).toBe(true);
       }
+    }
+    for (const [file, css] of Object.entries(stylesheets)) {
+      if (file.endsWith('tokens.css') || file.endsWith('tailwind.css')) continue;
+      expect(css, file).not.toMatch(/z-index:/);
     }
   });
 
   it('puts the dialog backdrop above the sticky day chip', () => {
-    expect(dialog).toMatch(/\.backdrop\s*\{[^}]*z-index:\s*var\(--z-dialog\)/);
-    expect(list).toMatch(/\.separator\s*\{[^}]*z-index:\s*var\(--z-sticky\)/);
+    expect(source(components, 'Dialog.tsx')).toMatch(/z-dialog/);
+    expect(source(components, 'MessageList.tsx')).toMatch(
+      /sticky[^'"]*z-sticky|z-sticky[^'"]*sticky/,
+    );
   });
 });

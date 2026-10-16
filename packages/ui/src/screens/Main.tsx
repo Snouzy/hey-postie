@@ -30,7 +30,14 @@ import { useUploads } from '../core/useUploads';
 import type { MessageKey } from '../i18n';
 import { errorKey } from '../i18n/errors';
 import { Postie } from '../illustrations/Postie';
-import styles from './Main.module.css';
+
+/*
+ * Zoomed past the minimum window, the columns scroll sideways rather than squash or clip.
+ * Never up or down: only the lists scroll that way (ui.md, "What scrolls"). A column that
+ * outgrew the window would otherwise let a focus() or a scrollIntoView() shift the whole screen.
+ */
+const COLUMNS = 'flex h-full overflow-x-auto overflow-y-hidden';
+const EMPTY = 'flex flex-1 flex-col items-center justify-center p-8';
 
 interface MainProps {
   account: Account;
@@ -209,7 +216,7 @@ export function Main({ account, onOpenLink, onSaveFile, onLeave }: MainProps) {
   return (
     <div
       ref={mainRef}
-      className={styles.main}
+      className={COLUMNS}
       style={
         {
           '--sidebar-width': `${panes.sizes.sidebar}px`,
@@ -255,7 +262,7 @@ export function Main({ account, onOpenLink, onSaveFile, onLeave }: MainProps) {
         onCollapse={() => panes.update({ sidebarCollapsed: true })}
         onExpand={() => panes.update({ sidebarCollapsed: false })}
       />
-      <main className={styles.center}>
+      <main className="flex min-w-[320px] flex-1 flex-col">
         {request ? (
           <MessageRequest
             key={request.jid}
@@ -291,11 +298,11 @@ export function Main({ account, onOpenLink, onSaveFile, onLeave }: MainProps) {
             uploads={uploads.forChat(chat.id)}
           />
         ) : welcoming ? (
-          <section className={styles.empty}>
+          <section className={EMPTY}>
             <WelcomeCard onDismiss={dismissWelcome} />
           </section>
         ) : (
-          <section className={styles.empty}>
+          <section className={EMPTY}>
             <EmptyState
               size="full"
               illustration={<Postie mood="waving" label={text('postie.alt.waving')} />}
@@ -321,7 +328,8 @@ export function Main({ account, onOpenLink, onSaveFile, onLeave }: MainProps) {
             onCollapse={() => setDetailsOpen(false)}
             onExpand={() => {}}
           />
-          <div id="details" className={styles.details}>
+          {/* Only an id for the resizer's `aria-controls`: the pane inside keeps its own width and borders. */}
+          <div id="details" className="contents">
             <DetailsPane
               chat={chat}
               contact={contact}

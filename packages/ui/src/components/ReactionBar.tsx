@@ -5,7 +5,9 @@ import { QUICK_EMOJIS } from '../data/emoji';
 import { Button } from './Button';
 import { EmojiPicker } from './EmojiPicker';
 import { Popover } from './Popover';
-import styles from './ReactionBar.module.css';
+
+const EMOJI =
+  'size-8 cursor-pointer rounded-sm border-none bg-transparent text-[20px] leading-none hover:bg-paper focus-visible:bg-paper';
 
 interface ReactionBarProps {
   onReact: (emoji: string) => void;
@@ -41,7 +43,7 @@ export function ReactionBar({ onReact }: ReactionBarProps) {
       <Button
         ref={trigger}
         variant="ghost"
-        className={styles.trigger}
+        className="border border-line bg-paper-raised p-1 shadow-card"
         aria-label={text('reaction.add')}
         aria-haspopup="dialog"
         aria-expanded={open !== null}
@@ -51,12 +53,12 @@ export function ReactionBar({ onReact }: ReactionBarProps) {
       </Button>
       {open === 'quick' && (
         <Popover anchor={trigger.current} label={text('reaction.add')} onClose={close}>
-          <div ref={quick} className={styles.quick}>
+          <div ref={quick} className="flex items-center gap-[2px]">
             {QUICK_EMOJIS.map((entry) => (
               <button
                 key={entry.shortname}
                 type="button"
-                className={styles.emoji}
+                className={EMOJI}
                 aria-label={entry.shortname}
                 title={entry.shortname}
                 onClick={() => pick(entry.emoji)}
@@ -66,7 +68,7 @@ export function ReactionBar({ onReact }: ReactionBarProps) {
             ))}
             <Button
               variant="ghost"
-              className={styles.more}
+              className="p-1"
               aria-label={text('reaction.more')}
               onClick={() => setOpen('picker')}
             >

@@ -1,82 +1,65 @@
 import { describe, expect, it } from 'vitest';
 import { COLUMNS } from '../components/EmojiPicker';
+import { components, source, stylesheets } from './sources';
 
-/** Vite's `import.meta.glob`, which vitest provides; the package has no `vite/client` types. */
-type GlobMeta = {
-  glob(pattern: string, options: { query: string; eager: true; import: 'default' }): unknown;
-};
-
-const stylesheets = (import.meta as unknown as GlobMeta).glob('../**/*.css', {
-  query: '?raw',
-  eager: true,
-  import: 'default',
-}) as Record<string, string>;
-
-function stylesheet(name: string): string {
-  return Object.entries(stylesheets).find(([path]) => path.endsWith(`/${name}`))?.[1] ?? '';
-}
-
-/** The declarations of one rule, by its selector. */
-function rule(css: string, selector: string): string {
-  return css.match(new RegExp(`${selector.replace('.', '\\.')}\\s*\\{([^}]*)\\}`))?.[1] ?? '';
+/** True when one line of the component (a class string) holds every given utility. */
+function hasClasses(component: string, ...utilities: string[]): boolean {
+  return source(components, component)
+    .split('\n')
+    .some((line) => {
+      const words = line.split(/[\s'"`]+/);
+      return utilities.every((utility) => words.includes(utility));
+    });
 }
 
 /**
- * jsdom lays nothing out, so what the stylesheets promise is read from their text (as
+ * jsdom lays nothing out, so what the classes promise is read from the components' text (as
  * `layers.test.ts` does for the z-index scale): the main screen never scrolls up or down, the
  * columns let their lists scroll, and the emoji grid stays inside its card.
  */
 describe('what scrolls', () => {
   it('lets the main screen scroll sideways only', () => {
-    const main = rule(stylesheet('Main.module.css'), '.main');
-    expect(main).toMatch(/overflow-x:\s*auto;/);
-    expect(main).toMatch(/overflow-y:\s*hidden;/);
-    expect(main).not.toMatch(/overflow:\s/);
+    expect(hasClasses('Main.tsx', 'overflow-x-auto', 'overflow-y-hidden')).toBe(true);
+    expect(source(components, 'Main.tsx')).not.toMatch(/\boverflow-(auto|hidden|scroll)\b/);
   });
 
   it('keeps the center column at the window height so its list scrolls', () => {
-    // A `flex: 1` column item shrinks below its content only with `min-height: 0`.
-    expect(rule(stylesheet('Conversation.module.css'), '.conversation')).toMatch(
-      /min-height:\s*0;/,
-    );
-    expect(rule(stylesheet('MessageRequest.module.css'), '.request')).toMatch(/min-height:\s*0;/);
-    expect(rule(stylesheet('MessageList.module.css'), '.scroller')).toMatch(/min-height:\s*0;/);
+    // A `flex-1` column item shrinks below its content only with `min-h-0`.
+    expect(hasClasses('Conversation.tsx', 'flex-1', 'min-h-0')).toBe(true);
+    expect(hasClasses('MessageRequest.tsx', 'flex-1', 'min-h-0')).toBe(true);
+    expect(hasClasses('MessageList.tsx', 'min-h-0', 'overflow-y-auto')).toBe(true);
   });
 
   it('sizes the side columns from the resizer variables, within their bounds', () => {
-    expect(rule(stylesheet('Sidebar.module.css'), '.sidebar')).toMatch(
-      /width:\s*clamp\(220px, var\(--sidebar-width, 300px\), 480px\);/,
+    expect(hasClasses('Sidebar.tsx', 'w-[clamp(220px,var(--sidebar-width,300px),480px)]')).toBe(
+      true,
     );
-    for (const name of ['Details.module.css', 'RoomDetails.module.css', 'DetailsPane.module.css']) {
-      expect(stylesheet(name), name).toMatch(
-        /width:\s*clamp\(240px, var\(--details-width, 280px\), 480px\);/,
+    for (const name of ['Details.tsx', 'RoomDetails.tsx', 'DetailsPane.tsx']) {
+      expect(hasClasses(name, 'w-[clamp(240px,var(--details-width,280px),480px)]'), name).toBe(
+        true,
       );
     }
-    // The folded sidebar is `hidden`: the module's `display: flex` must not win over it.
-    expect(rule(stylesheet('Sidebar.module.css'), '.sidebar\\[hidden\\]')).toMatch(
-      /display:\s*none;/,
-    );
-    expect(rule(stylesheet('PaneResizer.module.css'), '.resizer')).toMatch(/cursor:\s*col-resize;/);
+    // The folded sidebar is `hidden`: its `flex` must not win over it.
+    expect(hasClasses('Sidebar.tsx', 'flex', '[&[hidden]]:hidden')).toBe(true);
+    expect(hasClasses('PaneResizer.tsx', 'cursor-col-resize')).toBe(true);
   });
 
   it('never scrolls the window itself from the root', () => {
     for (const [file, css] of Object.entries(stylesheets)) {
-      for (const [, selector = ''] of css.matchAll(/(?:^|\n)((?:html|body|#root)[^{]*)\{/g)) {
-        expect(rule(css, selector.trim().split(',')[0] ?? ''), `${file}: ${selector}`).not.toMatch(
-          /overflow/,
-        );
+      for (const [, selector = '', body = ''] of css.matchAll(
+        /(?:^|\n)\s*((?:html|body|#root)[^{]*)\{([^}]*)\}/g,
+      )) {
+        expect(body, `${file}: ${selector}`).not.toMatch(/overflow/);
       }
     }
   });
 
   it('fits the emoji grid in its card: as many columns as the arrows move by, none wider', () => {
-    const picker = stylesheet('EmojiPicker.module.css');
-    expect(rule(picker, '.grid')).toContain(`repeat(${COLUMNS}, minmax(0, 1fr))`);
-    expect(rule(picker, '.grid')).toMatch(/overflow-x:\s*hidden;/);
-    expect(rule(picker, '.cell')).toMatch(/min-width:\s*0;/);
+    // `grid-cols-N` is `repeat(N, minmax(0, 1fr))`: a wide glyph never widens its column.
+    expect(hasClasses('EmojiPicker.tsx', `grid-cols-${COLUMNS}`, 'overflow-x-hidden')).toBe(true);
     // WebKit ignores aspect-ratio on a <button>: the rows carry the height.
-    expect(rule(picker, '.grid')).toMatch(/grid-auto-rows:\s*\d+px;/);
-    expect(rule(picker, '.cell')).toMatch(/height:\s*\d+px;/);
-    expect(rule(picker, '.picker')).toMatch(/width:\s*320px;/);
+    expect(hasClasses('EmojiPicker.tsx', 'auto-rows-[36px]')).toBe(true);
+    expect(hasClasses('EmojiPicker.tsx', 'h-[36px]', 'min-w-0')).toBe(true);
+    expect(hasClasses('EmojiPicker.tsx', 'w-[320px]')).toBe(true);
   });
 });

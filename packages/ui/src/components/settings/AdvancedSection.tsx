@@ -2,7 +2,7 @@ import type { MouseEvent } from 'react';
 import { useText } from '../../core/CoreProvider';
 import { useSettings } from '../../core/SettingsProvider';
 import { Button } from '../Button';
-import styles from './section.module.css';
+import { sectionStyles as styles } from './sectionStyles';
 
 export const REPOSITORY_URL = 'https://github.com/Snouzy/hey-postie';
 export const WEBSITE_URL = 'https://hey-postie.com';

@@ -5,7 +5,9 @@ import type { MessageKey } from '../i18n';
 import { errorKey } from '../i18n/errors';
 import { Button } from './Button';
 import { Dialog } from './Dialog';
-import styles from './LeaveRoomDialog.module.css';
+
+// Postie's voice, never a joke: the heading font in mailbox red.
+const ERROR = "m-0 font-heading text-red [font-variation-settings:'SOFT'_100]";
 
 interface LeaveRoomDialogProps {
   room: Room;
@@ -42,13 +44,13 @@ export function LeaveRoomDialog({ room, onClose, onLeft }: LeaveRoomDialogProps)
 
   return (
     <Dialog title={text('room.leave')} onClose={onClose} closable={!busy}>
-      <p className={styles.sentence}>{text('room.confirmLeave').replace('{name}', room.name)}</p>
+      <p className="m-0 wrap-anywhere">{text('room.confirmLeave').replace('{name}', room.name)}</p>
       {error && (
-        <p className={styles.error} role="alert">
+        <p className={ERROR} role="alert">
           {text(error)}
         </p>
       )}
-      <div className={styles.actions}>
+      <div className="flex justify-end gap-2">
         <Button onClick={onClose} disabled={busy}>
           {text('dialog.cancel')}
         </Button>

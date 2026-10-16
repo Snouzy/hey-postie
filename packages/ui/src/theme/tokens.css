@@ -131,7 +131,10 @@ h3 {
   margin: 0;
 }
 
-button {
+button,
+input,
+textarea,
+select {
   font: inherit;
 }
 

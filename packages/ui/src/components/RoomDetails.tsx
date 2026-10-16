@@ -7,7 +7,6 @@ import type { MessageKey } from '../i18n';
 import { errorKey } from '../i18n/errors';
 import { Button } from './Button';
 import { LeaveRoomDialog } from './LeaveRoomDialog';
-import styles from './RoomDetails.module.css';
 import { RoomEncryption } from './RoomEncryption';
 
 interface RoomDetailsProps {
@@ -48,30 +47,40 @@ export function RoomDetails({
   }
 
   return (
-    <aside className={styles.details} aria-label={text('main.members')}>
-      <header className={styles.header}>
-        <h2 className={styles.title}>{room.name}</h2>
+    <aside
+      className="flex w-[clamp(240px,var(--details-width,280px),480px)] shrink-0 flex-col gap-4 border-l border-line bg-paper p-4 overflow-y-auto"
+      aria-label={text('main.members')}
+    >
+      <header className="flex items-center justify-between gap-2">
+        <h2 className="truncate text-[20px]">{room.name}</h2>
         <Button variant="ghost" onClick={onClose} aria-label={text('main.closeDetails')}>
           <X size={18} aria-hidden />
         </Button>
       </header>
-      <p className={styles.topic}>{room.topic || text('room.topicEmpty')}</p>
-      <p className={styles.jid}>{room.jid}</p>
+      <p className="m-0 wrap-anywhere">{room.topic || text('room.topicEmpty')}</p>
+      <p className="m-0 font-mono text-[13px] text-ink-muted wrap-anywhere">{room.jid}</p>
 
-      <section className={styles.section} aria-label={text('room.members')}>
-        {members.length === 0 && <p className={styles.empty}>{text('room.membersEmpty')}</p>}
+      <section className="flex flex-col gap-3" aria-label={text('room.members')}>
+        {/* Postie keeps the door open: his voice, so the heading font. */}
+        {members.length === 0 && (
+          <p className="m-0 font-heading [font-variation-settings:'SOFT'_100] text-ink-muted">
+            {text('room.membersEmpty')}
+          </p>
+        )}
         {ROLES.map((role) => {
           const group = members.filter((member) => member.role === role);
           if (group.length === 0) return null;
           return (
             <div key={role}>
-              <h3 className={styles.heading}>{text(`room.role.${role}`)}</h3>
-              <ul className={styles.list}>
+              <h3 className="mx-0 mt-0 mb-1 p-0 font-text text-[12px] font-bold tracking-[0.04em] uppercase text-ink-muted">
+                {text(`room.role.${role}`)}
+              </h3>
+              <ul className="m-0 flex list-none flex-col gap-[2px] p-0">
                 {group.map((member) => (
-                  <li key={member.nick} className={styles.member}>
-                    <span className={styles.nick}>{member.nick}</span>
+                  <li key={member.nick} className="flex items-baseline justify-between gap-2">
+                    <span className="truncate">{member.nick}</span>
                     {member.affiliation !== 'none' && (
-                      <span className={styles.affiliation}>
+                      <span className="shrink-0 text-[12px] text-kraft-ink">
                         {text(`room.affiliation.${member.affiliation}`)}
                       </span>
                     )}
@@ -85,10 +94,15 @@ export function RoomDetails({
 
       <RoomEncryption members={members} focusRequest={focusRequest} />
 
-      <fieldset className={styles.notify}>
-        <legend className={styles.heading}>{text('room.notify')}</legend>
+      <fieldset className="m-0 flex flex-col gap-1 border-0 p-0">
+        <legend className="mx-0 mt-0 mb-1 p-0 font-text text-[12px] font-bold tracking-[0.04em] uppercase text-ink-muted">
+          {text('room.notify')}
+        </legend>
         {RULES.map((rule) => (
-          <label key={rule} className={styles.radio}>
+          <label
+            key={rule}
+            className="flex cursor-pointer items-center gap-2 [&_input]:accent-navy"
+          >
             <input
               type="radio"
               name="notify"
@@ -105,7 +119,7 @@ export function RoomDetails({
         {text('room.leave')}
       </Button>
       {error && (
-        <p className={styles.error} role="alert">
+        <p className="m-0 font-heading [font-variation-settings:'SOFT'_100] text-red" role="alert">
           {text(error)}
         </p>
       )}

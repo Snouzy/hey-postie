@@ -6,7 +6,6 @@ import { useAccount } from '../core/useAccount';
 import type { MessageKey } from '../i18n';
 import { errorKey } from '../i18n/errors';
 import { Postie } from '../illustrations/Postie';
-import styles from './SignIn.module.css';
 
 interface SignInProps {
   onBack: () => void;
@@ -16,6 +15,15 @@ interface SignInProps {
 
 // Just enough to ask the keychain; the service does the real validation on submit.
 const LOOKS_LIKE_JID = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
+
+// `box-border`: the padding counts inside the height, or the screen overflows the window by that
+// much. `justify-center-safe`: taller than the window (200% zoom), the top stays reachable.
+const SCREEN =
+  'box-border flex min-h-full flex-col items-center justify-center-safe gap-3 px-6 py-12';
+const FORM = 'flex w-[min(360px,100%)] flex-col gap-3 rounded bg-paper-raised p-6 shadow-card';
+// Postie speaks here, hence the heading font. Reserve the room so the form does not jump.
+const MESSAGE =
+  "m-0 min-h-[2.5em] font-heading text-[15px] text-ink-muted [font-variation-settings:'SOFT'_100] [&[role=alert]]:text-red";
 
 export function SignIn({ onBack, prefill }: SignInProps) {
   const core = useCore();
@@ -68,10 +76,10 @@ export function SignIn({ onBack, prefill }: SignInProps) {
   const passwordInvalid = error === 'error.InvalidCredentials';
 
   return (
-    <main className={styles.signIn}>
+    <main className={SCREEN}>
       <Postie mood={mood} label={text(`postie.alt.${mood}`)} size={140} />
-      <h1 className={styles.title}>{text('signIn.title')}</h1>
-      <form className={styles.form} onSubmit={submit} aria-busy={connecting}>
+      <h1 className="text-[32px] text-navy">{text('signIn.title')}</h1>
+      <form className={FORM} onSubmit={submit} aria-busy={connecting}>
         <Field
           label={text('signIn.jid')}
           type="text"
@@ -98,7 +106,7 @@ export function SignIn({ onBack, prefill }: SignInProps) {
           aria-invalid={passwordInvalid || undefined}
           aria-describedby={passwordInvalid ? messageId : undefined}
         />
-        <label className={styles.remember}>
+        <label className="flex items-center gap-2 text-[14px]">
           <input
             type="checkbox"
             checked={remember}
@@ -107,10 +115,10 @@ export function SignIn({ onBack, prefill }: SignInProps) {
           />
           {text('signIn.remember')}
         </label>
-        <p id={messageId} className={styles.message} role={error ? 'alert' : 'status'}>
+        <p id={messageId} className={MESSAGE} role={error ? 'alert' : 'status'}>
           {connecting ? text('signIn.connecting') : error ? text(error) : ''}
         </p>
-        <div className={styles.actions}>
+        <div className="flex justify-between gap-3">
           <Button variant="ghost" onClick={onBack} disabled={connecting}>
             {text('signIn.back')}
           </Button>

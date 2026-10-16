@@ -10,6 +10,9 @@ listed at the end. Checked on 2026-10-15.
 | `@converse/headless` | 14.0.0 | MPL-2.0 | XMPP engine: MUC, MAM, OMEMO (0.3 and 2), reactions, upload, smacks. Pulls `strophe.js` (MIT), `libomemo.js` (GPL-3.0), `dompurify` (Apache-2.0 or MPL-2.0), `dayjs` (MIT), `lodash-es` (MIT). Installed in `packages/core` on 2026-10-15; its `curve25519_compiled.wasm` and `emoji.json` are copied to `apps/desktop/public/`, `libomemo.esm.min.js` is bundled by Vite as a lazy chunk (see [converse.md](converse.md) §12). |
 | `react`, `react-dom` | 19.3.1 | MIT | Interface. |
 | `lucide-react` | 1.57.0 | ISC | Icons. |
+| `tailwindcss` | 4.3.3 | MIT | Utility classes, read from the Postal tokens (`packages/ui/src/theme/tailwind.css`). Only the CSS it generates ships. Added 2026-10-16 ([spec](../specs/2026-10-16-buzz-ui-tailwind-design.md)). |
+| `clsx`, `tailwind-merge` | 2.1.1, 3.7.0 | MIT | `cn()` (`packages/ui/src/lib/cn.ts`): joins classes, the last of two clashing utilities wins. Added 2026-10-16. |
+| `class-variance-authority` | 0.7.1 | Apache-2.0 | Component variants (`Button`). Added 2026-10-16. |
 | `@tauri-apps/api` and plugins (`notification`, `store`) | 2.x | MIT or Apache-2.0 | Bridge to the Rust side. |
 | `@tauri-apps/plugin-opener` | 2.7.2 | MIT or Apache-2.0 | `openUrl`: links in messages go to the system browser (`apps/desktop/app/openLink.ts`). Added 2026-10-15. |
 | `@tauri-apps/plugin-updater` | 2.14.0 | MIT or Apache-2.0 | `check()` for a newer release at startup (`apps/desktop/app/updater.ts`); `downloadAndInstall()` later, with the update screen. Added 2026-10-16. |
@@ -60,7 +63,8 @@ and the `tauri` crates.
 
 ## Development
 
-TypeScript 6, Biome 2, Vitest 5, Vite 8, `@vitejs/plugin-react`, Testing Library, jsdom
+TypeScript 6, Biome 2, Vitest 5, Vite 8, `@vitejs/plugin-react`, `@tailwindcss/vite` 4.3.3 (Tailwind
+in the Vite build, added 2026-10-16), Testing Library, jsdom
 (30.1.3 in `packages/core`, for the Converse repository tests), `@tauri-apps/cli` 2.12. All MIT or
 Apache-2.0.
 

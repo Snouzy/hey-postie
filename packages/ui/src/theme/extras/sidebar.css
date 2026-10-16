@@ -1,0 +1,17 @@
+/* Styles of the sidebar group that utilities cannot say cleanly (keyframes, pseudo-elements, scrollbars). */
+
+/* The account card (AccountMenu) fades in when it opens. */
+@keyframes account-card-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@layer components {
+  .hp-account-card {
+    animation: account-card-fade var(--motion-fast) ease-out;
+  }
+}
