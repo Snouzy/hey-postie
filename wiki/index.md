@@ -16,6 +16,7 @@ The folder opens as an Obsidian vault.
 - [Dependencies](development/dependencies.md): every dependency, its license and why.
 - [Converse](development/converse.md): how we use `@converse/headless`: settings, events, roster, chats, MAM, reactions, upload, OMEMO, registration, pitfalls.
 - [Design system](development/design-system.md): tokens, fonts, Postie's moods, the components and their rules.
+- [Marketing site](../apps/site/README.md): the static site of hey-postie.com (Astro), its pages, its texts and the placeholders to confirm.
 - [Interface](development/ui.md): screens, the state machine, how the UI subscribes to the core, how to add a screen.
 
 ## Reports

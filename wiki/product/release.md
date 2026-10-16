@@ -126,7 +126,9 @@ Flatpak (spec, section 6) is not configured.
   `process:allow-restart` are already granted (`src-tauri/capabilities/default.json`).
 
 The endpoint is `https://hey-postie.com/releases/latest.json` (placeholder: the domain is
-still to confirm, see [brand.md](brand.md)). A static file, rewritten at each release:
+still to confirm, see [brand.md](brand.md)). A static file, rewritten at each release. The
+marketing site (`apps/site/public/releases/latest.json`) serves a placeholder for `0.1.0` with
+`PLACEHOLDER` signatures until the first build is published:
 
 ```json
 {

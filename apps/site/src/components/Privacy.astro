@@ -1,0 +1,34 @@
+---
+import { type Locale, useTexts } from '../i18n';
+import Base from '../layouts/Base.astro';
+
+interface Props {
+  locale: Locale;
+}
+
+const { locale } = Astro.props;
+const t = useTexts(locale);
+
+const appItems = ['network', 'device', 'nothing', 'files', 'bells'] as const;
+---
+
+<Base locale={locale} route="privacy" title={`${t('meta.privacyTitle')}, ${t('meta.title')}`}>
+  <article class="prose">
+    <h1>{t('privacy.title')}</h1>
+    <p class="lead">{t('privacy.intro')}</p>
+
+    <h2>{t('privacy.app.title')}</h2>
+    {
+      appItems.map((item) => (
+        <>
+          <h3>{t(`privacy.app.${item}.title`)}</h3>
+          <p>{t(`privacy.app.${item}.body`)}</p>
+        </>
+      ))
+    }
+
+    <h2>{t('privacy.site.title')}</h2>
+    <p>{t('privacy.site.body')}</p>
+    <p>{t('privacy.source')}</p>
+  </article>
+</Base>
