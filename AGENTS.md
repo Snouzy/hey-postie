@@ -95,7 +95,8 @@ When SOLID and KISS disagree, KISS wins outside the boundaries of section 2.
   called finished. Every service has unit tests against fake repositories. There is no CI for now
   (decision of 2026-10-15: speed first); the local run is the gate.
 - **Docs in the same commit.** A code change updates its wiki page in the same commit.
-- **Commits and pushes**: never on `main`; each commit and each push needs the author's explicit
-  go-ahead.
+- **Commits and pushes**: each commit and each push needs the author's explicit go-ahead. Work
+  happens on branches. A push to `main` is allowed only when the author approves that very push
+  (decision of 2026-10-16), and never with `--force`.
 - **Lessons.** After a correction from the author, add the pattern to `tasks/lessons.md` so the next
   session does not repeat it.
