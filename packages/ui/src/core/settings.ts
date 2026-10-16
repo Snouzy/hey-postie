@@ -101,7 +101,7 @@ export function readAssistantSettings(): AssistantSettings {
 
 /** `readAndSend` was the mode's name before drafts replaced sending (2026-10-16). */
 function assistantMode(value: unknown): AssistantSettings['mode'] {
-  if (value === 'read') return 'read';
+  if (value === 'read' || value === 'readDraftAndSend') return value;
   if (value === 'readAndDraft' || value === 'readAndSend') return 'readAndDraft';
   return 'off';
 }

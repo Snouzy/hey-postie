@@ -63,7 +63,7 @@ Claude Desktop ──stdio──▶ bridge (mcp-remote, or our MCPB bundle later
   socket shared with another team's process (the `claude` CLI), and a sandboxed app cannot ship a
   helper that an outside client launches. A loopback TCP port is the reliable channel.
 
-## 4. Tools (version 1: 8)
+## 4. Tools (version 1: 9)
 
 Read tools share the `list_`, `get_`, `read_`, `find_` verbs so a user can allow every read with
 one Claude Code rule (`mcp__hey-postie__read_*` and so on) while writes keep asking.
@@ -75,14 +75,18 @@ one Claude Code rule (`mcp__hey-postie__read_*` and so on) while writes keep ask
 | `read_messages` | Messages of one chat, newest page first (default 30, max 100), `before` cursor; never marks as read. | `chats.messages`, `chats.loadOlder` | ✓ | | ✓ |
 | `find_contacts` | Contacts matching a name or JID, with presence. | `contacts.list` | ✓ | | ✓ |
 | `draft_message` | Put text in the composer of an existing chat or a contact's chat; the user edits and sends it. Nothing is sent. | `assistant.draft` | | | |
+| `send_message` | Send text at once, only in the `readDraftAndSend` mode; `requiresUserInteraction`, so Claude Code asks the user before each call. | `chats.send` | | | |
 | `react_to_message` | Add or remove one emoji on a message. | `chats.toggleReaction` | | | ✓ |
 | `mark_chat_read` | Mark a chat read. | `chats.markRead` | | | ✓ |
 | `set_presence` | Available / away / do not disturb, with an optional status. | `accounts.setPresence` | | | ✓ |
 
-All tools: `openWorldHint: false` except `react_to_message` and `set_presence` (other people see
-them). Claude never sends a message: since 2026-10-16 (decision of the author after trying the
-approval dialog), `draft_message` replaces `send_message` and the approval dialog, so the user can
-edit what Claude wrote before sending it.
+All tools: `openWorldHint: false` except `send_message`, `react_to_message` and `set_presence` (other
+people see them). Decisions of the author on 2026-10-16, after trying an approval dialog in the app:
+`draft_message` is the default way to write (the user edits and sends), and direct sending is a
+separate, explicit level of access where the confirmation happens on Claude's side, not in Hey
+Postie: `send_message` carries `_meta["anthropic/requiresUserInteraction"]: true` (Claude Code asks
+on every call, whatever the permissions) and its description tells Claude to use it only when the
+user explicitly asked to send, after showing the recipient and the text.
 
 Later, each in its own pull request and keeping under 15: `search_messages` (needs a search
 service), `edit_message` and `retract_message` (with their spec), `get_attachment`.
@@ -110,12 +114,13 @@ service), `edit_message` and `retract_message` (with their spec), `get_attachmen
 ## 5. Safety
 
 - **Off by default.** Settings › Claude: Off / Read my chats / Read my chats and prepare letters
-  that I send myself. The sentence next to it says plainly: what Claude reads leaves this device for
+  that I send myself / Read, prepare and also send when I ask Claude (Claude asks before each one). The sentence next to it says plainly: what Claude reads leaves this device for
   Anthropic, outside end-to-end encryption.
 - **Sealed chats excluded by default**: a second switch, "Include sealed chats", off. Excluded chats
   do not appear in any tool's answer.
-- **Claude never sends.** A draft lands in the chat's composer, below what the user already wrote;
-  the user reads, edits and sends it, or deletes it. The window comes to the front.
+- **Drafts by default.** A draft lands in the chat's composer, below what the user already wrote;
+  the user reads, edits and sends it, or deletes it. The window comes to the front. Direct sending
+  exists only in the last level, confirmed by the user to Claude for each message.
 - **Token**: 32 random bytes, in the keychain, never in `localStorage`, files or logs. Settings
   shows "Copy the Claude Code command" and "New token" (the old one stops working at once).
 - **Rust checks every request**: `Authorization: Bearer` (constant-time compare), `Host` is
@@ -132,7 +137,7 @@ service), `edit_message` and `retract_message` (with their spec), `get_attachmen
 `AssistantService` (`packages/core/src/contracts/services.ts`, `services/assistant.ts`), reached
 as `core.assistant`:
 
-- `getSettings()` / `setSettings(change)`: `{ mode: 'off' | 'read' | 'readAndDraft', includeSealed,
+- `getSettings()` / `setSettings(change)`: `{ mode: 'off' | 'read' | 'readAndDraft' | 'readDraftAndSend', includeSealed,
   port }`, off, sealed excluded and port 7413 by default; a port outside 1024–65535 is refused
   (`InvalidPort`). Like the notification preview, the rule lives in the core and the UI remembers
   the user's choice and tells the core at startup.
@@ -143,6 +148,7 @@ as `core.assistant`:
 - `draft({ chatId, title, body })`: refused with `AssistantNotAllowed` unless `readAndDraft`;
   emits `assistant.draft`, then `chat.requested` so the interface opens the chat. Nothing is sent.
   (Replaced `requestSend` / `answerSend` and the approval dialog on 2026-10-16.)
+- `canSend()`: true only in `readDraftAndSend` (which also allows drafts).
 - Events `assistant.changed` (the desktop app starts, stops, moves or restarts its listener) and
   `assistant.draft`. Error codes `AssistantNotAllowed`,
   `InvalidPort`.
@@ -189,7 +195,8 @@ an MCPB bundle on the site later. Neither ships in the App Store build.
   `structuredContent` yet.
 - Tests (`server.test.ts`) call the handler with real 2026-07-28 requests on a signed-in core over
   fakes: the tool list and annotations, sealed chats hidden, fenced bodies, contacts, signed out,
-  and drafts refused, delivered (nothing sent) and kept out of sealed chats.
+  drafts refused, delivered (nothing sent) and kept out of sealed chats, and direct sending refused
+  outside its mode, sent in it, kept out of sealed chats.
 
 ## Points to check
 

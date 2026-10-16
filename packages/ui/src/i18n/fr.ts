@@ -286,6 +286,8 @@ export const fr: Record<MessageKey, string> = {
   'assistant.mode.read': 'Lire mes discussions',
   'assistant.mode.readAndDraft':
     'Lire mes discussions et préparer des lettres que j’envoie moi-même',
+  'assistant.mode.readDraftAndSend':
+    'Lire, préparer et aussi envoyer des lettres pour moi quand je le demande à Claude (Claude me demande avant chacune)',
   'assistant.privacy':
     'Ce que Claude lit quitte cet ordinateur pour Anthropic, hors du sceau du chiffrement de bout en bout.',
   'assistant.sealedHeading': 'Discussions scellées',

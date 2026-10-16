@@ -13,7 +13,7 @@ const TOKEN_BYTES = 32;
 
 /**
  * The rules of Claude's access through MCP: off by default, sealed chats left out unless the
- * user includes them, and no sending: Claude prepares drafts the user sends. The token lives in the keychain only.
+ * user includes them, drafts the user sends, and direct sending only in the last mode. The token lives in the keychain only.
  * Logs carry ids and decisions, never a body or the token.
  */
 export function createAssistantService(
@@ -59,12 +59,14 @@ export function createAssistantService(
     },
 
     draft(draft) {
-      if (settings.mode !== 'readAndDraft') {
+      if (settings.mode !== 'readAndDraft' && settings.mode !== 'readDraftAndSend') {
         throw new DomainError('AssistantNotAllowed', 'AssistantNotAllowed: drafts are off');
       }
       events.emit('assistant.draft', draft);
       events.emit('chat.requested', { chatId: draft.chatId });
     },
+
+    canSend: () => settings.mode === 'readDraftAndSend',
   };
 }
 

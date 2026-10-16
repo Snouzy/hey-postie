@@ -18,7 +18,7 @@ beforeEach(async () => {
 });
 
 describe('the tool list', () => {
-  it('has the eight tools of the spec, reads marked read-only', async () => {
+  it('has the nine tools of the spec, reads marked read-only', async () => {
     const { tools } = await t.rpc('tools/list');
     const byName = new Map(tools.map((tool: { name: string }) => [tool.name, tool]));
     expect([...byName.keys()].sort()).toEqual(
@@ -30,9 +30,13 @@ describe('the tool list', () => {
         'react_to_message',
         'read_messages',
         'draft_message',
+        'send_message',
         'set_presence',
       ].sort(),
     );
+    expect(byName.get('send_message')).toMatchObject({
+      _meta: { 'anthropic/requiresUserInteraction': true },
+    });
     for (const name of ['list_chats', 'get_chat', 'read_messages', 'find_contacts']) {
       expect(byName.get(name), name).toMatchObject({ annotations: { readOnlyHint: true } });
     }
@@ -105,5 +109,29 @@ describe('drafting', () => {
     t.core.assistant.setSettings({ mode: 'readAndDraft' });
     const answer = await t.call('draft_message', { chat: 'alice@x.org', text: 'Hi' });
     expect(answer).toMatchObject({ isError: true });
+  });
+});
+
+describe('sending directly', () => {
+  it('is refused unless the user allowed it, and nothing leaves', async () => {
+    t.core.assistant.setSettings({ mode: 'readAndDraft' });
+    const answer = await t.call('send_message', { chat: 'bob@x.org', text: 'On my way' });
+    expect(answer).toMatchObject({ isError: true });
+    expect(answer.text).toMatch(/Direct sending is off/);
+    expect(t.deps.fakes.chat.sent).toHaveLength(0);
+  });
+
+  it('sends at once in the last mode', async () => {
+    t.core.assistant.setSettings({ mode: 'readDraftAndSend' });
+    const answer = await t.call('send_message', { chat: 'bob@x.org', text: 'On my way' });
+    expect(answer.isError).toBe(false);
+    expect(t.deps.fakes.chat.sent.map((m) => m.body)).toEqual(['On my way']);
+  });
+
+  it('never sends into a sealed chat the user left out', async () => {
+    t.core.assistant.setSettings({ mode: 'readDraftAndSend' });
+    const answer = await t.call('send_message', { chat: 'alice@x.org', text: 'Hi' });
+    expect(answer).toMatchObject({ isError: true });
+    expect(t.deps.fakes.chat.sent).toHaveLength(0);
   });
 });

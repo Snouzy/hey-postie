@@ -47,3 +47,12 @@ describe('AssistantSection', () => {
     expect(document.body.textContent).not.toContain(token);
   });
 });
+
+describe('AssistantSection direct sending', () => {
+  it('offers sending as its own, last choice', () => {
+    const core = setup();
+    fireEvent.click(screen.getByRole('radio', { name: /also send letters/ }));
+    expect(core.assistant.canSend()).toBe(true);
+    expect(readAssistantSettings().mode).toBe('readDraftAndSend');
+  });
+});

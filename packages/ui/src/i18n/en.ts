@@ -275,6 +275,8 @@ export const en = {
   'assistant.mode.off': 'Off',
   'assistant.mode.read': 'Read my chats',
   'assistant.mode.readAndDraft': 'Read my chats and prepare letters that I send myself',
+  'assistant.mode.readDraftAndSend':
+    'Read, prepare and also send letters for me when I ask Claude to (Claude asks me before each one)',
   'assistant.privacy':
     'What Claude reads leaves this computer for Anthropic, outside the seal of end-to-end encryption.',
   'assistant.sealedHeading': 'Sealed chats',

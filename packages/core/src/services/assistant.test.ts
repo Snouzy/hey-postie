@@ -98,3 +98,17 @@ describe('drafts', () => {
     expect(deps.fakes.chat.sent).toHaveLength(0);
   });
 });
+
+describe('direct sending', () => {
+  it('is allowed only in the last mode, which also allows drafts', () => {
+    for (const mode of ['off', 'read', 'readAndDraft'] as const) {
+      core.assistant.setSettings({ mode });
+      expect(core.assistant.canSend(), mode).toBe(false);
+    }
+    core.assistant.setSettings({ mode: 'readDraftAndSend' });
+    expect(core.assistant.canSend()).toBe(true);
+    expect(() =>
+      core.assistant.draft({ chatId: 'bob@x.org', title: 'Bob', body: 'Hi' }),
+    ).not.toThrow();
+  });
+});

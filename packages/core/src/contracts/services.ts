@@ -143,8 +143,11 @@ export interface NotificationsService {
   getShowPreview(): boolean;
 }
 
-/** Claude (MCP) access: off, read only, or read and prepare drafts the user sends themselves. */
-export type AssistantMode = 'off' | 'read' | 'readAndDraft';
+/**
+ * Claude (MCP) access: off, read only, read and prepare drafts the user sends, or also send
+ * directly (Claude's client asks the user before each send; Hey Postie does not).
+ */
+export type AssistantMode = 'off' | 'read' | 'readAndDraft' | 'readDraftAndSend';
 
 export interface AssistantSettings {
   mode: AssistantMode;
@@ -163,7 +166,8 @@ export interface Draft {
 
 /**
  * The rules of Claude's access (spec 2026-10-16-mcp-design). Off by default; what Claude reads
- * leaves the device. Claude never sends: it prepares drafts the user reviews, edits and sends.
+ * leaves the device. Claude prepares drafts the user reviews, edits and sends; it sends directly
+ * only in the `readDraftAndSend` mode, the user confirming each send to Claude.
  */
 export interface AssistantService {
   getSettings(): AssistantSettings;
@@ -177,9 +181,11 @@ export interface AssistantService {
   canRead(chat: Chat): boolean;
   /**
    * Hands a draft to the interface (`assistant.draft`, then `chat.requested` to show the chat).
-   * Refuses with `AssistantNotAllowed` unless the mode is `readAndDraft`. Nothing is sent.
+   * Refuses with `AssistantNotAllowed` unless the mode allows drafts. Nothing is sent.
    */
   draft(draft: Draft): void;
+  /** Whether Claude may send directly (`readDraftAndSend`). */
+  canSend(): boolean;
 }
 
 export interface Core {
