@@ -307,6 +307,65 @@ _Added 2026-10-17 (spec 2026-10-17-conversation-slack, Lot A item 2). Sources: `
   per occupant: not in the contract). A marker for a letter not loaded in the chat's collection
   moves nothing; the next one will.
 
+### Read sync (XEP-0490)
+
+_Added 2026-10-16 (spec [2026-10-16-read-sync-and-search](../specs/2026-10-16-read-sync-and-search-design.md)
+§1). Sources: `read-sync.ts`, `chat.ts` (`markRead`), `read-sync.test.ts`,
+`read-sync.contract.test.ts`; Converse `plugins/pubsub/api.js`, `plugins/disco/utils.js`,
+`plugins/chat/plugin.js`, `shared/model-with-messages.js`, `plugins/muc/muc.js`; Prosody 13
+`mod_pep.lua`, `util/pubsub.lua`._
+
+Converse 14 does not speak XEP-0490; `ConverseReadSync`, created by `ConverseChatRepository`, adds
+it. One private PEP node of our own account, `urn:xmpp:mds:displayed:0`: one item per chat, item id
+= the chat's bare JID, payload `<displayed><stanza-id id by/></displayed>`. Nothing in it leaves the
+account, so it ignores the read-markers setting.
+
+- **Out.** `markRead` clears Converse's counter, then calls `readSync.publish(chat)` without
+  awaiting it (a failure is a log line, no content). The item names the newest model of the chat
+  carrying the attribute `stanza_id <archive>` (our bare JID in a direct chat, the room in a hall);
+  nothing when there is none (our own direct letters only get one from MAM) or when it is not newer
+  than the chat attribute `mds_displayed_at`. `api.pubsub.publish(self, node, item, options, true)`
+  with `persist_items=true`, `max_items=max`, `send_last_published_item=never`,
+  `access_model=whitelist`: with strict options Converse checks PEP and `pubsub#publish-options` by
+  disco first and returns without sending when either is missing, and on `precondition-not-met`
+  reconfigures the node and publishes again. Prosody 13 accepts all four options (`mod_pep.lua`
+  maps `max` to its item limit; checked live on 2026-10-16).
+- **In.** `urn:xmpp:mds:displayed:0+notify` is added on `addClientFeatures`, which Converse fires
+  from `initializeDisco` before the first presence, so the caps hash already carries it and the
+  server pushes every new item to this resource (XEP-0163), our own publishes included. A Strophe
+  handler (namespace `pubsub#event`, re-added on `connected` and `reconnected`) reads the `<event>`
+  messages from our own bare JID. `applyDisplayed`: the item's `by` must be the chat's archive; the
+  letter is looked up by `stanza_id <by>`; if its `time` is not after `mds_displayed_at`, nothing
+  moves (never backwards: this is also what makes our own echo a no-op). Otherwise
+  `mds_displayed_at` takes that time and the counters are **lowered** (never raised) to the incoming
+  letters after it (`sender` not `me`, with a body, not retracted): `num_unread` in a direct chat,
+  `num_unread_general` and `num_unread` (mentions) in a hall, and `has_activity` false at zero. The
+  counters are saved directly, not through `clearUnreadMsgCounter`, so no XEP-0333 marker leaves and
+  nothing is published again; `change:num_unread*` makes `onChatChange` fire, and the sidebar, the
+  badge and the notifications follow.
+- **A letter not held yet** (the item arrived before the MAM catch-up brought it): the item is kept
+  per chat and applied when a model with that stanza id is added to the chat. A newer item replaces
+  it. An item for a chat we do not hold is dropped.
+- **Catch up.** On `connected` and `reconnected`: after `chatBoxesFetched`, if the account or its
+  domain advertises `pubsub#publish-options`, the node's items are fetched once
+  (`api.pubsub.items.get`) and applied the same way. Until the first publish the node does not
+  exist: `item-not-found`, one log line.
+- **Contract test** (`read-sync.contract.test.ts`, three cases, all passing on 2026-10-16). Converse
+  is one instance per process, so alice's second device is the hand-written client signed in as
+  alice (resource `phone-<run>`), acting as Conversations would: it publishes an item with the four
+  options and reads the node back. (1) bob writes, the phone publishes that letter's stanza id, the
+  app's unread count for bob drops to 0; (2) bob writes, the app's `markRead` publishes, the phone
+  reads that letter's stanza id from the node; (3) in a new hall, bob writes, the phone publishes
+  the room-stamped stanza id, the app's hall count drops to 0. With `applyDisplayed` disabled, (1)
+  and (3) fail.
+- **Found along the way.** Converse registers its message handlers only on `presencesInitialized`
+  (`plugins/chat/plugin.js:54`), a moment after `connect()` resolves and after the initial presence
+  is out: a letter arriving in between is dropped by this resource. The contract test has bob write
+  "warm-up" letters until the app hears one.
+- Not handled: the catch-up does not lower a count for letters that arrive by MAM after the item
+  (Converse does not count archived letters as unread anyway, `isNewMessage`); item retractions
+  are ignored.
+
 ### Replies and mentions
 
 _Added 2026-10-17 (spec 2026-10-17-conversation-slack, Lot B items 8 to 10). Sources:

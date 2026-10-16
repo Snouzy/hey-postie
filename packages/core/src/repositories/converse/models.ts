@@ -289,6 +289,18 @@ export interface ConverseApi {
   send(stanza: unknown): unknown;
   /** Rejects with the error stanza, or with null on timeout. */
   sendIQ(stanza: unknown, timeout?: number): Promise<Element>;
+  /** `plugins/pubsub/api.js`; `jid` null means our own PEP service. */
+  pubsub?: {
+    /** Strict options: returns without sending when the server lacks publish-options or PEP. */
+    publish(
+      jid: string,
+      node: string,
+      item: unknown,
+      options: Record<string, string>,
+      strictOptions?: boolean,
+    ): Promise<unknown>;
+    items: { get(jid: string | null, node: string): Promise<{ items: Element[] }> };
+  };
   /** Present once the OMEMO plugin loaded (`plugins/omemo/api.js`). */
   omemo?: {
     send(chat: ChatModel, plaintext: string | null, extensions?: unknown[]): Promise<void>;

@@ -6,6 +6,7 @@ import { isRoom, toChat, toMessage } from './mappers';
 import type { ChatModel, MessageModel } from './models';
 import { REACTIONS_NS, sendReactions } from './reactions';
 import { addMarkerType, applyReadMarker, READ_UNTIL } from './read-markers';
+import { ConverseReadSync } from './read-sync';
 import { replyAttributes } from './replies';
 import {
   AESGCM_OVERHEAD_BYTES,
@@ -54,8 +55,11 @@ export class ConverseChatRepository implements ChatRepository {
   private readonly sending = new Map<string, Promise<unknown>>();
   /** The chats that were already there when a connection came up: they need a MAM catch-up. */
   private survivors = new Set<ChatModel>();
+  /** XEP-0490: the read position shared with our other devices. */
+  private readonly readSync: ConverseReadSync;
 
   constructor(private readonly engine: ConverseEngine) {
+    this.readSync = new ConverseReadSync(engine);
     engine.onReady((loaded) => this.bindCollection(loaded));
     engine.on('addClientFeatures', () => engine.current?.api.disco.own.features.add(REACTIONS_NS));
     engine.on('disconnected', () => {
@@ -268,6 +272,7 @@ export class ConverseChatRepository implements ChatRepository {
   async markRead(chatId: string): Promise<void> {
     const chat = await this.find(chatId);
     await chat.clearUnreadMsgCounter();
+    this.readSync.publish(chat).catch(() => console.warn('read sync: publish failed'));
   }
 
   onMessage(handler: MessageHandler): () => void {

@@ -7,6 +7,11 @@ the WhatsApp way, with links, media and documents". The "Later" items of
 
 ## 1. Read sync across one's devices (XEP-0490, Message Displayed Synchronization)
 
+_Built on 2026-10-16: `repositories/converse/read-sync.ts`, described in
+[converse.md, "Read sync (XEP-0490)"](../development/converse.md#read-sync-xep-0490). The contract
+test pairs the app with a hand-written second session of alice (Converse is one instance per
+process), and also covers a hall._
+
 **The problem.** Read a chat on the phone and Hey Postie still shows it unread, with its badge and
 its notification. XEP-0333 `displayed` markers go to the *peer*; one's own other devices never learn
 the position (and they do not leave at all when the author turns read markers off).

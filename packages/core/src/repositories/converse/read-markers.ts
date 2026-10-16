@@ -80,7 +80,7 @@ export function isRead(sentAt: unknown, readUntil: unknown): boolean {
 }
 
 /** An ISO 8601 time in milliseconds; null when absent or unreadable. */
-function millis(value: unknown): number | null {
+export function millis(value: unknown): number | null {
   if (typeof value !== 'string') return null;
   const parsed = Date.parse(value);
   return Number.isFinite(parsed) ? parsed : null;
