@@ -4,9 +4,9 @@ import { cn } from '../lib/cn';
 import { Button } from './Button';
 
 const MENU =
-  'absolute top-[calc(100%+var(--space-1))] right-0 z-float flex min-w-[180px] flex-col rounded-sm border border-line bg-paper-raised p-1 shadow-card';
+  'absolute top-[calc(100%+var(--space-1))] right-0 z-float flex w-max min-w-[180px] flex-col rounded-sm border border-line bg-paper-raised p-1 shadow-card';
 const ITEM =
-  'flex w-full cursor-pointer items-center gap-2 rounded-sm border-none bg-transparent px-3 py-2 text-left text-ink transition-[background-color] duration-(--motion-fast) hover:bg-paper focus-visible:bg-paper';
+  'flex w-full cursor-pointer items-center gap-2 rounded-sm border-none bg-transparent px-3 py-2 text-left text-ink transition-[background-color] duration-(--motion-fast) hover:bg-paper focus-visible:bg-paper whitespace-nowrap';
 
 export interface AddMenuItem {
   label: string;

@@ -390,7 +390,7 @@ export const en = {
   'chatList.muted': 'Bell off',
   'sidebar.invitations': 'Invitations',
   'sidebar.halls': 'Halls',
-  'sidebar.letters': 'Letters',
+  'sidebar.letters': 'Messages',
   'sidebar.hallsAdd': 'Halls: create or join',
   'sidebar.hallsEmpty': 'You are in no hall yet.',
   'sidebar.lettersEmpty': 'No letter with anyone yet.',

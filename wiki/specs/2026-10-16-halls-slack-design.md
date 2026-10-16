@@ -10,7 +10,7 @@ to 4 built on 2026-10-16 (section 8)._
 A hall (an XMPP group chat, XEP-0045) is created in two clicks, people are invited from the address
 book, and it is managed from the hall itself, as a Slack or Buzz channel:
 
-- the sidebar shows **Halls** and **Letters** (direct chats) as two foldable sections;
+- the sidebar shows **Halls** and **Messages** (direct chats) as two foldable sections;
 - **Create a hall**: a name, an optional description, Private (default) or Public;
 - **Invite people**: search the address book or paste an address, several at once; the invited
   person sees an invitation to accept or decline;
@@ -126,7 +126,7 @@ declineInvitation(roomJid: string): Promise<void>;
 
 ## 6. Interface (Buzz as the model, our tokens)
 
-- **Sidebar** (Chats tab): two foldable groups, **Halls** and **Letters**, with the uppercase heading
+- **Sidebar** (Chats tab): two foldable groups, **Halls** and **Messages**, with the uppercase heading
   and chevron of `RequestList`; on heading hover a "+" (24px) opens the Add menu on halls (Create a
   hall, Browse halls). A private hall wears a small lock next to the `users` icon. Notify `none`:
   the row at 50% with a bell-off. Rows keep their two lines.

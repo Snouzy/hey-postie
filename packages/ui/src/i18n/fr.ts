@@ -404,7 +404,7 @@ export const fr: Record<MessageKey, string> = {
   'chatList.muted': 'Cloche coupée',
   'sidebar.invitations': 'Invitations',
   'sidebar.halls': 'Salons',
-  'sidebar.letters': 'Lettres',
+  'sidebar.letters': 'Messages',
   'sidebar.hallsAdd': 'Salons : créer ou rejoindre',
   'sidebar.hallsEmpty': 'Tu n’es dans aucun salon pour l’instant.',
   'sidebar.lettersEmpty': 'Pas encore de lettre avec quelqu’un.',

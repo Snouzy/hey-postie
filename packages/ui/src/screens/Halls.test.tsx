@@ -59,7 +59,7 @@ describe('The sidebar groups', () => {
   it('shows Halls then Letters, each with its rows', async () => {
     await signedIn(hallAndLetter);
     const halls = await screen.findByRole('region', { name: 'Halls' });
-    const letters = group('Letters');
+    const letters = group('Messages');
     expect(halls.compareDocumentPosition(letters)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
     expect(await within(halls).findByRole('button', { name: /Team/ })).toBeInTheDocument();
     expect(within(letters).getByRole('button', { name: /bob/ })).toBeInTheDocument();
@@ -74,7 +74,7 @@ describe('The sidebar groups', () => {
     fireEvent.click(heading);
     expect(heading).toHaveAttribute('aria-expanded', 'false');
     expect(screen.queryByRole('button', { name: /Team/ })).toBeNull();
-    expect(within(group('Letters')).getByRole('button', { name: /bob/ })).toBeInTheDocument();
+    expect(within(group('Messages')).getByRole('button', { name: /bob/ })).toBeInTheDocument();
 
     view.unmount();
     await signedIn(hallAndLetter);

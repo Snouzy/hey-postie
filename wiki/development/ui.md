@@ -94,7 +94,7 @@ empty; `Conversation` passes it only once `useMessages().loaded` is true (the fi
 or failed), so a chat whose history is still on its way does not flash "A blank page". The sidebar
 search with no match shows the same empty state as an empty list (not a separate "no result").
 When anything is listed (a hall, a letter, a stranger or an invitation), the Chats tab shows its
-groups instead (see [Halls the Slack way](#halls-the-slack-way)); an empty "Halls" or "Letters"
+groups instead (see [Halls the Slack way](#halls-the-slack-way)); an empty "Halls" or "Messages"
 group says so in one muted line, not with Postie. A hall with no letter yet shows its intro
 ("This is the beginning of …", see below) instead of the blank page, and browsing shows "No hall
 here".
@@ -463,7 +463,7 @@ channels as the model, our tokens). Sources: `components/Sidebar.tsx`, `SidebarG
 
 - **Sidebar groups** (Chats tab): under "Letters from strangers", an **Invitations** group (only
   when one waits, its count on stamp yellow), then **Halls** (the rows of `kind: 'room'`) and
-  **Letters** (the direct chats), each a `SidebarGroup`: an `h3` holding the heading button
+  **Messages** (the direct chats), each a `SidebarGroup`: an `h3` holding the heading button
   (`aria-expanded`, chevron, uppercase like `ContactList`), the group a `section` named by its
   title. Open by default; folding is a per-viewer convenience, kept in `localStorage`
   `hey-postie:folded-groups` (a JSON list of the folded groups, `readFoldedGroups` /
@@ -878,7 +878,7 @@ sentence, focus back to "+", room service discovery, bad domain sentence, browse
 sender nick and mention highlight, Tab completion with the caret, outside a hall and "Join
 again", a room chat without a hall record, members by role and notify radios, Esc on the leave
 confirmation, leave with confirmation, a fresh hall on top, mentions badge),
-`Halls.test.tsx` (Halls then Letters with their rows, a group folded and still folded in the
+`Halls.test.tsx` (Halls then Messages with their rows, a group folded and still folded in the
 next window with the other one open, the lock and the bell-off, arrows from a hall to a letter
 and back, the Halls "+" menu, the empty state kept; Create: the address derived until edited
 with the service shown, `RoomExists` as Postie's sentence with the address invalid, success
