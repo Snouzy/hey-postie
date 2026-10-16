@@ -100,6 +100,10 @@ When SOLID and KISS disagree, KISS wins outside the boundaries of section 2.
   called finished. Every service has unit tests against fake repositories. There is no CI for now
   (decision of 2026-10-15: speed first); the local run is the gate.
 - **Docs in the same commit.** A code change updates its wiki page in the same commit.
+- **The showcase follows the code.** A change to what the app can do also updates, in the same
+  work: the README ("What you get", the "How it compares" table and its summary), the GitHub
+  repository description when the pitch changes, and the agent surfaces: MCP tools
+  (`packages/mcp`), the `postie` CLI commands (`apps/cli`) and `docs/agents/postie-cli/SKILL.md`.
 - **Commits and pushes**: each commit and each push needs the author's explicit go-ahead. Work
   happens on branches. A push to `main` is allowed only when the author approves that very push
   (decision of 2026-10-16), and never with `--force`.
