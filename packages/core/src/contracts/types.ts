@@ -251,6 +251,32 @@ export interface Message {
   linkPreviews?: LinkPreview[];
 }
 
+/** Where a `ConversationArchiveService` page stopped: pass it back for the next, older page. */
+export interface ArchiveCursor {
+  /** The `Message.id` of the oldest letter already looked at. */
+  before: string;
+}
+
+/** Newest first. `next` is absent once the start of the conversation's archive is reached. */
+export interface ArchivePage<T> {
+  items: T[];
+  next?: ArchiveCursor;
+}
+
+/** A letter a search found; `ranges` are the matches in `body` (empty when a file name matched). */
+export interface SearchHit {
+  message: Message;
+  ranges: { start: number; end: number }[];
+}
+
+/** WhatsApp's "media, links and docs" of a conversation. */
+export type ArchiveKind = 'media' | 'link' | 'document';
+
+export type ArchiveItem =
+  | { kind: 'media' | 'document'; message: Message; attachment: Attachment }
+  /** An `http(s)` URL of a body, with the preview the hall attached to it, if any. */
+  | { kind: 'link'; message: Message; url: string; preview?: LinkPreview };
+
 export type Trust = 'untrusted' | 'trusted' | 'verified' | 'blocked';
 export interface Device {
   jid: string;

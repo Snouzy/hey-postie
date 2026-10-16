@@ -2,6 +2,10 @@ import type { EventBus } from './events';
 import type {
   Account,
   AccountPresence,
+  ArchiveCursor,
+  ArchiveItem,
+  ArchiveKind,
+  ArchivePage,
   Attachment,
   Chat,
   Contact,
@@ -17,6 +21,7 @@ import type {
   RoomPerson,
   RoomSettings,
   RoomVisibility,
+  SearchHit,
   SendOptions,
 } from './types';
 
@@ -204,6 +209,23 @@ export interface FilesService {
 }
 
 /**
+ * Looks through a conversation's letters, newest first, a page at a time (`ARCHIVE_PAGE_SIZE`
+ * letters looked at per call): first those held on this device, then the server's archive. The
+ * server is never asked to search (most cannot, and sealed letters are readable here only).
+ * Retracted letters and those hidden "for me" are skipped.
+ */
+export interface ConversationArchiveService {
+  /** Letters whose body or file names hold `query`, ignoring case and accents. */
+  search(chatId: string, query: string, cursor?: ArchiveCursor): Promise<ArchivePage<SearchHit>>;
+  /** The pictures and videos, links, or other files sent in the conversation. */
+  collect(
+    chatId: string,
+    kind: ArchiveKind,
+    cursor?: ArchiveCursor,
+  ): Promise<ArchivePage<ArchiveItem>>;
+}
+
+/**
  * Decides when a system notification is shown, and what it says. The UI tells it what the user
  * is looking at, and whether the notification may carry the letter's text.
  */
@@ -267,6 +289,7 @@ export interface Core {
   rooms: RoomsService;
   crypto: CryptoService;
   files: FilesService;
+  archive: ConversationArchiveService;
   notifications: NotificationsService;
   assistant: AssistantService;
   events: EventBus;
