@@ -34,6 +34,13 @@
 
   --shadow-card: 0 1px 2px rgb(30 34 48 / 0.08), 0 4px 16px rgb(30 34 48 / 0.06);
 
+  /* Layers, lowest first: what sticks in a scroller, what floats over a column, a popover
+     positioned against the window, a modal dialog above everything. */
+  --z-sticky: 1;
+  --z-float: 2;
+  --z-popover: 3;
+  --z-dialog: 4;
+
   color-scheme: light dark;
 }
 

@@ -217,6 +217,14 @@ describe('chats.send', () => {
 });
 
 describe('incoming messages', () => {
+  it('emits message.received for a letter sent from here', async () => {
+    const seen: Message[] = [];
+    core.events.on('message.received', (m) => seen.push(m));
+    const sent = await core.chats.send('bob@example.org', 'hello');
+    expect(seen).toEqual([sent]);
+    expect(sent.direction).toBe('out');
+  });
+
   it('emits message.received with control characters removed', async () => {
     const seen: Message[] = [];
     core.events.on('message.received', (m) => seen.push(m));

@@ -1,4 +1,6 @@
 .signIn {
+  /* The padding counts inside the height, or the screen overflows the window by that much. */
+  box-sizing: border-box;
   min-height: 100%;
   display: flex;
   flex-direction: column;

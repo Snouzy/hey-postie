@@ -1,4 +1,4 @@
-import type { Chat, Message } from '@hey-postie/core';
+import { type Chat, MESSAGE_PAGE_SIZE, type Message } from '@hey-postie/core';
 import { useEffect, useRef, useState } from 'react';
 import type { MessageKey } from '../i18n';
 import { errorKey } from '../i18n/errors';
@@ -7,13 +7,14 @@ import { useCoreEvent } from './useCoreEvent';
 
 /**
  * The messages of the open chat: the first page on mount, then every `message.received` and
- * `message.updated` for that chat, older pages on demand. Marks the chat read as letters arrive
- * while the window has the focus, and again when it regains it.
+ * `message.updated` for that chat, older pages on demand. A letter sent from here reaches the
+ * list through `message.received` too, whoever called `chats.send`. Marks the chat read as
+ * letters arrive while the window has the focus, and again when it regains it.
  */
 export function useMessages(chat: Chat) {
   const core = useCore();
   const [messages, setMessages] = useState<Message[]>([]);
-  const [hasOlder, setHasOlder] = useState(true);
+  const [hasOlder, setHasOlder] = useState(false);
   // The first page has answered (or failed): only then is an empty list an empty chat.
   const [loaded, setLoaded] = useState(false);
   const [error, setError] = useState<MessageKey | null>(null);
@@ -26,11 +27,12 @@ export function useMessages(chat: Chat) {
     core.chats
       .messages(chat.id)
       // Messages received while loading are already in the list: keep them.
-      .then(
-        (loaded) =>
-          !cancelled &&
-          setMessages((current) => mergeById(fresh(loaded, fromEvents.current), current)),
-      )
+      .then((loaded) => {
+        if (cancelled) return;
+        setMessages((current) => mergeById(fresh(loaded, fromEvents.current), current));
+        // A first page shorter than a page is the whole history: nothing older to ask for.
+        setHasOlder(loaded.length >= MESSAGE_PAGE_SIZE);
+      })
       .catch((caught: unknown) => !cancelled && setError(errorKey(caught)))
       .finally(() => !cancelled && setLoaded(true));
     return () => {
@@ -76,7 +78,7 @@ export function useMessages(chat: Chat) {
   }
 
   async function send(body: string) {
-    add(await core.chats.send(chat.id, body));
+    await core.chats.send(chat.id, body);
     setError(null);
   }
 

@@ -69,6 +69,11 @@
   outline: none;
 }
 
+.search input::placeholder {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 /* The input's own ring is off (it would sit inside the pill): the pill wears it instead. */
 .search:focus-within {
   border-color: var(--navy);

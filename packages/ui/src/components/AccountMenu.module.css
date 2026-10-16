@@ -38,7 +38,7 @@
   top: calc(100% + var(--space-1));
   left: 0;
   right: 0;
-  z-index: 1;
+  z-index: var(--z-float);
   display: flex;
   flex-direction: column;
   padding: var(--space-2);

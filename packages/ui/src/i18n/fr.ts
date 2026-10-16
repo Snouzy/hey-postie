@@ -98,7 +98,8 @@ export const fr: Record<MessageKey, string> = {
 
   'main.tabs.chats': 'Discussions',
   'main.tabs.contacts': 'Carnet d’adresses',
-  'main.search': 'Rechercher une discussion',
+  'main.search': 'Rechercher…',
+  'main.searchContacts': 'Rechercher un contact',
   'main.newChat': 'Nouvelle discussion',
   'main.addContact': 'Ajouter un contact',
   'main.signOut': 'Se déconnecter',

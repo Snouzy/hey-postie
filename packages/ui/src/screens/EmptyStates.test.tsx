@@ -25,9 +25,20 @@ describe('Empty states', () => {
     expect(screen.getByRole('dialog', { name: 'New chat' })).toBeInTheDocument();
   });
 
+  it('shows no empty state while a stranger waits at the door', async () => {
+    const { deps } = await signedIn();
+    act(() => {
+      deps.fakes.chat.receive({ chatId: 'eve@x.org', fromJid: 'eve@x.org', body: 'hello' });
+    });
+    await screen.findByRole('button', { name: /Letters from strangers/ });
+    expect(screen.queryByText('No letter yet')).not.toBeInTheDocument();
+  });
+
   it('offers to add a contact when the address book is empty', async () => {
     await signedIn();
+    expect(screen.getByRole('searchbox', { name: 'Search chats' })).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Address book' }));
+    expect(screen.getByRole('searchbox', { name: 'Search contacts' })).toBeInTheDocument();
     expect(screen.getByText('An empty address book')).toBeInTheDocument();
     expect(screen.getByRole('img', { name: /looking around/ })).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Add a contact' }));

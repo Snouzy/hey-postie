@@ -91,6 +91,7 @@ export const en = {
   'main.tabs.chats': 'Chats',
   'main.tabs.contacts': 'Address book',
   'main.search': 'Search chats',
+  'main.searchContacts': 'Search contacts',
   'main.newChat': 'New chat',
   'main.addContact': 'Add a contact',
   'main.signOut': 'Sign out',

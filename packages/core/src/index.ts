@@ -14,6 +14,7 @@ export {
 export type { ConverseRepositories, EngineOptions } from './repositories/converse';
 export { createConverseRepositories } from './repositories/converse';
 export { MAX_STATUS_LENGTH, MIN_PASSWORD_LENGTH } from './services/accounts';
+export { MESSAGE_PAGE_SIZE } from './services/chats';
 export { INLINE_IMAGE_MAX_BYTES } from './services/files';
 export { domainOf, normalizeJid } from './services/jid';
 export { HIDDEN_PREVIEW } from './services/notifications';
