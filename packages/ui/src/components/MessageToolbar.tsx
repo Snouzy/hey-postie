@@ -10,7 +10,9 @@ import { SHOWN_ON_HOVER } from './messageParts';
 import { QuickReactions } from './QuickReactions';
 import { ReactionBar } from './ReactionBar';
 
-const TOOLS = `absolute flex gap-1 whitespace-nowrap ${SHOWN_ON_HOVER}`;
+// `z-float`: above the letter's own positioned parts (its reply quote, its pictures), which come
+// after the toolbar in the page and would otherwise be drawn over it.
+const TOOLS = `absolute z-float flex gap-1 whitespace-nowrap ${SHOWN_ON_HOVER}`;
 const TOOL = 'border border-line bg-paper-raised p-1 shadow-card';
 
 interface MessageToolbarProps {

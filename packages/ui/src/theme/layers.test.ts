@@ -56,4 +56,10 @@ describe('layers', () => {
     expect(bubble).toMatch(/hover:z-float/);
     expect(bubble).toMatch(/focus-within:z-float/);
   });
+
+  it('draws the hover toolbar over the letter’s own quote and pictures', () => {
+    // Positioned parts that come after the toolbar in the page (a reply quote) are drawn over it
+    // unless it has a layer of its own (seen by the author on 2026-10-16).
+    expect(source(components, 'MessageToolbar.tsx')).toMatch(/const TOOLS = `absolute z-float/);
+  });
 });

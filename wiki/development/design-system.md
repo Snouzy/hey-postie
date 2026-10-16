@@ -35,7 +35,7 @@ Reduced motion disables every animation and transition.
 
 Layers (added 2026-10-16, after the sticky day chip of a conversation showed through the
 settings window): `--z-sticky` 1 (what sticks inside a scroller: the day separators),
-`--z-float` 2 (what floats over its column: the account and add menus, the drop overlay),
+`--z-float` 2 (what floats over its column: the account and add menus, the drop overlay, a hovered letter and its hover toolbar, which must also sit over the letter's own reply quote),
 `--z-popover` 3 (`Popover`, positioned against the window), `--z-dialog` 4 (the `Dialog` backdrop,
 above everything). A component never writes a bare `z-index`: `theme/layers.test.ts` checks that
 every one goes through the scale and that the dialog is its top.
