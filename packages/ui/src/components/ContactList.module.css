@@ -37,7 +37,7 @@
 }
 
 .row:hover {
-  background: var(--paper-raised);
+  background: var(--fill-hover);
 }
 
 .name {

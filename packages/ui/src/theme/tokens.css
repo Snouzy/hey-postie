@@ -15,6 +15,9 @@
   --success: #2e7d4f;
   --warning: #a35900;
   --line: rgb(30 34 48 / 0.12);
+  /* A plain wash of ink over the row under the pointer, a little more for the chosen row. */
+  --fill-hover: rgb(30 34 48 / 0.06);
+  --fill-chosen: rgb(30 34 48 / 0.11);
   --line-strong: rgb(30 34 48 / 0.5);
 
   --font-heading: 'Fraunces', Georgia, 'Times New Roman', serif;
@@ -60,6 +63,9 @@
     --success: #62c489;
     --warning: #e6a04c;
     --line: rgb(238 233 221 / 0.14);
+    /* A plain wash of ink over the row under the pointer, a little more for the chosen row. */
+    --fill-hover: rgb(238 233 221 / 0.06);
+    --fill-chosen: rgb(238 233 221 / 0.11);
     --line-strong: rgb(238 233 221 / 0.4);
     --shadow-card: 0 1px 2px rgb(0 0 0 / 0.4), 0 4px 16px rgb(0 0 0 / 0.3);
   }
@@ -80,6 +86,9 @@
   --success: #62c489;
   --warning: #e6a04c;
   --line: rgb(238 233 221 / 0.14);
+  /* A plain wash of ink over the row under the pointer, a little more for the chosen row. */
+  --fill-hover: rgb(238 233 221 / 0.06);
+  --fill-chosen: rgb(238 233 221 / 0.11);
   --line-strong: rgb(238 233 221 / 0.4);
   --shadow-card: 0 1px 2px rgb(0 0 0 / 0.4), 0 4px 16px rgb(0 0 0 / 0.3);
 }

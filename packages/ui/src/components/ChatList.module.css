@@ -28,12 +28,11 @@
 }
 
 .row:hover {
-  background: var(--paper-raised);
+  background: var(--fill-hover);
 }
 
 .row[aria-current='true'] {
-  background: var(--paper-raised);
-  box-shadow: inset 3px 0 0 var(--navy);
+  background: var(--fill-chosen);
 }
 
 /* The two lines beside the avatar. */

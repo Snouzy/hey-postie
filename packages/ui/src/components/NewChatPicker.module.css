@@ -26,7 +26,7 @@
   padding: 0 var(--space-3) var(--space-1);
 }
 
-/* A row like ChatList's; the active one wears the navy bar of a selected chat. */
+/* A row like ChatList's; the active one takes the wash of a chosen chat. */
 .row {
   display: flex;
   align-items: center;
@@ -39,12 +39,11 @@
 }
 
 .row:hover {
-  background: var(--paper-raised);
+  background: var(--fill-hover);
 }
 
 .row[aria-selected='true'] {
-  background: var(--paper-raised);
-  box-shadow: inset 3px 0 0 var(--navy);
+  background: var(--fill-chosen);
 }
 
 .icon {
