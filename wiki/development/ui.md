@@ -421,11 +421,13 @@ are bare and lowercase from the core, so rows and halls are matched as-is.
   the banner alone, and neither the hall's "⋯" nor the contact pane: `DetailsPane` (keyed
   by the chat) renders `Details` only for `chat.kind === 'direct'` and `RoomDetails` (keyed by
   the JID) only when the hall record exists.
-- **Nick completion**: `Composer` receives the members' nicks (minus my own). Tab completes the
-  word before the caret into the nick it equals, else the first nick that starts with it, both
-  ignoring case: `nick: ` at the start of a line, `nick ` elsewhere, and no second space when one
-  already follows the caret (`completeNick`, a pure function). The caret lands after the nick and
-  the textarea regrows. Shift+Tab and a word that matches nobody leave Tab to the browser.
+- **Nick completion**: `Composer` receives the hall's people (minus me, see `@` mentions in
+  [Inside a conversation](#inside-a-conversation)). Tab completes the word before the caret (its
+  `@` optional) into the nick it equals, else the first nick that starts with it, both ignoring
+  case, as `@nick ` everywhere (changed 2026-10-17 from `nick: ` / `nick `, so that Converse sends a
+  XEP-0372 reference), with no second space when one already follows the caret (`completeNick` in
+  `mentions.ts`). The caret lands after it and the textarea regrows. Shift+Tab and a word that
+  matches nobody leave Tab to the browser.
 - **RoomDetails** (right pane, rebuilt as the hall panel on 2026-10-16, see
   [Halls the Slack way](#halls-the-slack-way)): the hall, its details, its people, the
   Encryption section, the notify rule as three radios (`rooms.setNotify`, then `useRooms().refresh()` through
@@ -678,7 +680,7 @@ core's `files` service; the UI only shows and asks._
 
 _Added 2026-10-17, Lot A of the [spec](../specs/2026-10-17-conversation-slack-design.md) (Buzz's
 conversation screen as the model, our tokens). Sources: `core/drafts.ts`, `components/Composer.tsx`,
-`useEmojiCompletion.ts`, `EmojiSuggestions.tsx`, `composerText.ts`, `MessageList.tsx`,
+`useCompletion.ts`, `EmojiSuggestions.tsx`, `composerText.ts`, `MessageList.tsx`,
 `useMessageScroll.ts`, `NewLettersPill.tsx`, `QuickReactions.tsx`, `MessageActions.tsx`,
 `data/emoji.ts`, `i18n/dates.ts`, `core/settings.ts`; tests in `ComposerDrafts.test.tsx`,
 `EmojiCompletion.test.tsx`, `MessageList.test.tsx`, `QuickReactions.test.tsx`,
@@ -725,7 +727,52 @@ conversation screen as the model, our tokens). Sources: `core/drafts.ts`, `compo
   `aria-activedescendant` point at the `role="listbox"`. Up and Down move (wrapping), Enter or Tab
   put the emoji in place of the shortcode, a click too; Esc closes the list until another
   shortcode is started (and closes nothing else: not the correction, not the details pane). While
-  the list is closed, Enter sends as always.
+  the list is closed, Enter sends as always. The keyboard model is `useCompletion` (shared with
+  the `@` list below), wired to the composer by `useComposerCompletions`.
+
+_Lot B, items 8 to 10, added 2026-10-17. Sources: `NewDivider.tsx`, `ReplyQuote.tsx`,
+`ComposerBanner.tsx`, `useReply.ts`, `replies.ts`, `MessageText.tsx`, `mentions.ts`,
+`MentionSuggestions.tsx`, `useCompletion.ts`, `useComposerCompletions.ts`, `core/drafts.ts`; tests in
+`screens/Replies.test.tsx`, `Mentions.test.tsx`, `mentions.test.ts`, `replies.test.ts`,
+`MessageList.test.tsx`._
+
+- **The "New" line.** `Conversation` keeps `chat.firstUnreadId` as it was when it mounted (before
+  `Main` marks the chat read) and `MessageList` draws `NewDivider` above that letter: a mailbox-red
+  line with "NEW" (`<hr aria-label="New letters start here">`), the letter starting a run of its
+  own (`groupByDay(messages, newFrom)`, so a hall shows the sender's name again). It stays while
+  the chat is open, whatever arrives; leaving the chat and coming back forgets it. A first unread
+  letter that is not loaded (more than a page unread) draws nothing until it is. The view does not
+  scroll to it (Lot A's rules hold: the list opens at the bottom).
+- **Reply.** "Reply" in the toolbar and first in the "⋯" menu (`actionsFor(message, canModerate,
+  canReply)`: any letter that left and is not deleted, not in a hall the user is out of). It
+  focuses the composer and shows `ComposerBanner` above it: "Replying to Bob" ("Replying to your
+  own letter" for mine) in 600 with one muted line of the letter (`replyExcerpt`: its text on one
+  line, else the parcel's name, nothing for a deleted or unreadable one) and an X ("Cancel the
+  reply"). Esc cancels it (and stops there: the details pane stays); a correction takes the banner
+  first and the reply waits. The letter answered is kept per chat next to the draft
+  (`readReply` / `writeReply` in `core/drafts.ts`, memory only, forgotten on sign-out), so it
+  survives a chat switch. Enter sends through `chats.send(chatId, body, { replyTo })` and drops
+  the reply; a failure keeps it, and Retry resends as a reply.
+- **The quote.** A letter with `replyTo` shows `ReplyQuote` above its text: a 3px bar in the
+  bubble's own ink at 40%, the author in 600 (`replyAuthor`: "You" for mine, the nick in a hall,
+  else the peer's name) and one truncated line of the original. When the original is in the list
+  it is a button ("In reply to Bob Lunch?", title "Show the original letter"): the list scrolls it
+  to the middle, it wears a 3px `--yellow` ring for 1.6 s (`HIGHLIGHT_FOR_MS`) and takes the focus
+  (`tabIndex=-1` only while highlighted). Otherwise it is plain text.
+- **`@` mentions in halls.** An `@` at the start of a word opens `MentionSuggestions` above the
+  composer (`mentionAt`, even with nothing typed after it): the hall's people from
+  `rooms.people` (present or away, with a nick, not me), present first, then exact, prefix and
+  contains matches ignoring case, then by name, at most 8 (`rankMentions`). Each option is the
+  presence dot and `@nick` (muted when away). Same keyboard as the emoji list (`useCompletion`):
+  arrows wrap, Enter or Tab insert `@nick ` (`insertMention`), a click too, Esc closes it until
+  the next `@`; the field keeps the focus with `aria-controls` / `aria-activedescendant`. A
+  direct chat lists nobody. Converse turns `@nick` of a known nick into a XEP-0372 reference (and
+  takes the `@` out of the body), see [converse.md](converse.md#replies-and-mentions).
+- **Chips.** A hall letter's `mentions` (offsets into the body, from the references) render as
+  `@nick` chips (`MessageText`): 600 on a 14% `--navy` wash in navy ink, on a 22%
+  `--navy-contrast` wash in my outgoing bubbles, and the one naming me (my nick, ignoring case) on
+  `--yellow` with `--on-yellow`, like the "mentions you" highlight, which stays. A letter without
+  references (another client that sends plain `@nick`) stays plain text.
 
 ## Emoji
 
@@ -766,9 +813,14 @@ _Added 2026-10-15. Sources: `scripts/trim-emoji.mjs`, `data/emoji.json`, `data/e
 _Added 2026-10-15. Sources: `components/ReactionBar.tsx`, `Reactions.tsx`, `core/useMessages.ts`,
 `components/Reactions.test.tsx`._
 
-- Every bubble that is not `pending` has a hover / focus toolbar at the top corner away from the
-  edge: three quick emojis (`QuickReactions`, see [Inside a conversation](#inside-a-conversation)),
-  then "React" (lucide `smile-plus`), then the "⋯" menu. "React" opens a `Popover` with the
+- Every bubble that is not `pending` has a hover / focus toolbar straddling its top edge, on the
+  side that faces the column (left of an incoming bubble, right of an outgoing one, so that it
+  grows towards the middle; see [What scrolls](#what-scrolls)): three quick emojis
+  (`QuickReactions`, see [Inside a conversation](#inside-a-conversation)), then "React" (lucide
+  `smile-plus`), then "Reply" (lucide `corner-up-left`) where the user can write, then the "⋯"
+  menu. A hovered or focused bubble rises to the `z-float` layer, toolbar included, so the
+  letter below (a picture is positioned too) never covers it; runs are 4px apart and the toolbar
+  sits 10px above the bubble, so it covers only the padding of the letter above. "React" opens a `Popover` with the
   `QUICK_EMOJIS` row (each button named by its shortname, the first one takes the focus) and
   "More emojis" (the whole `EmojiPicker`). Picking calls
   `chats.toggleReaction(chat.id, message.id, emoji)` through `useMessages.react`, closes and gives
@@ -916,6 +968,16 @@ already on screen passes `{ preventScroll: true }` (the composer, the Cmd+K sear
 picker's search field); a scroll to a section uses `block: 'nearest'`, which moves the pane
 and nothing above it. The welcome, sign-in and registration screens are the exception: they
 are `min-height: 100%` and let the window scroll when the zoom makes them taller than it.
+
+**Never sideways in the message list** (bug found by the author on 2026-10-17, a hall with
+outgoing screenshots, `layout.test.ts`). The hover toolbar is laid out even while it is
+invisible: anchored on the outer side of a short outgoing bubble, it reached past the list's
+right edge and the list scrolled sideways. It now grows into the column (see
+[Reactions](#reactions)). A bubble keeps to `min(70%, 560px)`; its parcels list and an inline
+picture's button are `min-w-0`, so a wide picture never widens them; the picture itself is
+`max-h-[320px] max-w-full`, `h-auto w-auto object-contain` (a phone screenshot was shown far
+taller in the webview). No `overflow-x-hidden` on the scroller: it would hide the cause. Jumping
+to the original of a reply sets the scroller's `scrollTop` itself rather than `scrollIntoView`.
 
 ## Adding a screen
 

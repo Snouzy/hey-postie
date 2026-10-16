@@ -44,9 +44,9 @@ export function Attachments({ message, onSaveFile }: AttachmentsProps) {
   }
 
   return (
-    <ul className="m-0 flex list-none flex-col gap-2 p-0">
+    <ul className="m-0 flex min-w-0 list-none flex-col gap-2 p-0">
       {attachments.map((attachment) => (
-        <li key={attachment.url} className="flex">
+        <li key={attachment.url} className="flex min-w-0">
           {inline(attachment) ? (
             <InlineImage attachment={attachment} onSaveFile={onSaveFile} />
           ) : (

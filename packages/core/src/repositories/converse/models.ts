@@ -48,6 +48,8 @@ export interface ChatModel extends ModelLike {
   /** XEP-0424 (`model-with-messages.js:417`, `muc.js:860` in a room). */
   retractOwnMessage(message: MessageModel): void | Promise<void>;
   getDisplayName(): string | null | undefined;
+  /** XEP-0461: the message a reply names, by stanza id in a room, else by id (`model-with-messages.js:289`). */
+  getReferencedMessage?(replyToId: string): MessageModel | undefined;
 }
 
 /** A MUC (`plugins/muc/muc.js`); `session.connection_status` holds a `RoomStatus` value. */

@@ -13,10 +13,12 @@ import type { MessageKey } from '../i18n';
 import { errorKey } from '../i18n/errors';
 import { AttachButton } from './AttachButton';
 import { Button } from './Button';
-import { completeNick, grow, insertAt, pastedImages } from './composerText';
+import { ComposerBanner } from './ComposerBanner';
+import { ComposerSuggestions } from './ComposerSuggestions';
+import { grow, insertAt, pastedImages } from './composerText';
 import { EmojiPicker } from './EmojiPicker';
-import { EmojiSuggestions } from './EmojiSuggestions';
-import { useEmojiCompletion } from './useEmojiCompletion';
+import { completeNick, type MentionCandidate } from './mentions';
+import { useComposerCompletions } from './useComposerCompletions';
 
 const AREA =
   'max-h-[200px] flex-1 resize-none rounded border border-line-strong bg-paper-raised px-3 py-2 leading-[1.4] text-ink transition-[border-color] duration-(--motion-fast) focus-visible:border-navy';
@@ -29,8 +31,8 @@ interface ComposerProps {
   onSend: (body: string) => Promise<void>;
   /** Files picked with the attach button or pasted from the clipboard: they leave as parcels. */
   onAttach?: (files: File[]) => void;
-  /** In a hall: the nicks Tab can complete. */
-  nicks?: string[];
+  /** In a hall: the people `@` lists and Tab completes (not me). */
+  people?: MentionCandidate[];
   /** Nothing can be written (a hall the user is not in). */
   disabled?: boolean;
   /** The letters of this chat leave sealed: the hint says so. */
@@ -45,11 +47,14 @@ interface ComposerProps {
   onCancelEdit?: (() => void) | undefined;
   /** ↑ in an empty field: the conversation picks my last letter to correct. */
   onEditLast?: (() => void) | undefined;
+  /** The letter being answered: a banner above the field; X or Esc cancels. */
+  replying?: { id: string; name: string; self: boolean; excerpt: string } | undefined;
+  onCancelReply?: (() => void) | undefined;
 }
 
 /**
- * Enter sends, Shift+Enter breaks the line. The textarea grows with the text. In a hall, Tab
- * completes the word before the caret into a member's nick; `:sm` offers emojis. The paperclip
+ * Enter sends, Shift+Enter breaks the line. The textarea grows with the text. In a hall, `@` lists
+ * the members and Tab completes the word before the caret into `@nick`; `:sm` offers emojis. The paperclip
  * picks files, the smile opens the emoji picker, a pasted image leaves as a parcel. What is typed
  * is the chat's draft (`core/drafts.ts`), except the text of a letter being corrected.
  */
@@ -57,7 +62,7 @@ export function Composer({
   chatId,
   onSend,
   onAttach,
-  nicks = [],
+  people = [],
   disabled = false,
   sealed = false,
   onComposing,
@@ -66,6 +71,8 @@ export function Composer({
   editing,
   onCancelEdit,
   onEditLast,
+  replying,
+  onCancelReply,
 }: ComposerProps) {
   const text = useText();
   const placeholder = text(sealed ? 'composer.placeholderSealed' : 'composer.placeholder');
@@ -75,10 +82,9 @@ export function Composer({
   const [pickerOpen, setPickerOpen] = useState(false);
   const area = useRef<HTMLTextAreaElement>(null);
   const emojiButton = useRef<HTMLButtonElement>(null);
+  const [caret, setCaret] = useState(0);
   const canSend = body.trim().length > 0 && !sending && !disabled;
-  const completion = useEmojiCompletion(body, (start, end, emoji) =>
-    replace(insertAt(body, start, end, emoji)),
-  );
+  const completions = useComposerCompletions(body, caret, people, replace);
 
   // A draft brought back from another visit: the field takes its height at once.
   useLayoutEffect(() => {
@@ -104,6 +110,12 @@ export function Composer({
       grow(area.current);
     });
   }, [editingId, editingBody]);
+
+  // Answering a letter: the field takes the focus, the text stays.
+  const replyingId = replying?.id;
+  useEffect(() => {
+    if (replyingId !== undefined) area.current?.focus({ preventScroll: true });
+  }, [replyingId]);
 
   /** Back to the draft that was there before the correction. */
   function cancelEdit() {
@@ -156,7 +168,7 @@ export function Composer({
   /** Writes the new text and puts the caret where React will have left it. */
   function replace(next: { body: string; caret: number }) {
     write(next.body);
-    completion.setCaret(next.caret);
+    setCaret(next.caret);
     requestAnimationFrame(() => {
       if (!area.current) return;
       area.current.setSelectionRange(next.caret, next.caret);
@@ -165,7 +177,7 @@ export function Composer({
   }
 
   function onKeyDown(event: KeyboardEvent<HTMLTextAreaElement>) {
-    if (completion.onKeyDown(event)) return;
+    if (completions.onKeyDown(event)) return;
     // While an IME composes (Japanese, Chinese...), Enter confirms the candidate, not the letter.
     if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) {
       event.preventDefault();
@@ -173,10 +185,16 @@ export function Composer({
     } else if (event.key === 'Escape' && editing) {
       event.preventDefault();
       cancelEdit();
+    } else if (event.key === 'Escape' && replying) {
+      // Esc cancels the reply only: the details pane stays.
+      event.preventDefault();
+      event.stopPropagation();
+      onCancelReply?.();
     } else if (event.key === 'ArrowUp' && !body && !editing && onEditLast) {
       event.preventDefault();
       onEditLast();
     } else if (event.key === 'Tab' && !event.shiftKey) {
+      const nicks = people.map((person) => person.nick);
       const completed = completeNick(body, event.currentTarget.selectionStart, nicks);
       if (!completed) return;
       event.preventDefault();
@@ -208,18 +226,12 @@ export function Composer({
 
   return (
     <div className="flex flex-col gap-2 border-t border-line bg-paper px-4 py-3">
-      {editing && (
-        <p className="m-0 flex items-center justify-between gap-2 rounded-sm bg-kraft-soft px-3 py-1 text-[13px] text-ink">
-          <span>{text('composer.editing')}</span>
-          <Button
-            variant="ghost"
-            className="px-2 py-[2px] text-[13px] leading-[1.3]"
-            onClick={cancelEdit}
-          >
-            {text('composer.cancelEdit')}
-          </Button>
-        </p>
-      )}
+      <ComposerBanner
+        editing={editing !== undefined}
+        onCancelEdit={cancelEdit}
+        replying={replying}
+        onCancelReply={() => onCancelReply?.()}
+      />
       {error && (
         <p
           className="m-0 font-heading text-[14px] text-red [font-variation-settings:'SOFT'_100]"
@@ -228,17 +240,9 @@ export function Composer({
           {text(error)}
         </p>
       )}
-      {/* `relative`: the emoji matches float above the row. */}
+      {/* `relative`: the emoji and member matches float above the row. */}
       <div className="relative flex items-end gap-2">
-        {completion.open && (
-          <EmojiSuggestions
-            id={completion.listId}
-            suggestions={completion.suggestions}
-            active={completion.active}
-            optionId={completion.optionId}
-            onPick={completion.pick}
-          />
-        )}
+        <ComposerSuggestions {...completions} />
         {onAttach && <AttachButton className={TOOL} disabled={disabled} onAttach={onAttach} />}
         <Button
           ref={emojiButton}
@@ -264,18 +268,14 @@ export function Composer({
           aria-label={placeholder}
           onChange={(event) => {
             write(event.target.value);
-            completion.setCaret(event.target.selectionStart);
+            setCaret(event.target.selectionStart);
             onComposing?.(event.target.value.length > 0);
             grow(event.target);
           }}
           onKeyDown={onKeyDown}
-          onSelect={(event) => completion.setCaret(event.currentTarget.selectionStart)}
+          onSelect={(event) => setCaret(event.currentTarget.selectionStart)}
           onPaste={onPaste}
-          aria-autocomplete="list"
-          aria-controls={completion.open ? completion.listId : undefined}
-          aria-activedescendant={
-            completion.open ? completion.optionId(completion.active) : undefined
-          }
+          {...completions.fieldProps}
           disabled={sending || disabled}
         />
         <Button

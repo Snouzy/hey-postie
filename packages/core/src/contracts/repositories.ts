@@ -18,6 +18,7 @@ import type {
   RoomMember,
   RoomNotify,
   RoomSettings,
+  SendOptions,
   Trust,
 } from './types';
 
@@ -77,7 +78,12 @@ export interface ChatRepository {
   message(chatId: string, messageId: string): Promise<Message | null>;
   /** The most recent messages, oldest first. `before` asks for the page that precedes a message id. */
   messages(chatId: string, options?: { before?: string; limit?: number }): Promise<Message[]>;
-  send(chatId: string, body: string): Promise<Message>;
+  /**
+   * `replyTo` is a `Message.id` of this chat: the letter leaves as a XEP-0461 reply to it, with
+   * the quoted fallback. In a hall, a letter the room gave no stanza id cannot be named: the
+   * letter then leaves as a plain one.
+   */
+  send(chatId: string, body: string, options?: SendOptions): Promise<Message>;
   /**
    * Uploads a file (XEP-0363; encrypted with AES-GCM when the chat is sealed) and sends the
    * message that carries it. `onProgress` gets 0..1. Rejects with `FileTooLarge` when the server's

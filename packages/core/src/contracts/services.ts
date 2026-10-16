@@ -17,6 +17,7 @@ import type {
   RoomPerson,
   RoomSettings,
   RoomVisibility,
+  SendOptions,
 } from './types';
 
 export interface AccountsService {
@@ -77,8 +78,12 @@ export interface ChatsService {
    * messages, or those before `before`, oldest first, at most `limit` (`MESSAGE_PAGE_SIZE`).
    */
   history(chatId: string, options?: { before?: string; limit?: number }): Promise<Message[]>;
-  /** Trims the body; refuses an empty one with `EmptyMessage`. */
-  send(chatId: string, body: string): Promise<Message>;
+  /**
+   * Trims the body; refuses an empty one with `EmptyMessage`. `replyTo` (a `Message.id` of this
+   * chat) sends it as a reply (XEP-0461, with the quoted fallback of XEP-0428); a letter that is
+   * not there is `Unknown`, a deleted or unsent one is `NotAllowed`. A sealed chat seals the reply.
+   */
+  send(chatId: string, body: string, options?: SendOptions): Promise<Message>;
   /** Toggles one emoji of this account on a message. */
   toggleReaction(chatId: string, messageId: string, emoji: string): Promise<void>;
   /**

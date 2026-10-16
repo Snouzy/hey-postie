@@ -1,5 +1,5 @@
 import type { Message, MessageStatus } from '@hey-postie/core';
-import { AlertCircle, Check, CheckCheck, Clock, Stamp } from 'lucide-react';
+import { AlertCircle, Check, CheckCheck, Clock, CornerUpLeft, Stamp } from 'lucide-react';
 import { useLocale, useText } from '../core/CoreProvider';
 import { recordEmojiUse } from '../core/settings';
 import type { Emoji } from '../data/emoji';
@@ -8,15 +8,18 @@ import { cn } from '../lib/cn';
 import { Attachments, type SaveFile } from './Attachments';
 import { Button } from './Button';
 import { EditHistory } from './EditHistory';
-import { Linkify } from './Linkify';
 import { actionsFor, type MessageAction, MessageActions } from './MessageActions';
+import { MessageText } from './MessageText';
 import { QuickReactions } from './QuickReactions';
 import { ReactionBar } from './ReactionBar';
 import { Reactions } from './Reactions';
+import { ReplyQuote } from './ReplyQuote';
 
 const SR_ONLY = 'absolute h-px w-px overflow-hidden [clip:rect(0_0_0_0)]';
+// Hovered or focused, the bubble and its toolbar rise over the letters around them (a later
+// picture is positioned too and would otherwise be drawn over the toolbar).
 const BUBBLE =
-  'group/bubble relative flex max-w-[min(70%,560px)] flex-col gap-1 rounded-bubble px-3 py-2 shadow-card';
+  'group/bubble relative flex max-w-[min(70%,560px)] flex-col gap-1 rounded-bubble px-3 py-2 shadow-card hover:z-float focus-within:z-float';
 // Incoming: cream paper. Outgoing: the uniform navy.
 const INCOMING = 'self-start rounded-bl-sm bg-paper-raised text-ink';
 const OUTGOING = 'self-end rounded-br-sm bg-navy text-navy-contrast [&_a]:[color:inherit]';
@@ -42,7 +45,13 @@ const STAMP = 'inline-flex items-center gap-[2px] text-navy-contrast';
 // Failed and read need to stand out: a small chip on paper, with ink or mailbox red.
 const STAMP_CHIP = 'rounded-sm bg-paper-raised px-1 text-ink';
 // The hover toolbar (React): floats at the top corner away from the edge, shown on hover or focus.
-const TOOLS = `absolute top-[-14px] ${SHOWN_ON_HOVER}`;
+// Straddling the top edge, on the side that faces the column: it grows towards the middle, never
+// past the list's edge (laid out even while invisible, it would make the list scroll sideways),
+// and covers only the padding of the letter above (runs are 4px apart, bubbles have 8px).
+const TOOLS = `absolute top-[-10px] flex gap-1 whitespace-nowrap ${SHOWN_ON_HOVER}`;
+const TOOL = 'border border-line bg-paper-raised p-1 shadow-card';
+// The original of a reply, just jumped to: a stamp-yellow ring for a moment.
+const HIGHLIGHT = 'ring-3 ring-yellow';
 
 interface MessageBubbleProps {
   message: Message;
@@ -60,6 +69,16 @@ interface MessageBubbleProps {
   canModerate?: boolean;
   /** The viewer's favourite emojis, offered in the toolbar before "React". */
   quickEmojis?: Emoji[];
+  /** The user can write here: "Reply" is offered. */
+  canReply?: boolean;
+  /** My nick in a hall: the mention chip naming me stands out. */
+  ownNick?: string | undefined;
+  /** The author of the letter this one answers, as the conversation calls them. */
+  replyAuthor?: string | undefined;
+  /** Scrolls to the letter this one answers; absent when it is not loaded. */
+  onJumpToReply?: (() => void) | undefined;
+  /** Just jumped to from a reply's quote. */
+  highlighted?: boolean;
 }
 
 export function MessageBubble({
@@ -73,6 +92,11 @@ export function MessageBubble({
   onAction,
   canModerate = false,
   quickEmojis = [],
+  canReply = false,
+  ownNick,
+  replyAuthor,
+  onJumpToReply,
+  highlighted = false,
 }: MessageBubbleProps) {
   const text = useText();
   const locale = useLocale();
@@ -84,6 +108,7 @@ export function MessageBubble({
     !message.retracted && (sealed || message.body.length > 0 || message.attachments.length === 0);
   const incoming = message.direction === 'in';
   const { status } = message;
+  const actions = actionsFor(message, canModerate, canReply);
 
   /** A reaction from the toolbar counts toward the viewer's favourites. */
   function reactFromToolbar(emoji: string) {
@@ -93,9 +118,16 @@ export function MessageBubble({
 
   return (
     <div
-      className={cn(BUBBLE, incoming ? INCOMING : OUTGOING, mention && MENTION)}
+      className={cn(
+        BUBBLE,
+        incoming ? INCOMING : OUTGOING,
+        mention && MENTION,
+        highlighted && HIGHLIGHT,
+      )}
       data-status={status}
       data-message-id={message.id}
+      // Focusable only while highlighted: the jump puts the reader on the original.
+      tabIndex={highlighted ? -1 : undefined}
     >
       {mention && <span className={SR_ONLY}>{text('message.mention')}</span>}
       {wax && (
@@ -104,16 +136,27 @@ export function MessageBubble({
         </span>
       )}
       {message.status !== 'pending' && !message.retracted && (
-        <div className={cn(TOOLS, 'flex gap-1', incoming ? 'right-2' : 'left-2')}>
+        <div className={cn(TOOLS, incoming ? 'left-2' : 'right-2')} data-toolbar="">
           <QuickReactions emojis={quickEmojis} onReact={reactFromToolbar} />
           <ReactionBar onReact={reactFromToolbar} />
+          {onAction && actions.includes('reply') && (
+            <Button
+              variant="ghost"
+              className={TOOL}
+              aria-label={text('message.action.reply')}
+              title={text('message.action.reply')}
+              onClick={() => onAction(message, 'reply')}
+            >
+              <CornerUpLeft size={16} aria-hidden />
+            </Button>
+          )}
           {onAction && (
-            <MessageActions
-              actions={actionsFor(message, canModerate)}
-              onPick={(action) => onAction(message, action)}
-            />
+            <MessageActions actions={actions} onPick={(action) => onAction(message, action)} />
           )}
         </div>
+      )}
+      {message.replyTo && !message.retracted && (
+        <ReplyQuote replyTo={message.replyTo} author={replyAuthor ?? ''} onJump={onJumpToReply} />
       )}
       {message.retracted && (
         <p className={GONE}>
@@ -129,7 +172,13 @@ export function MessageBubble({
               {text('message.undecryptable')}
             </>
           ) : (
-            <Linkify text={message.body} onOpenLink={onOpenLink} />
+            <MessageText
+              body={message.body}
+              mentions={message.mentions}
+              ownNick={ownNick}
+              outgoing={!incoming}
+              onOpenLink={onOpenLink}
+            />
           )}
         </p>
       )}

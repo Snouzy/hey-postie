@@ -1,30 +1,28 @@
 import type { Chat, Contact, Message, Room } from '@hey-postie/core';
-import { Ellipsis, Info, Users } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useCore, useText } from '../core/CoreProvider';
 import { useEncryption } from '../core/useEncryption';
 import { useFileDrop } from '../core/useFileDrop';
 import { useMessages } from '../core/useMessages';
 import { useRoomMembers } from '../core/useRoomMembers';
+import { useRoomPeople } from '../core/useRoomPeople';
 import { useTyping } from '../core/useTyping';
 import type { ChatUploads } from '../core/useUploads';
 import type { MessageKey } from '../i18n';
 import { errorKey } from '../i18n/errors';
 import { Postie } from '../illustrations/Postie';
 import type { SaveFile } from './Attachments';
-import { Avatar } from './Avatar';
 import { Button } from './Button';
 import { Composer } from './Composer';
+import { ConversationHeader } from './ConversationHeader';
 import { DeleteMessageDialog } from './DeleteMessageDialog';
 import { DropOverlay } from './DropOverlay';
 import { EmptyState } from './EmptyState';
-import { HallTopic } from './HallTopic';
 import { actionsFor, type MessageAction } from './MessageActions';
 import { MessageList } from './MessageList';
 import { PendingParcel } from './PendingParcel';
-import { PresenceDot } from './PresenceDot';
 import { RoomIntro } from './RoomIntro';
-import { SealToggle } from './SealToggle';
+import { useReply } from './useReply';
 
 interface ConversationProps {
   chat: Chat;
@@ -71,13 +69,21 @@ export function Conversation({
   const letters = useMessages(chat);
   const seal = useEncryption(chat);
   const members = useRoomMembers(room?.jid ?? '');
+  const { people } = useRoomPeople(room?.jid ?? '');
   const typing = useTyping(chat.id);
-  const typingNames = typing.map((fromJid) =>
-    chat.kind === 'room' ? nickOf(fromJid) : (contact?.name ?? chat.title),
-  );
-  const nicks = room
-    ? members.map((member) => member.nick).filter((nick) => nick !== room.nick)
+  const peerName = contact?.name ?? chat.title;
+  const typingNames = typing.map((fromJid) => (chat.kind === 'room' ? nickOf(fromJid) : peerName));
+  // Who `@` and Tab can name: the hall's people with a nick, present or away, except me.
+  const mentionable = room
+    ? people.flatMap((person) =>
+        person.nick && person.nick !== room.nick
+          ? [{ nick: person.nick, present: person.present }]
+          : [],
+      )
     : [];
+  // The first unread letter as it was when the chat opened: `Main` marks it read right after.
+  const [newFrom] = useState(chat.firstUnreadId);
+  const reply = useReply(chat.id, letters.messages, peerName);
   // A hall the user is not in: left elsewhere, kicked, or bookmarked and not joined yet.
   const outside = chat.kind === 'room' && !room?.joined;
   // The details pane exists for a direct chat, or for a hall the app has a record of.
@@ -100,11 +106,15 @@ export function Conversation({
   const [topicError, setTopicError] = useState<MessageKey | null>(null);
   const headerError = seal.error ?? topicError;
 
-  /** Enter sends a new letter, or saves the correction under way. */
+  /** Enter sends a new letter (a reply, when one is under way), or saves the correction. */
   async function sendOrSave(body: string) {
-    if (!editing) return letters.send(body);
-    await core.chats.edit(chat.id, editing.id, body);
-    setEditing(undefined);
+    if (editing) {
+      await core.chats.edit(chat.id, editing.id, body);
+      setEditing(undefined);
+      return;
+    }
+    await letters.send(body, reply.replying?.id);
+    reply.replyTo(undefined);
   }
 
   /** ↑ in an empty composer: my last letter that can still be corrected. */
@@ -117,6 +127,7 @@ export function Conversation({
 
   function act(message: Message, action: Exclude<MessageAction, 'copy'>) {
     if (action === 'edit') setEditing({ id: message.id, body: message.body });
+    else if (action === 'reply') reply.replyTo(message);
     else if (action === 'deleteForMe') {
       core.chats
         .hideForMe(chat.id, message.id)
@@ -152,44 +163,19 @@ export function Conversation({
       {...drop.handlers}
     >
       {drop.dragging && <DropOverlay />}
-      <header className="flex items-center justify-between gap-2 border-b border-line px-4 py-3">
-        <div className="flex min-w-0 items-center gap-2">
-          <Avatar name={chat.title} jid={chat.peerJid} avatarUrl={contact?.avatarUrl} />
-          {contact && <PresenceDot presence={contact.presence} />}
-          <h2 className="truncate text-[20px]">{chat.title}</h2>
-          {room && <HallTopic room={room} editable={topicEditable} onError={setTopicError} />}
-        </div>
-        <div className="flex shrink-0 items-center gap-1">
-          <SealToggle
-            encrypted={seal.encrypted}
-            pending={seal.pending}
-            onToggle={() => void seal.toggle()}
-          />
-          {room && onOpenPeople && (
-            <button
-              type="button"
-              className="flex h-8 cursor-pointer items-center gap-1 rounded-sm border border-line-strong bg-transparent px-2 text-[13px] font-semibold text-ink-muted tabular-nums transition-[background-color,color] duration-(--motion-fast) hover:bg-fill-hover hover:text-ink"
-              aria-label={text('room.peopleButton').replace('{count}', String(members.length))}
-              title={text('room.peopleButton').replace('{count}', String(members.length))}
-              onClick={onOpenPeople}
-            >
-              <Users size={16} aria-hidden />
-              {members.length}
-            </button>
-          )}
-          {hasDetails && (
-            <Button
-              variant="ghost"
-              onClick={onToggleDetails}
-              aria-pressed={detailsOpen}
-              aria-label={text(room ? 'room.panel' : 'main.details')}
-              title={text(room ? 'room.panel' : 'main.details')}
-            >
-              {room ? <Ellipsis size={18} aria-hidden /> : <Info size={18} aria-hidden />}
-            </Button>
-          )}
-        </div>
-      </header>
+      <ConversationHeader
+        chat={chat}
+        contact={contact}
+        room={room}
+        topicEditable={topicEditable}
+        onTopicError={setTopicError}
+        seal={seal}
+        peopleCount={members.length}
+        onOpenPeople={onOpenPeople}
+        hasDetails={hasDetails}
+        detailsOpen={detailsOpen}
+        onToggleDetails={onToggleDetails}
+      />
       {headerError && (
         <p
           className="m-0 px-4 py-2 font-heading [font-variation-settings:'SOFT'_100] text-[14px] text-red"
@@ -217,6 +203,10 @@ export function Conversation({
         onReact={letters.react}
         onAction={act}
         canModerate={canModerate}
+        canReply={!outside}
+        newFrom={newFrom}
+        peerName={peerName}
+        ownNick={room?.nick}
         onSaveFile={onSaveFile}
         showSenders={chat.kind === 'room'}
         onShowDevices={hasDetails ? onOpenEncryption : undefined}
@@ -268,12 +258,14 @@ export function Conversation({
         onCancelEdit={() => setEditing(undefined)}
         onEditLast={editLast}
         onAttach={uploads.add}
-        nicks={nicks}
+        people={mentionable}
         disabled={outside}
         sealed={seal.encrypted}
         onComposing={(composing) => core.chats.setComposing(chat.id, composing)}
         draft={draft}
         onDraftTaken={onDraftTaken}
+        replying={reply.banner}
+        onCancelReply={() => reply.replyTo(undefined)}
       />
       {confirming && (
         <DeleteMessageDialog

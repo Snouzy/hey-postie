@@ -82,14 +82,15 @@ export function useMessages(chat: Chat) {
     }
   }
 
-  async function send(body: string) {
-    await core.chats.send(chat.id, body);
+  /** `replyTo`: the id of the letter this one answers. */
+  async function send(body: string, replyTo?: string) {
+    await core.chats.send(chat.id, body, replyTo ? { replyTo } : undefined);
     setError(null);
   }
 
   function retry(failed: Message) {
     setMessages((current) => current.filter((m) => m.id !== failed.id));
-    send(failed.body).catch((caught: unknown) => {
+    send(failed.body, failed.replyTo?.id).catch((caught: unknown) => {
       add(failed);
       setError(errorKey(caught));
     });

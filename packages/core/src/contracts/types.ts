@@ -131,6 +131,12 @@ export interface Chat {
    * the most recent page of the history: a reply older than that page is not seen.
    */
   isRequest?: boolean;
+  /**
+   * The first letter that arrived unread (Converse's `first_unread_id`), present only while
+   * `unreadCount` is above zero: the UI captures it when the chat opens, before marking it read,
+   * to draw the "New" line above it.
+   */
+  firstUnreadId?: string;
 }
 
 /** XEP-0085: what the peer is doing in a chat, as far as the UI cares. */
@@ -156,6 +162,39 @@ export interface Reaction {
   fromJids: string[];
   /** True when this account reacted (in a room, under its occupant JID). Set by the repository. */
   mine: boolean;
+}
+
+/** XEP-0461: the letter a reply answers. Untrusted text in `excerpt`, like a body. */
+export interface ReplyTo {
+  /**
+   * The original's `Message.id` when it is in the chat's loaded history (the UI can jump to it),
+   * else the id the reply names on the wire.
+   */
+  id: string;
+  /** Who wrote the original, as in `Message.fromJid`; unknown when the reply did not say. */
+  fromJid?: string;
+  /** The original's nick, in a hall. */
+  fromNick?: string;
+  /** The original is one of this account's letters. */
+  mine?: boolean;
+  /** The original's text, one line, bounded by the service; from the quoted fallback when not loaded. */
+  excerpt?: string;
+}
+
+/**
+ * XEP-0372: a hall member named in a letter. Offsets are UTF-16 indexes into `Message.body`
+ * (`end` excluded); the text there is the nick, with or without its `@`.
+ */
+export interface Mention {
+  begin: number;
+  end: number;
+  nick: string;
+}
+
+/** How a letter leaves (`ChatsService.send`). */
+export interface SendOptions {
+  /** The `Message.id` of the letter this one answers (XEP-0461). */
+  replyTo?: string;
 }
 
 export interface Message {
@@ -188,6 +227,10 @@ export interface Message {
   edited?: boolean;
   /** The earlier texts of a corrected letter, oldest first, as this device saw them. Untrusted. */
   versions?: { body: string; at: Date }[];
+  /** XEP-0461: this letter answers another one; the quoted fallback is already out of `body`. */
+  replyTo?: ReplyTo;
+  /** XEP-0372 mentions in `body`, in order, never overlapping. Halls only. */
+  mentions?: Mention[];
 }
 
 export type Trust = 'untrusted' | 'trusted' | 'verified' | 'blocked';

@@ -50,4 +50,10 @@ describe('layers', () => {
       /sticky[^'"]*z-sticky|z-sticky[^'"]*sticky/,
     );
   });
+
+  it('raises a hovered or focused letter, toolbar included, over the letters around it', () => {
+    const bubble = source(components, 'MessageBubble.tsx');
+    expect(bubble).toMatch(/hover:z-float/);
+    expect(bubble).toMatch(/focus-within:z-float/);
+  });
 });

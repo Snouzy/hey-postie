@@ -2,10 +2,10 @@ import type { CoreDependencies } from '../container';
 import { DomainError } from '../contracts/errors';
 import type { EventBus } from '../contracts/events';
 import type { ChatsService } from '../contracts/services';
-import type { Chat, Contact, Message, Reaction } from '../contracts/types';
+import type { Chat, Contact, Message } from '../contracts/types';
 import { isStranger } from './contacts';
 import { normalizeJid } from './jid';
-import { stripControlCharacters } from './text';
+import { sanitize } from './sanitize';
 import { createTypingTracker } from './typing';
 
 /** The size of a page of history: a first page shorter than this is the whole history. */
@@ -80,6 +80,14 @@ export function createChatsService(
     return message;
   };
 
+  /** A letter can be answered once it left and while it is there. */
+  const replyable = async (chatId: string, messageId: string): Promise<void> => {
+    const message = await deps.chat.message(chatId, messageId);
+    if (!message) throw new DomainError('Unknown', 'Unknown: no such message');
+    const gone = message.retracted || message.status === 'pending' || message.status === 'failed';
+    if (gone) throw new DomainError('NotAllowed', 'NotAllowed: not a letter one can answer');
+  };
+
   return {
     async list() {
       const [chats, contacts] = await Promise.all([deps.chat.list(), deps.roster.list()]);
@@ -113,12 +121,14 @@ export function createChatsService(
       const page = options.before ? { before: options.before, limit } : { limit };
       return visible((await deps.chat.messages(chatId, page)).map(sanitize));
     },
-    async send(chatId, body) {
+    async send(chatId, body, options = {}) {
       const trimmed = body.trim();
       if (!trimmed) throw new DomainError('EmptyMessage');
+      if (options.replyTo) await replyable(chatId, options.replyTo);
       typing.sent(chatId);
       written.add(chatId);
-      const sent = await deps.chat.send(chatId, trimmed);
+      // The excerpt of a reply quotes someone else's letter: untrusted, like theirs.
+      const sent = sanitize(await deps.chat.send(chatId, trimmed, options));
       // The repository reports no echo of our own letters: every listener (the open chat, the
       // smoke driver) learns of one here, whoever asked for the send.
       events.emit('message.received', sent);
@@ -178,53 +188,6 @@ export function createChatsService(
       else typing.cleared(chatId);
     },
   };
-}
-
-/** Incoming text is untrusted: the UI renders it as text, never as HTML. Control characters go. */
-export function sanitize(message: Message): Message {
-  const body = stripControlCharacters(message.body);
-  const reactions = sanitizeReactions(message.reactions);
-  const versions = message.versions?.map((version) => ({
-    ...version,
-    body: stripControlCharacters(version.body),
-  }));
-  const same = body === message.body && reactions === message.reactions && !versions;
-  return same ? message : { ...message, body, reactions, ...(versions ? { versions } : {}) };
-}
-
-const MAX_REACTIONS = 32;
-const MAX_REACTORS = 64;
-const MAX_EMOJI_LENGTH = 16;
-
-/** Reactions come from peers: one short emoji each, no duplicates, bounded counts. */
-export function sanitizeReactions(reactions: Reaction[]): Reaction[] {
-  const seen = new Map<string, Reaction>();
-  for (const reaction of reactions) {
-    const emoji = reaction.emoji.trim();
-    if (!emoji || emoji.length > MAX_EMOJI_LENGTH || /\s/.test(emoji)) continue;
-    const existing = seen.get(emoji);
-    const fromJids = [...new Set([...(existing?.fromJids ?? []), ...reaction.fromJids])].slice(
-      0,
-      MAX_REACTORS,
-    );
-    seen.set(emoji, { emoji, fromJids, mine: Boolean(existing?.mine) || reaction.mine });
-    if (seen.size >= MAX_REACTIONS) break;
-  }
-  const clean = [...seen.values()];
-  const unchanged =
-    clean.length === reactions.length &&
-    clean.every((r, i) => r === reactions[i] || sameReaction(r, reactions[i]));
-  return unchanged ? reactions : clean;
-}
-
-function sameReaction(a: Reaction, b: Reaction | undefined): boolean {
-  return (
-    b !== undefined &&
-    a.emoji === b.emoji &&
-    a.mine === b.mine &&
-    a.fromJids.length === b.fromJids.length &&
-    a.fromJids.every((j, i) => j === b.fromJids[i])
-  );
 }
 
 function remember(oldest: Map<string, string>, chatId: string, messages: Message[]) {

@@ -307,6 +307,58 @@ _Added 2026-10-17 (spec 2026-10-17-conversation-slack, Lot A item 2). Sources: `
   per occupant: not in the contract). A marker for a letter not loaded in the chat's collection
   moves nothing; the next one will.
 
+### Replies and mentions
+
+_Added 2026-10-17 (spec 2026-10-17-conversation-slack, Lot B items 8 to 10). Sources:
+`replies.ts`, `mappers.ts`, `chat.ts`, `services/sanitize.ts`, `services/chats.ts`; tests
+`replies.test.ts`, `services/replies.test.ts`, `services/sanitize.test.ts`,
+`reply.contract.test.ts`. Converse 14.0.0 read in `shared/parsers.js:308-356`,
+`shared/model-with-messages.js:283-346, 949-956, 1025-1075`, `shared/message.js:186-203`,
+`plugins/chat/model.js:240-280`, `plugins/muc/muc.js:1081-1192, 2924-2949`,
+`plugins/omemo/utils.js:773-800`, `utils/parse-helpers.js`._
+
+- **First unread.** Converse saves `first_unread_id` on the chat when its count leaves zero
+  (`num_unread` in a direct chat, `num_unread_general` in a hall) and never clears it. `toChat`
+  maps it to `Chat.firstUnreadId` only while that count is above zero.
+- **Sending a reply.** `ChatRepository.send(chatId, body, { replyTo })`: the repository finds the
+  original in `chat.messages` (`Unknown` if absent) and sets `reply_to_id` / `reply_to` on the chat
+  (`replyAttributes`): in a hall the room's stanza id (`stanza_id <room>`) and the author's occupant
+  address; in a direct chat the original's `msgid` (else `origin_id`) and its `from`. The next
+  `sendMessage` reads them (`getOutgoingMessageAttributes`), prepends the XEP-0393 quote
+  (`> Name:` then the text, 80 code points at most), records the `<fallback for=reply>` range in
+  code points and shifts the references; `createMessageStanza` writes `<reply>` and `<fallback>`
+  in the clear, or OMEMO puts both inside the sealed content. The repository clears the two
+  attributes after the send whatever happens, and sends (and corrections, which also go through
+  `sendMessage`) leave one at a time per chat (`oneAtATime`), because `sendMessage` awaits
+  before reading them. A hall letter without a room stamp cannot be named: it leaves as a plain
+  letter (XEP-0461 asks for the stanza id in groupchat). Assumed, not checked against another
+  client: the direct-chat id is the stanza `id` (Converse's own lookup accepts `msgid` or
+  `origin_id`, which are equal on its letters).
+- **Reading a reply.** Parsed by Converse (`reply_to_id`, `reply_to`, `fallback`). `toMessage`
+  strips the fallback range from the body (code points, only when the message is a reply and the
+  range fits, as `getMessageText` does) and maps `replyTo`: when `chat.getReferencedMessage` finds
+  the original (stanza id in a hall, `origin_id` or `msgid` otherwise), its id is ours, with its
+  author, `mine` and text (else a parcel's name); otherwise the wire id, the author from `reply_to`
+  (in a direct chat, an author who is not the peer is us) and the excerpt read from the quote
+  (`excerptFromQuote`: the `> ` lines without Converse's `> name:` line). A reply mapped before its
+  original was loaded keeps the wire id until it is mapped again. The service bounds the excerpt
+  to one line of 140 characters, without control characters (`sanitizeReply`), on received and
+  sent letters alike.
+- **Mentions.** Typing `@nick` in a hall: `parseTextForReferences` matches the known nicks
+  (occupants and past senders, case-insensitive), takes the `@` out of the body and sends
+  `<reference type="mention" begin end uri>` (UTF-16 offsets). Received references come back as
+  `references` (`{ begin, end, type, value }`, value = the text in that range). `mentionsOf`
+  keeps the `mention` ones of a hall letter, drops those inside a stripped quote and moves the
+  others back by its length; the service keeps only ranges that hold the nick (with or without
+  `@`), in order and apart, and drops them all when stripping control characters changed the body
+  (`validMentions`). `isMention` is unchanged.
+- **Contract test** (`reply.contract.test.ts`, passing on 2026-10-17 against the local Prosody):
+  alice replies to bob's raw letter, bob receives `<reply to="bob@localhost/…" id="q-…">`, a body
+  starting with the `> ` quote and ending with the answer, and `<fallback><body start="0"
+  end="…"/>` covering the quote exactly; alice's own copy has the answer alone and `replyTo` on
+  bob's letter. Bob replies to alice with a hand-written reply and fallback: alice's message has
+  the answer alone and `replyTo` naming her letter by our id, `mine`, with its text.
+
 ### Contract test
 
 `contract.test.ts` (run with `pnpm --filter @hey-postie/core test:contract`, see

@@ -1,10 +1,6 @@
 import { useText } from '../core/CoreProvider';
 import type { Emoji } from '../data/emoji';
-
-const LIST =
-  'absolute bottom-full left-0 z-popover mb-2 flex max-h-[280px] min-w-[240px] flex-col overflow-y-auto rounded border border-line bg-paper-raised p-1 shadow-card';
-const OPTION =
-  'flex cursor-pointer items-center gap-2 rounded-sm px-2 py-1 text-[14px] text-ink aria-selected:bg-fill-chosen';
+import { LIST, OPTION } from './suggestionStyles';
 
 interface EmojiSuggestionsProps {
   id: string;

@@ -8,7 +8,9 @@ import type { SaveFile } from './Attachments';
 import { Avatar } from './Avatar';
 import type { MessageAction } from './MessageActions';
 import { MessageBubble } from './MessageBubble';
+import { NewDivider } from './NewDivider';
 import { NewLettersPill } from './NewLettersPill';
+import { replyAuthor } from './replies';
 import { useMessageScroll } from './useMessageScroll';
 
 const SCROLLER = 'flex min-h-0 flex-1 flex-col overflow-y-auto px-4 pb-4';
@@ -27,6 +29,8 @@ const OVERLAY =
 const CHIP = 'm-0 rounded-full bg-paper-raised px-3 py-1 shadow-card';
 const COPIED = 'm-0 rounded-full bg-ink px-3 py-1 text-[13px] text-paper shadow-card';
 const COPIED_FOR_MS = 2000;
+/** How long the original of a reply stays highlighted after a jump to it. */
+export const HIGHLIGHT_FOR_MS = 1600;
 
 interface MessageListProps {
   messages: Message[];
@@ -40,6 +44,14 @@ interface MessageListProps {
   onAction?: ((message: Message, action: Exclude<MessageAction, 'copy'>) => void) | undefined;
   /** In a hall the user moderates. */
   canModerate?: boolean;
+  /** The user can write in this chat: letters offer "Reply". */
+  canReply?: boolean;
+  /** The first letter that was unread when the chat opened: the "New" line goes above it. */
+  newFrom?: string | undefined;
+  /** What the conversation calls the peer of a direct chat (the author of a quoted letter). */
+  peerName?: string;
+  /** My nick in a hall: the mention chip naming me stands out. */
+  ownNick?: string | undefined;
   onSaveFile: SaveFile;
   /** In a hall: the sender's nick above each run of incoming messages. */
   showSenders?: boolean;
@@ -54,6 +66,8 @@ interface MessageListProps {
 interface Run {
   fromJid: string;
   messages: Message[];
+  /** The run starts at the first unread letter: the "New" line goes above it. */
+  isNew?: boolean;
 }
 interface Day {
   key: string;
@@ -74,6 +88,10 @@ export function MessageList({
   onReact,
   onAction,
   canModerate = false,
+  canReply = false,
+  newFrom,
+  peerName = '',
+  ownNick,
   onSaveFile,
   showSenders = false,
   onShowDevices,
@@ -84,6 +102,7 @@ export function MessageList({
   const locale = useLocale();
   const scroll = useMessageScroll({ messages, footer, hasOlder, onLoadOlder });
   const [copied, setCopied] = useState(false);
+  const [highlighted, setHighlighted] = useState<string | null>(null);
   // Read once per render of the list, not once per bubble.
   const quickEmojis = favouriteEmojis(readEmojiUsage());
 
@@ -92,6 +111,27 @@ export function MessageList({
     const timer = setTimeout(() => setCopied(false), COPIED_FOR_MS);
     return () => clearTimeout(timer);
   }, [copied]);
+
+  useEffect(() => {
+    if (!highlighted) return;
+    const timer = setTimeout(() => setHighlighted(null), HIGHLIGHT_FOR_MS);
+    return () => clearTimeout(timer);
+  }, [highlighted]);
+
+  /** From a reply's quote: the original, centred, highlighted, and the reader on it. */
+  function jumpTo(id: string) {
+    const scroller = scroll.scroller.current;
+    const bubble = scroller?.querySelector<HTMLElement>(`[data-message-id="${CSS.escape(id)}"]`);
+    if (!scroller || !bubble) return;
+    setHighlighted(id);
+    // The list alone moves (no `scrollIntoView`, which may scroll the screen: see "What scrolls").
+    const top = bubble.getBoundingClientRect().top - scroller.getBoundingClientRect().top;
+    scroller.scrollTop += top - (scroller.clientHeight - bubble.offsetHeight) / 2;
+    requestAnimationFrame(() => bubble.focus({ preventScroll: true }));
+  }
+
+  const loaded = new Set(messages.map((message) => message.id));
+  const you = text('reply.you');
 
   async function act(message: Message, action: MessageAction) {
     if (action !== 'copy') return onAction?.(message, action);
@@ -115,16 +155,17 @@ export function MessageList({
         tabIndex={0}
       >
         {messages.length === 0 && empty}
-        {groupByDay(messages).map((day) => (
+        {groupByDay(messages, newFrom).map((day) => (
           <section key={day.key} className="flex flex-col gap-3">
             <h3 className={SEPARATOR}>{dayLabel(locale, day.date, text)}</h3>
             {day.runs.map((run) => (
               // A run of messages from one sender: tight spacing inside, room between runs.
               <div
                 key={run.messages[0]?.id}
-                className="flex flex-col gap-[2px]"
+                className="flex flex-col gap-1"
                 data-from={run.fromJid}
               >
+                {run.isNew && <NewDivider />}
                 {showSenders && run.messages[0]?.direction === 'in' && (
                   <span className={SENDER}>
                     <Avatar name={senderOf(run.messages[0])} jid={run.fromJid} size={20} />
@@ -144,6 +185,15 @@ export function MessageList({
                     onSaveFile={onSaveFile}
                     onShowDevices={onShowDevices}
                     quickEmojis={quickEmojis}
+                    canReply={canReply}
+                    ownNick={ownNick}
+                    replyAuthor={message.replyTo && replyAuthor(message.replyTo, peerName, you)}
+                    onJumpToReply={
+                      message.replyTo && loaded.has(message.replyTo.id)
+                        ? () => jumpTo(message.replyTo?.id ?? '')
+                        : undefined
+                    }
+                    highlighted={highlighted === message.id}
                   />
                 ))}
               </div>
@@ -173,8 +223,11 @@ function senderOf(message: Message): string {
 /** A sender's letters further apart than this start a new run, with their name again. */
 export const RUN_GAP_MS = 10 * 60 * 1000;
 
-/** Grouped by calendar day, then into runs: one sender, each letter within `RUN_GAP_MS` of the last. */
-export function groupByDay(messages: Message[]): Day[] {
+/**
+ * Grouped by calendar day, then into runs: one sender, each letter within `RUN_GAP_MS` of the
+ * last. `newFrom` starts a run of its own, marked `isNew`.
+ */
+export function groupByDay(messages: Message[], newFrom?: string): Day[] {
   const days: Day[] = [];
   for (const message of messages) {
     const key = dayKey(message.sentAt);
@@ -186,8 +239,11 @@ export function groupByDay(messages: Message[]): Day[] {
     let run = day.runs[day.runs.length - 1];
     const previous = run?.messages[run.messages.length - 1];
     const gap = previous ? message.sentAt.getTime() - previous.sentAt.getTime() : 0;
-    if (!run || run.fromJid !== message.fromJid || gap > RUN_GAP_MS) {
-      run = { fromJid: message.fromJid, messages: [] };
+    const isNew = message.id === newFrom;
+    if (!run || run.fromJid !== message.fromJid || gap > RUN_GAP_MS || isNew) {
+      run = isNew
+        ? { fromJid: message.fromJid, messages: [], isNew }
+        : { fromJid: message.fromJid, messages: [] };
       day.runs.push(run);
     }
     run.messages.push(message);

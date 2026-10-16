@@ -54,6 +54,32 @@ describe('what scrolls', () => {
     }
   });
 
+  it('never lets the message list scroll sideways: the toolbar grows into the column', () => {
+    // Laid out even while invisible: anchored on the outer side, it pokes past the list's edge.
+    const bubble = source(components, 'MessageBubble.tsx');
+    expect(bubble).toMatch(/incoming \? 'left-2' : 'right-2'/);
+    expect(hasClasses('MessageBubble.tsx', 'absolute', 'top-[-10px]', 'whitespace-nowrap')).toBe(
+      true,
+    );
+    // A bubble keeps to its share of the column, and its pictures to the bubble.
+    expect(hasClasses('MessageBubble.tsx', 'max-w-[min(70%,560px)]')).toBe(true);
+    expect(hasClasses('Attachments.tsx', 'flex', 'min-w-0')).toBe(true);
+    expect(hasClasses('InlineImage.tsx', 'max-w-full', 'min-w-0')).toBe(true);
+  });
+
+  it('keeps an inline picture at most 320px tall, its shape kept', () => {
+    expect(
+      hasClasses(
+        'InlineImage.tsx',
+        'max-h-[320px]',
+        'max-w-full',
+        'h-auto',
+        'w-auto',
+        'object-contain',
+      ),
+    ).toBe(true);
+  });
+
   it('fits the emoji grid in its card: as many columns as the arrows move by, none wider', () => {
     // `grid-cols-N` is `repeat(N, minmax(0, 1fr))`: a wide glyph never widens its column.
     expect(hasClasses('EmojiPicker.tsx', `grid-cols-${COLUMNS}`, 'overflow-x-hidden')).toBe(true);

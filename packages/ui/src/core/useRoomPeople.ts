@@ -6,13 +6,15 @@ import { useCoreEvent } from './useCoreEvent';
 /**
  * The people of a hall as the service orders them (present first, owners and admins first),
  * re-read on every `room.members` for that hall and after a change made here (`refresh`).
- * Same request counter as `useRoomMembers`: only the latest answer counts.
+ * Same request counter as `useRoomMembers`: only the latest answer counts. An empty `jid` (a
+ * direct chat) asks nothing and gives an empty list.
  */
 export function useRoomPeople(jid: string): { people: RoomPerson[]; refresh: () => Promise<void> } {
   const core = useCore();
   const [people, setPeople] = useState<RoomPerson[]>([]);
   const requests = useRef(0);
   const refresh = useCallback(async () => {
+    if (!jid) return;
     requests.current += 1;
     const mine = requests.current;
     try {

@@ -1,0 +1,19 @@
+import type { Message, ReplyTo } from '@hey-postie/core';
+
+/** Who wrote the letter a reply names, as the conversation calls them. */
+export function replyAuthor(
+  author: Pick<ReplyTo, 'fromJid' | 'fromNick' | 'mine'>,
+  peerName: string,
+  you: string,
+): string {
+  if (author.mine) return you;
+  if (author.fromNick) return author.fromNick;
+  const nick = author.fromJid?.split('/')[1];
+  return nick || peerName;
+}
+
+/** A line of a letter for a quote: its text, else the name of its parcel. */
+export function replyExcerpt(message: Message): string {
+  if (message.retracted || message.encryption === 'undecryptable') return '';
+  return message.body.replace(/\s+/g, ' ').trim() || message.attachments[0]?.name || '';
+}

@@ -144,7 +144,7 @@ describe('A hall', () => {
     expect(within(region).getByText('hi').parentElement).not.toHaveTextContent('Mentions you');
   });
 
-  it('completes a nick with Tab and leaves the caret after it', async () => {
+  it('completes a nick with Tab into @nick and leaves the caret after it', async () => {
     const { deps, core } = await signedIn();
     const region = await inHall(deps, core);
     await membersLoaded();
@@ -152,17 +152,17 @@ describe('A hall', () => {
     // The exact nick (Bo) wins over the one that starts the same way (bob), whatever the case.
     fireEvent.change(area, { target: { value: 'hello bo' } });
     fireEvent.keyDown(area, { key: 'Tab' });
-    expect(area).toHaveValue('hello Bo ');
-    await waitFor(() => expect(area.selectionStart).toBe('hello Bo '.length));
+    expect(area).toHaveValue('hello @Bo ');
+    await waitFor(() => expect(area.selectionStart).toBe('hello @Bo '.length));
 
-    // At the start of a line, and no second space when one follows the caret.
+    // At the start of a line too, and no second space when one follows the caret.
     fireEvent.change(area, { target: { value: 'Bre x' } });
     area.setSelectionRange(3, 3);
     fireEvent.keyDown(area, { key: 'Tab' });
-    expect(area).toHaveValue('brenda: x');
+    expect(area).toHaveValue('@brenda x');
     fireEvent.change(area, { target: { value: 'see b' } });
     fireEvent.keyDown(area, { key: 'Tab' });
-    expect(area).toHaveValue('see bob ');
+    expect(area).toHaveValue('see @bob ');
   });
 
   it('stands at the door of a hall the user is not in, and joins again', async () => {

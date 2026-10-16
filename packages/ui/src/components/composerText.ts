@@ -1,34 +1,6 @@
 /** Text rules of the composer: pure functions, so the component stays about the layout. */
 
 /**
- * The word before the caret, completed into the nick it equals, else the first nick that starts
- * with it (ignoring case): `nick: ` at the start of a line, `nick ` elsewhere (no second space
- * when one follows already). Nothing to complete returns null.
- */
-export function completeNick(
-  body: string,
-  caret: number,
-  nicks: string[],
-): { body: string; caret: number } | null {
-  const before = body.slice(0, caret);
-  const word = before.match(/\S+$/)?.[0];
-  if (!word) return null;
-  const lower = word.toLowerCase();
-  const nick =
-    nicks.find((candidate) => candidate.toLowerCase() === lower) ??
-    nicks.find((candidate) => candidate.toLowerCase().startsWith(lower));
-  if (!nick) return null;
-  const start = caret - word.length;
-  const atLineStart = start === 0 || before[start - 1] === '\n';
-  const inserted = atLineStart ? `${nick}:` : nick;
-  const completed = body[caret] === ' ' ? inserted : `${inserted} `;
-  return {
-    body: before.slice(0, start) + completed + body.slice(caret),
-    caret: start + completed.length,
-  };
-}
-
-/**
  * A `:shortcode` being typed: a colon at the start of a word, then at least two letters, digits,
  * `_`, `+` or `-` up to the caret. Its start is the colon's index. `:)` or `a:bc` are not one.
  */

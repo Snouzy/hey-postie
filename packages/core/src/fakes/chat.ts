@@ -1,6 +1,6 @@
 import { DomainError } from '../contracts/errors';
 import type { ChatRepository } from '../contracts/repositories';
-import type { Chat, ChatState, Message } from '../contracts/types';
+import type { Chat, ChatState, Message, ReplyTo, SendOptions } from '../contracts/types';
 
 type MessageHandler = (message: Message) => void;
 type ChatHandler = (chat: Chat) => void;
@@ -94,9 +94,11 @@ export class FakeChat implements ChatRepository {
     return options?.limit ? all.slice(-options.limit) : [...all];
   }
 
-  async send(chatId: string, body: string): Promise<Message> {
+  async send(chatId: string, body: string, options: SendOptions = {}): Promise<Message> {
     const chat = this.ensureChat(chatId, chatId);
+    const original = options.replyTo ? await this.message(chatId, options.replyTo) : null;
     const message = this.build({ chatId, fromJid: 'me', body, direction: 'out', status: 'sent' });
+    if (original) message.replyTo = replyTo(original);
     this.append(chat, message);
     this.sent.push(message);
     return message;
@@ -183,7 +185,10 @@ export class FakeChat implements ChatRepository {
   async markRead(chatId: string): Promise<void> {
     this.markedRead.push(chatId);
     const chat = this.chats.get(chatId);
-    if (chat && chat.unreadCount > 0) this.notifyChat({ ...chat, unreadCount: 0 });
+    if (chat && chat.unreadCount > 0) {
+      const { firstUnreadId: _read, ...rest } = chat;
+      this.notifyChat({ ...rest, unreadCount: 0 });
+    }
   }
 
   setSendReadMarkers(send: boolean): void {
@@ -258,11 +263,21 @@ export class FakeChat implements ChatRepository {
     this.byChat.get(chat.id)?.push(message);
     const counts = message.direction === 'in' && chat.id !== this.openId;
     const unread = counts ? chat.unreadCount + 1 : chat.unreadCount;
-    this.notifyChat({ ...chat, lastMessage: message, unreadCount: unread });
+    // Like Converse: the first letter counted after the chat was read.
+    const first = counts && chat.unreadCount === 0 ? { firstUnreadId: message.id } : {};
+    this.notifyChat({ ...chat, lastMessage: message, unreadCount: unread, ...first });
   }
 
   private notifyChat(chat: Chat): void {
     this.chats.set(chat.id, chat);
     for (const handler of this.chatHandlers) handler(chat);
   }
+}
+
+/** What a reply carries of its original, as the Converse repository maps it. */
+function replyTo(original: Message): ReplyTo {
+  const reply: ReplyTo = { id: original.id, fromJid: original.fromJid, excerpt: original.body };
+  if (original.fromNick) reply.fromNick = original.fromNick;
+  if (original.direction === 'out') reply.mine = true;
+  return reply;
 }

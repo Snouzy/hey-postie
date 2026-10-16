@@ -42,12 +42,13 @@ export function InlineImage({ attachment, onSaveFile }: InlineImageProps) {
     <>
       <button
         type="button"
-        className="relative block cursor-zoom-in overflow-hidden rounded-sm border-none bg-transparent p-0"
+        className="relative block max-w-full min-w-0 cursor-zoom-in overflow-hidden rounded-sm border-none bg-transparent p-0"
         aria-label={`${text('parcel.view')} ${attachment.name}`}
         onClick={() => setOpen(true)}
       >
         <img
-          className="block max-h-[320px] max-w-full rounded-sm"
+          // At most 320px tall, the width following the picture's shape, never wider than the bubble.
+          className="block h-auto max-h-[320px] w-auto max-w-full rounded-sm object-contain"
           src={loaded.url}
           alt={attachment.name}
         />

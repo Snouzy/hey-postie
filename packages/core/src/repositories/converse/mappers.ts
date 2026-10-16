@@ -9,6 +9,7 @@ import type {
 } from '../../contracts/types';
 import type { ChatModel, ContactModel, MessageModel, ModelLike } from './models';
 import { isRead } from './read-markers';
+import { mentionsOf, replyOf, withoutReplyFallback } from './replies';
 
 /** Pure mappings from Converse models to the contract types. Attribute names: converse.md §3-4. */
 
@@ -27,6 +28,8 @@ export interface MessageContext {
   ownReactionJid?: string;
   /** A direct chat's read line (`read-markers.ts`): our letters up to it were displayed by the peer. */
   readUntil?: string;
+  /** The letter a reply names, when it is in the chat (`getReferencedMessage`). */
+  replied?: (replyToId: string) => MessageModel | undefined;
 }
 
 export function toMessage(model: MessageModel, context: MessageContext): Message {
@@ -34,8 +37,9 @@ export function toMessage(model: MessageModel, context: MessageContext): Message
   const undecryptable = model.get('error_type') === 'Decryption';
   const moderated = model.get('moderated') === 'retracted';
   const retracted = Boolean(model.get('retracted')) || moderated;
-  const text =
+  const raw =
     undecryptable || retracted ? '' : string(model.get('plaintext')) || string(model.get('body'));
+  const { text, quote, cut } = withoutReplyFallback(model, raw);
   const files = retracted ? [] : attachments(string(model.get('oob_url')), text);
   const nick = string(model.get('nick'));
   const message: Message = {
@@ -60,6 +64,14 @@ export function toMessage(model: MessageModel, context: MessageContext): Message
   if (message.edited && !retracted && versions.length > 0) message.versions = versions;
   const reason = string(model.get('moderation_reason'));
   if (moderated && reason) message.moderationReason = reason;
+  // The original is mapped without its own reply: one level is all a quote shows.
+  const { replied: _, ...flat } = context;
+  const replyTo = retracted
+    ? undefined
+    : replyOf(model, quote, context, (original) => toMessage(original, flat));
+  if (replyTo) message.replyTo = replyTo;
+  const mentions = context.ownNick === undefined ? [] : mentionsOf(model.get('references'), cut);
+  if (message.body && mentions.length > 0) message.mentions = mentions;
   return nick ? { ...message, fromNick: nick } : message;
 }
 
@@ -87,6 +99,9 @@ export function toChat(model: ChatModel, lastMessage?: Message): Chat {
     unreadCount: number(model.get(room ? 'num_unread_general' : 'num_unread')),
     encrypted: Boolean(model.get('omemo_active')),
   };
+  // Converse sets it when the count leaves zero and never clears it: stale once the chat is read.
+  const firstUnread = string(model.get('first_unread_id'));
+  if (chat.unreadCount > 0 && firstUnread) chat.firstUnreadId = firstUnread;
   return lastMessage ? { ...chat, lastMessage } : chat;
 }
 

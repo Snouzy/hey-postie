@@ -32,6 +32,17 @@ function renderList(
 }
 
 describe('groupByDay', () => {
+  it('starts a run at the first unread letter and marks it new', () => {
+    const at = new Date(2026, 9, 12, 9, 0);
+    const first = message({ fromJid: 'bob', sentAt: at });
+    const unread = message({ fromJid: 'bob', sentAt: at });
+    const [day] = groupByDay([first, unread, message({ fromJid: 'bob', sentAt: at })], unread.id);
+    expect(day?.runs.map((run) => [run.messages.length, Boolean(run.isNew)])).toEqual([
+      [1, false],
+      [2, true],
+    ]);
+  });
+
   it('groups by day, then by consecutive sender', () => {
     const monday = new Date(2026, 9, 12, 9, 0);
     const tuesday = new Date(2026, 9, 13, 9, 0);

@@ -5,24 +5,38 @@ import { actionsFor } from './MessageActions';
 import { MessageBubble } from './MessageBubble';
 
 describe('actionsFor', () => {
-  it('lets me copy a text, edit and take back my sent letters, and hide anyone’s', () => {
+  it('lets me answer and copy a letter, edit and take back mine, and hide anyone’s', () => {
     expect(actionsFor(message({ direction: 'out', status: 'sent' }), false)).toEqual([
+      'reply',
       'copy',
       'edit',
       'deleteForMe',
       'deleteForEveryone',
     ]);
-    expect(actionsFor(message({ direction: 'in' }), false)).toEqual(['copy', 'deleteForMe']);
+    expect(actionsFor(message({ direction: 'in' }), false)).toEqual([
+      'reply',
+      'copy',
+      'deleteForMe',
+    ]);
+  });
+
+  it('offers no reply where the user cannot write, nor on a deleted letter', () => {
+    expect(actionsFor(message({ direction: 'in' }), false, false)).toEqual(['copy', 'deleteForMe']);
+    expect(actionsFor(message({ retracted: true, body: '' }), false)).not.toContain('reply');
   });
 
   it('offers no copy for a parcel alone, a deleted letter or one sealed for another device', () => {
-    expect(actionsFor(message({ body: '' }), false)).toEqual(['deleteForMe']);
+    expect(actionsFor(message({ body: '' }), false)).toEqual(['reply', 'deleteForMe']);
     expect(actionsFor(message({ retracted: true, body: '' }), false)).toEqual(['deleteForMe']);
-    expect(actionsFor(message({ encryption: 'undecryptable' }), false)).toEqual(['deleteForMe']);
+    expect(actionsFor(message({ encryption: 'undecryptable' }), false)).toEqual([
+      'reply',
+      'deleteForMe',
+    ]);
   });
 
   it('adds removal for a moderator, on someone else’s letter only', () => {
     expect(actionsFor(message({ direction: 'in' }), true)).toEqual([
+      'reply',
       'copy',
       'deleteForMe',
       'moderate',

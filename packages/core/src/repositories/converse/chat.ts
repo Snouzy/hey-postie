@@ -1,11 +1,12 @@
 import { DomainError } from '../../contracts/errors';
 import type { ChatRepository } from '../../contracts/repositories';
-import type { Chat, ChatState, Message } from '../../contracts/types';
+import type { Chat, ChatState, Message, SendOptions } from '../../contracts/types';
 import type { ConverseEngine, Loaded } from './engine';
 import { isRoom, toChat, toMessage } from './mappers';
 import type { ChatModel, MessageModel } from './models';
 import { REACTIONS_NS, sendReactions } from './reactions';
 import { addMarkerType, applyReadMarker, READ_UNTIL } from './read-markers';
+import { replyAttributes } from './replies';
 import {
   AESGCM_OVERHEAD_BYTES,
   discoverUploadService,
@@ -47,6 +48,8 @@ export class ConverseChatRepository implements ChatRepository {
   private uploadService: Promise<UploadService | null> | null = null;
   /** One upload at a time per chat: `uploadFile` identifies its placeholder by order of arrival. */
   private readonly uploads = new Map<string, Promise<unknown>>();
+  /** The last letter or correction leaving per chat (`oneAtATime`). */
+  private readonly sending = new Map<string, Promise<unknown>>();
   /** The chats that were already there when a connection came up: they need a MAM catch-up. */
   private survivors = new Set<ChatModel>();
 
@@ -150,11 +153,37 @@ export class ConverseChatRepository implements ChatRepository {
     return this.olderThan(chat, options.before, limit);
   }
 
-  async send(chatId: string, body: string): Promise<Message> {
+  /**
+   * A reply the Converse way: `reply_to_id` and `reply_to` on the chat are read by the next
+   * `sendMessage` (`plugins/chat/model.js:246`, `muc.js:1160`), which adds the quoted fallback and
+   * seals both when the chat is sealed. They are cleared after it, whatever happened, and sends go
+   * one at a time per chat so that no other letter picks them up.
+   */
+  async send(chatId: string, body: string, options: SendOptions = {}): Promise<Message> {
     const chat = await this.find(chatId);
-    const model = await chat.sendMessage({ body });
-    if (!model) throw new DomainError('Unknown', 'Unknown: the message could not be sent');
-    return this.mapMessage(model, chat);
+    const original = options.replyTo ? chat.messages.get(options.replyTo) : undefined;
+    if (options.replyTo && !original) throw new DomainError('Unknown', 'Unknown: no such message');
+    const reply = original ? replyAttributes(chat, original, isRoom(chat)) : null;
+    return this.oneAtATime(chatId, async () => {
+      if (reply) chat.set(reply);
+      try {
+        const model = await chat.sendMessage({ body });
+        if (!model) throw new DomainError('Unknown', 'Unknown: the message could not be sent');
+        return this.mapMessage(model, chat);
+      } finally {
+        if (reply) chat.set({ reply_to_id: undefined, reply_to: undefined });
+      }
+    });
+  }
+
+  /** Letters and corrections of one chat leave in order (see `send`). */
+  private oneAtATime<T>(chatId: string, run: () => Promise<T>): Promise<T> {
+    const next = (this.sending.get(chatId) ?? Promise.resolve()).then(run);
+    this.sending.set(
+      chatId,
+      next.catch(() => undefined),
+    );
+    return next;
   }
 
   /** The bare JID of the signed-in account, the key of our own reactions in a direct chat. */
@@ -219,10 +248,12 @@ export class ConverseChatRepository implements ChatRepository {
     const chat = await this.find(chatId);
     const model = chat.messages.get(messageId);
     if (!model) throw new DomainError('Unknown', 'Unknown: no such message');
-    model.save({ correcting: true });
-    const corrected = await chat.sendMessage({ body });
-    if (!corrected) throw new DomainError('Unknown', 'Unknown: the correction could not be sent');
-    return this.mapMessage(corrected, chat);
+    return this.oneAtATime(chatId, async () => {
+      model.save({ correcting: true });
+      const corrected = await chat.sendMessage({ body });
+      if (!corrected) throw new DomainError('Unknown', 'Unknown: the correction could not be sent');
+      return this.mapMessage(corrected, chat);
+    });
   }
 
   async retract(chatId: string, messageId: string): Promise<void> {
@@ -420,6 +451,7 @@ export class ConverseChatRepository implements ChatRepository {
       unread,
       ...(ownReactionJid ? { ownReactionJid } : {}),
       ...(typeof readUntil === 'string' && !isRoom(chat) ? { readUntil } : {}),
+      replied: (id: string) => chat.getReferencedMessage?.(id),
     };
     return toMessage(
       model,
