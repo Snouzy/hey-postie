@@ -366,10 +366,15 @@ cache is cleared, so the next sign-in tries again.
 - Side effect, as before with Terminal: the hook answers `NSBundle.mainBundle.bundleIdentifier`
   for the whole dev process. Tauri creates the configured windows before `setup` (`tauri` 2.12.4,
   `app.rs` `fn setup`), so the webview's data store is not affected.
-- Points to check: macOS shows the banner under the dev process only if Notification Center
-  accepts a process that is not the registered bundle. The claim was verified (a scratch program
-  got `set_application` → `Ok` on 2026-10-16); a banner seen on screen under "Hey Postie" from a
-  real `pnpm desktop:dev` run has not been confirmed yet.
+- Confirmed on 2026-10-16, with a scratch program that sends the plugin's way
+  (`mac-notification-sys` 0.6.15, after `set_application("com.snouzylabs.heypostie")`) from an
+  unbundled process: the author saw the banner under "Hey Postie". The same probe under
+  `com.apple.Terminal` showed nothing on that Mac. Not yet seen from a real `pnpm desktop:dev` run
+  with a real letter, nor checked for the sound.
+- **A Focus mode hides them.** If Focus (e.g. "Work") is on and does not list Hey Postie among its
+  allowed apps, banners and sounds are held back for the bundled app and the dev window alike; the
+  Dock badge still counts. Allow Hey Postie in System Settings > Focus > <mode> > Allowed apps.
+  Check this first when a banner does not show.
 
 ### Window focus (`app/focus.ts`)
 
