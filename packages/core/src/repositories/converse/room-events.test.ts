@@ -14,6 +14,7 @@ function model(attrs: Record<string, unknown>) {
   return {
     get: (key: string) => attrs[key],
     save: () => undefined,
+    set: () => undefined,
     on: (event: string, handler: (...args: unknown[]) => void) => {
       handlers.set(event, [...(handlers.get(event) ?? []), handler]);
     },
@@ -36,6 +37,7 @@ function roomModel(jid: string, initialized: Promise<unknown>): RoomModel {
     ...model({ type: 'chatroom', jid, name: 'Hall', nick: 'romeo' }),
     occupants: collection([]),
     messages: collection([]),
+    notifications: model({}),
     initialized,
     sendMessage: async () => undefined,
     sendFiles: async () => undefined,

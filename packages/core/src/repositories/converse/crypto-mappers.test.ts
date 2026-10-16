@@ -19,6 +19,7 @@ function model(attributes: Record<string, unknown>): DeviceModel {
   return {
     get: (key) => attributes[key],
     save: () => undefined,
+    set: () => undefined,
     on: () => undefined,
     off: () => undefined,
   };

@@ -768,24 +768,97 @@ Observed on 2026-10-16:
 - jsdom's `XMLHttpRequest` enforces CORS (preflight for the cross-origin PUT) and reports upload
   progress; Converse's XHR path runs unchanged under Vitest.
 
-## 17. To implement: message requests, presence, avatars, chat states
+## 17. Message requests, blocklist, presence, avatar, chat states: what the repository does
 
-Contracts merged first on 2026-10-16 (branch `feat/b-contracts`, decisions of the night of
-2026-10-16). The services, fakes and tests are done; the Converse classes carry **stubs**: reads
-return nothing, writes throw `DomainError('Unknown', 'Unknown: not implemented yet ...')`, listeners
-never fire. The repository lane replaces them. Stubs: `roster.ts`, `chat.ts`, `xmpp.ts`.
+_Contracts merged on 2026-10-16 (`feat/b-contracts`); implementation of 2026-10-16 in `roster.ts`,
+`xmpp.ts` and `chat.ts`. Verified by `hall.test.ts` (the real headless build over its
+`MockConnection`, IQs answered by `autoAnswer`) and `hall.contract.test.ts` (the local Prosody,
+part of `pnpm test:contract`), both green on 2026-10-16._
 
-| Contract method | What to map | Headless | Spec |
-|---|---|---|---|
-| `RosterRepository.requests()` / `onRequest()` | contacts with `requesting: true` (§3, `contactRequest` event); `name` from the nickname (XEP-0172) or the local part; `message` from the presence `<status>` | `plugins/roster` | RFC 6121 |
-| `RosterRepository.accept(jid)` | `contact.authorize()` then subscribe back (`api.contacts.add` or `contact.subscribe()`) | `plugins/roster/contact.js` | RFC 6121 |
-| `RosterRepository.decline(jid)` | `contact.unauthorize()` and drop the unsaved contact | same | RFC 6121 |
-| `RosterRepository.block(jid)` / `unblock(jid)` | `<iq type='set'><block xmlns='urn:xmpp:blocking'><item jid/></block></iq>` and `<unblock>`; headless has no blocking plugin as of 14 (check) | our own IQ | XEP-0191 |
-| `XmppRepository.setPresence({ show, status })` | `api.user.presence.send(show === 'online' ? undefined : show, status)`; the service re-sends after `reconnected` | `plugins/status` | RFC 6121 |
-| `XmppRepository.onAvatarChange(handler)` | the own profile's `image`/`image_type` (vCard, `plugins/vcard`) or XEP-0084 PEP; hand out a data URL | `plugins/vcard`, `plugins/profile` | XEP-0084, XEP-0153 |
-| `ChatRepository.setComposing(chatId, composing)` | `chat.sendChatState()` with `composing` / `paused`; `sendMessage` already sends `active` | `plugins/chat/model.js` | XEP-0085 |
-| `ChatRepository.onChatState(handler)` | the `chat_state` attribute of the chat (or occupant in a room) on `change:chat_state` | same | XEP-0085 |
+| Contract method | Converse | Spec |
+|---|---|---|
+| `RosterRepository.requests()` / `onRequest()` | roster contacts with `requesting: true` (`contactRequest` event, `plugins/roster/contacts.js` `createRequestingContact`) | RFC 6121 §3.1.3 |
+| `RosterRepository.accept(jid)` | `contact.authorize().subscribeToPresence()` (`plugins/roster/contact.js`) | RFC 6121 §3.1.4, §3.1.5 |
+| `RosterRepository.decline(jid)` | `contact.unauthorize().destroy()` | RFC 6121 §3.1.6 |
+| `RosterRepository.block(jid)` / `unblock(jid)` | `api.blocklist.add` / `remove` (`plugins/blocklist/`, present in headless 14) | XEP-0191 |
+| `XmppRepository.setPresence({ show, status })` | `profile.save(..., { silent })` then `api.user.presence.send({ show, status })` (`shared/api/presence.js`) | RFC 6121 §4.2 |
+| `XmppRepository.onAvatarChange(handler)` | `state.profile.getVCard()` then `change:image` on the vCard (`plugins/vcard`) | XEP-0054, XEP-0153 |
+| `ChatRepository.setComposing(chatId, composing)` | `chat.set({ chat_state })` → `change:chat_state` → `sendChatState` (`plugins/chat/model.js:58`, `muc.js:121`) | XEP-0085 |
+| `ChatRepository.onChatState(handler)` | `chat.notifications` `change` (`plugins/chat/model.js:106`, `muc.js:2345` `updateNotifications`) | XEP-0085 |
 
-Rules already enforced by the services (do not duplicate): strangers never raise a notification,
-`Chat.fromStranger` is computed from the roster, `composing` is sent at most once per 10 s and
-`paused` after 5 s of silence, the status sentence is bounded to 140 characters.
+**Requests** (`roster.ts`). A `subscribe` presence from a JID that is not in the roster becomes a
+roster contact with `requesting: true`, `subscription: 'none'`, `ask: null` and the XEP-0172
+`<nick>` as `nickname` (`handleIncomingSubscription`); for a JID already in the roster with
+`ask="subscribe"` or a subscription, Converse authorizes by itself (§12, contract test of `add`).
+Such a model is not `isUnsaved()`, so `list()` and `onChange` filter it out (`isListed`), and
+`requests()` / `onRequest` carry it as a `ContactRequest` (`nickname` or the local part). The
+presence `<status>` is not kept by Converse: a Strophe handler on `presence type="subscribe"`,
+added at every `presencesInitialized` (a reconnection resets the handlers, Converse re-adds its own
+on that event), reads it, and `onRequest` fires in a microtask after `contactRequest` so that the
+handler has run whatever the registration order; the sentence is saved on the model as
+`hp_request_message` so that `requests()` still has it after a restart. `accept`: `authorize()`
+sends `subscribed` and saves `requesting: false, subscription: 'from'` (the server creates the
+roster item itself, RFC 6121 §3.1.5, and pushes it; the push saves `requesting: null`), then
+`subscribeToPresence()` sends `subscribe` through `api.user.presence.send` (asynchronous: the stanza
+leaves a tick later). The contact comes out `from`, `both` once the peer approves, like the fake.
+`decline`: `unauthorize()` sends `unsubscribed`, then `destroy()` drops the model and its storage
+(Converse's own order in the blocklist plugin). `isListed` also drops a model with
+`requesting === false`, `subscription: 'none'` and no `ask`: a refused request on its way out (its
+`change` and `remove` events would otherwise surface a stranger as a contact), or a contact just
+created by `addContact` whose roster push is about to follow. `Chat.fromStranger` needs nothing
+here: the service computes it from `list()`.
+
+**Blocklist.** Headless 14 has `converse-blocklist`: `_converse.state.blocklist` exists only when the
+server's disco#info advertises `urn:xmpp:blocking`, and `api.blocklist.*` waits for
+`blocklistInitialized` forever otherwise, so the repository checks `api.disco.supports` first and
+refuses with `Unknown`. `block` drops a pending request of the JID *before* the IQ: the plugin
+does it too on the collection's `add` (`unauthorize().destroy()` after two `await`s,
+`plugins/blocklist/collection.js:43-52`), on a model the repository had already destroyed, which
+was an unhandled rejection in the mock test; dropped first, the plugin finds nothing. The blocklist
+push (`<iq type="set"><block/>`) is handled by the plugin. Prosody: `mod_blocklist` is in
+`tools/xmpp-server/prosody.cfg.lua` (nothing to enable); it **drops** a blocked sender's message
+silently (`bounce_blocked_messages` is off by default), so the contract test synchronizes on a
+ping, and its mod_presence only delivers `subscribed` and roster pushes to a resource that fetched
+its roster (`send_to_interested_resources`, RFC 6121 §2.1.4): bob's client asks for his roster first.
+
+**Presence.** `api.user.status.set` is not used: it maps `away` to `dnd`. The profile keeps `show`
+and `status_message` and sends a presence on its own when they *change*
+(`plugins/status/profile.js:54-63`); a re-sent, unchanged presence (after a reconnection, from the
+accounts service) would send nothing, so the profile is saved silently and `api.user.presence.send`
+is called every time. `show` is left out for `online` (no `<show>`); `status` is `''` when absent,
+which clears a previous sentence (`constructPresence` falls back to the profile's otherwise). The
+same stanza goes to every joined room (`presence.js:42-45`). Not signed in → `ServerUnreachable`.
+
+**Avatar.** XEP-0084 is not in headless 14; the own avatar is the vCard `PHOTO` (`image` base64,
+`image_type`) of `state.profile.vcard`. The profile is recreated at every sign-in
+(`plugins/status/utils.js:29`), so `statusInitialized` → `profile.getVCard()` (fetches it once;
+`null` without the vCard plugin) → `change:image`. A XEP-0153 `<x><photo>` hash from another of our
+resources makes Converse re-fetch the vCard (`plugins/vcard/utils.js` `handleVCardUpdatePresence`),
+which fires `change:image`. The handler gets `data:<type>;base64,<image>` (`image/png` when the type
+is missing), `undefined` without a photo, only when it differs from the last one; never logged.
+
+**Chat states.** Sending: the model's `change:chat_state` is what sends the stanza (`sendChatState`
+in `shared/actions.js` for a direct chat, `<no-store/>` hints; `MUC#sendChatState`; the OMEMO
+plugin wraps it when `omemo_active`). `setChatState()` is not used: it arms Converse's own timers
+(`paused` after 10 s, `inactive` after 90 s, `_converse.TIMEOUTS`), which the typing service already
+drives (`composing` at most every 10 s, `paused` after 5 s). The attribute is reset silently before
+each `set`, otherwise a repeated `composing` is no change and nothing leaves. Receiving, on
+`chat.notifications` (`shared/model-with-messages.js:63`): a direct chat keeps the peer's
+`chat_state` (`plugins/chat/model.js:106`, `null` once a message arrives, `:147`); a room keeps one
+list of nicks per state (`updateNotifications`, a nick leaves a list after 10 s or on its next
+message). The repository reports `composing` and `paused` as they are, everything else (`active`,
+`inactive`, `gone`, `null`) as `active`, and for a room diffs the lists per nick against the last
+report (`fromJid` = `room@service/nick`), so that a nick dropping out of `composing` is reported
+`active` once.
+
+### Contract test (`hall.contract.test.ts`)
+
+Same preamble as [§12](#contract-test). Bob fetches his roster, both sides start clean (bob drops
+alice, alice drops bob, declines every request and unblocks bob). Four cases, all passing on
+2026-10-16: bob's `subscribe` with a `<status>` → `onRequest` with the sentence, `requests()`, not
+in `list()`; `accept` → bob gets `subscribed` and `subscribe`, approves, alice ends `both`;
+`setPresence({ show: 'away', status })` → bob sees `<show>away</show>` and the sentence, `online`
+→ neither; bob's `composing` then `paused` → `onChatState` for the direct chat, alice's
+`setComposing(true)` → a bodiless `<composing/>` message at bob; `block` → bob's message is dropped
+(ping-synchronized), `unblock` → the next one arrives. Observed: six stale `alice@localhost`
+resources (other agents' Converse sessions) were online during the run, harmless at priority 10.

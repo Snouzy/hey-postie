@@ -7,7 +7,9 @@ export type Handler = (...args: unknown[]) => void;
 
 export interface ModelLike {
   get(key: string): unknown;
-  save(attributes: Record<string, unknown>): unknown;
+  save(attributes: Record<string, unknown>, options?: { silent?: boolean }): unknown;
+  /** Sets without persisting; `silent` skips the `change` events. */
+  set(attributes: Record<string, unknown>, options?: { silent?: boolean }): unknown;
   on(event: string, handler: Handler): unknown;
   off(event: string, handler: Handler): unknown;
 }
@@ -27,6 +29,11 @@ export interface MessageModel extends ModelLike {
 
 export interface ChatModel extends ModelLike {
   messages: CollectionLike<MessageModel> & { fetched?: Promise<unknown> };
+  /**
+   * Incoming XEP-0085 states (`shared/model-with-messages.js:63`): `chat_state` of the peer in a
+   * direct chat (`plugins/chat/model.js:106`), one list of nicks per state in a room (`muc.js:2345`).
+   */
+  notifications: ModelLike;
   /** The queue through which parsed messages become models (`model-with-messages.js:268-272`). */
   msg_chain?: Promise<unknown>;
   sendMessage(attributes: { body: string }): Promise<MessageModel | undefined>;
@@ -95,6 +102,24 @@ export interface ContactModel extends ModelLike {
   getDisplayName(): string | null | undefined;
   getStatus(): string;
   isUnsaved(): boolean;
+  /** `<presence type="subscribed"/>`, then saves `subscription: 'from'` (`plugins/roster/contact.js`). */
+  authorize(): ContactModel;
+  /** `<presence type="unsubscribed"/>`, then saves `requesting: false`. */
+  unauthorize(): ContactModel;
+  /** `<presence type="subscribe"/>`, then saves `ask: 'subscribe'`. */
+  subscribeToPresence(): ContactModel;
+  /** Removes the model from the collection and its storage; sends nothing. */
+  destroy(): unknown;
+}
+
+/** The own vCard (`plugins/vcard/vcard.js`): `image` is base64, `image_type` its media type. */
+export type VCardModel = ModelLike;
+
+/** `_converse.state.profile` (`plugins/status/profile.js`), recreated at every `statusInitialized`. */
+export interface ProfileModel extends ModelLike {
+  vcard: VCardModel | null;
+  /** Fetches the vCard once (`shared/model-with-vcard.js`); null when the vCard plugin is off. */
+  getVCard(): Promise<VCardModel | null>;
 }
 
 /** Strophe's connection, including the private members the close reason needs (socketClose.ts). */
@@ -164,7 +189,12 @@ export interface PersistentStorageLike {
 
 export interface ConverseApi {
   settings: { get(key: string): unknown; set(key: string, value: unknown): void };
-  user: { login(jid: string, password: string): Promise<void>; logout(): Promise<void> };
+  user: {
+    login(jid: string, password: string): Promise<void>;
+    logout(): Promise<void>;
+    /** `shared/api/presence.js`: builds the stanza from the profile, `show`/`status` override it. */
+    presence: { send(attributes?: { show?: string; status?: string }): Promise<void> };
+  };
   connection: {
     get(): ConnectionLike | undefined;
     connected(): boolean | undefined;
@@ -178,6 +208,11 @@ export interface ConverseApi {
   contacts: {
     add(attributes: { jid: string; name?: string }): Promise<ContactModel>;
     remove(jid: string, unsubscribe?: boolean): Promise<void>;
+  };
+  /** XEP-0191 (`plugins/blocklist/api.js`): both wait for `blocklistInitialized`, which never comes without server support. */
+  blocklist: {
+    add(jid: string): Promise<unknown>;
+    remove(jid: string): Promise<unknown>;
   };
   chats: {
     get(jid: string): Promise<ChatModel | null | undefined>;
@@ -208,6 +243,7 @@ export interface ConverseApi {
     /** The entity and its items that support a feature (`plugins/disco/api.js:335`). */
     features: { get(feature: string, jid: string): Promise<DiscoFeatureEntity[]> };
     own: { features: { add(feature: string): void } };
+    supports(feature: string, jid: string): Promise<boolean>;
   };
   /** A raw stanza (`Element` or `stx` result) over the connection; IQs go through `sendIQ`. */
   send(stanza: unknown): unknown;
@@ -221,6 +257,7 @@ export interface ConverseApi {
 export interface ConverseState {
   connfeedback: ModelLike;
   session?: ModelLike;
+  profile?: ProfileModel;
   roster?: CollectionLike<ContactModel>;
   chatboxes?: CollectionLike<ChatModel>;
   /** Only once the server advertised PEP with publish-options (`plugins/bookmarks/plugin.js:138`). */

@@ -1,12 +1,13 @@
 import { DomainError, type ErrorCode } from '../../contracts/errors';
 import type { XmppRepository } from '../../contracts/repositories';
-import type { AccountState } from '../../contracts/types';
+import type { AccountPresence, AccountState } from '../../contracts/types';
 import type { ConverseEngine, Loaded } from './engine';
 import { bareJid } from './mappers';
-import type { ConnectionLike, ConverseApi, ModelLike } from './models';
+import type { ConnectionLike, ConverseApi, ModelLike, VCardModel } from './models';
 import { wrapSocketClose } from './socketClose';
 
 type StateHandler = (state: AccountState, error?: DomainError) => void;
+type AvatarHandler = (avatarUrl: string | undefined) => void;
 type ConnectInput = Parameters<XmppRepository['connect']>[0];
 
 const DEFAULT_TIMEOUT_MS = 30_000;
@@ -15,6 +16,10 @@ const SETTLE_TIMEOUT_MS = 2_000;
 /** The connection lifecycle of wiki/development/converse.md §2, mapped to `AccountState`. */
 export class ConverseXmppRepository implements XmppRepository {
   private readonly handlers = new Set<StateHandler>();
+  private readonly avatarHandlers = new Set<AvatarHandler>();
+  /** The own vCard being watched, and the last avatar handed out (a data URL, never logged). */
+  private watchedVCard: VCardModel | null = null;
+  private avatarUrl: string | undefined;
   private online = false;
   /** The last AUTHFAIL or CONNFAIL seen, so that `disconnected` carries a reason. */
   private failure: ErrorCode | null = null;
@@ -32,6 +37,8 @@ export class ConverseXmppRepository implements XmppRepository {
     engine.on('reconnected', () => this.notifyOnline());
     engine.on('will-reconnect', () => this.notify('connecting'));
     engine.on('disconnected', () => this.notifyOffline());
+    // The profile is recreated at every sign-in (`plugins/status/utils.js:29`): watch its vCard each time.
+    engine.on('statusInitialized', () => this.watchOwnVCard());
   }
 
   connect(input: ConnectInput): Promise<void> {
@@ -51,14 +58,51 @@ export class ConverseXmppRepository implements XmppRepository {
     return () => this.handlers.delete(handler);
   }
 
-  // Presence and the own avatar are not implemented yet: see wiki/development/converse.md
-  // "To implement". Sending refuses, nothing fires.
-  async setPresence(): Promise<void> {
-    throw new DomainError('Unknown', 'Unknown: not implemented yet in the Converse repository');
+  /**
+   * The profile keeps `show` and `status_message` and sends a presence on its own when they change
+   * (`plugins/status/profile.js:54-63`), but not when they are unchanged (a reconnection, for
+   * instance): the profile is updated silently and the stanza always sent. `api.user.status.set`
+   * is not used: it turns `away` into `dnd`.
+   */
+  async setPresence({ show, status }: AccountPresence): Promise<void> {
+    const { api, state } = await this.engine.ready();
+    if (!api.connection.authenticated()) {
+      throw new DomainError('ServerUnreachable', 'ServerUnreachable: not signed in');
+    }
+    await api.waitUntil('statusInitialized');
+    const attributes = { ...(show === 'online' ? {} : { show }), status: status ?? '' };
+    state.profile?.save(
+      { show: attributes.show, status_message: attributes.status },
+      { silent: true },
+    );
+    await api.user.presence.send(attributes);
   }
 
-  onAvatarChange(): () => void {
-    return () => undefined;
+  onAvatarChange(handler: AvatarHandler): () => void {
+    this.avatarHandlers.add(handler);
+    return () => this.avatarHandlers.delete(handler);
+  }
+
+  /**
+   * The own avatar is the `PHOTO` of the own vCard (XEP-0054), which Converse fetches for the
+   * profile and refreshes on a XEP-0153 `<x><photo>` hash from another of our resources
+   * (`plugins/vcard/utils.js` `handleVCardUpdatePresence`). XEP-0084 is not in headless 14.
+   */
+  private watchOwnVCard(): void {
+    const profile = this.engine.current?.state.profile;
+    profile?.getVCard().then((vcard) => {
+      if (!vcard || vcard === this.watchedVCard) return;
+      this.watchedVCard = vcard;
+      vcard.on('change:image', () => this.notifyAvatar(vcard));
+      this.notifyAvatar(vcard);
+    });
+  }
+
+  private notifyAvatar(vcard: VCardModel): void {
+    const url = avatarDataUrl(vcard);
+    if (url === this.avatarUrl) return;
+    this.avatarUrl = url;
+    for (const handler of this.avatarHandlers) handler(url);
   }
 
   private serialize<T>(task: () => Promise<T>): Promise<T> {
@@ -213,6 +257,14 @@ export class ConverseXmppRepository implements XmppRepository {
   private notify(state: AccountState, error?: DomainError): void {
     for (const handler of this.handlers) handler(state, error);
   }
+}
+
+/** `image` is base64 and `image_type` its media type (`plugins/vcard/parsers.js:11-22`). */
+function avatarDataUrl(vcard: VCardModel): string | undefined {
+  const image = vcard.get('image');
+  const type = vcard.get('image_type');
+  if (typeof image !== 'string' || !image) return undefined;
+  return `data:${typeof type === 'string' && type ? type : 'image/png'};base64,${image}`;
 }
 
 /**

@@ -1,6 +1,6 @@
 import { DomainError } from '../../contracts/errors';
 import type { ChatRepository } from '../../contracts/repositories';
-import type { Chat, Message } from '../../contracts/types';
+import type { Chat, ChatState, Message } from '../../contracts/types';
 import type { ConverseEngine, Loaded } from './engine';
 import { isRoom, toChat, toMessage } from './mappers';
 import type { ChatModel, MessageModel } from './models';
@@ -14,6 +14,7 @@ import {
 
 type MessageHandler = (message: Message) => void;
 type ChatHandler = (chat: Chat) => void;
+type ChatStateHandler = (chatId: string, fromJid: string, state: ChatState) => void;
 
 const DEFAULT_LIMIT = 50;
 const UPDATE_EVENTS = [
@@ -32,7 +33,10 @@ export class ConverseChatRepository implements ChatRepository {
   private readonly messageHandlers = new Set<MessageHandler>();
   private readonly updateHandlers = new Set<MessageHandler>();
   private readonly chatHandlers = new Set<ChatHandler>();
+  private readonly stateHandlers = new Set<ChatStateHandler>();
   private readonly bound = new WeakSet<ChatModel>();
+  /** Per room, the last state reported for each nick, to report only the changes. */
+  private readonly roomStates = new WeakMap<ChatModel, Map<string, ChatState>>();
   private loaded: Loaded | null = null;
   /** The chat the user looks at. Every other direct chat is hidden so that `num_unread` counts (§4). */
   private openJid: string | null = null;
@@ -203,14 +207,21 @@ export class ConverseChatRepository implements ChatRepository {
     return () => this.chatHandlers.delete(handler);
   }
 
-  // Chat states (XEP-0085) are not implemented yet: see wiki/development/converse.md
-  // "To implement". Sending refuses (the service swallows it), nothing fires.
-  async setComposing(): Promise<void> {
-    throw new DomainError('Unknown', 'Unknown: not implemented yet in the Converse repository');
+  /**
+   * `change:chat_state` on the model is what sends the stanza (`plugins/chat/model.js:58`,
+   * `muc.js:121`; OMEMO wraps it when the chat is sealed). `setChatState()` is not used: it arms
+   * Converse's own timers (`paused` after 10 s, `inactive` after 90 s) and the service already
+   * drives those. The attribute is reset silently first so that a repeated state is sent again.
+   */
+  async setComposing(chatId: string, composing: boolean): Promise<void> {
+    const chat = await this.find(chatId);
+    chat.set({ chat_state: null }, { silent: true });
+    chat.set({ chat_state: composing ? 'composing' : 'paused' });
   }
 
-  onChatState(): () => void {
-    return () => undefined;
+  onChatState(handler: ChatStateHandler): () => void {
+    this.stateHandlers.add(handler);
+    return () => this.stateHandlers.delete(handler);
   }
 
   /** A bookmarked room, or any JID on a domain already discovered as a conference service. */
@@ -282,6 +293,7 @@ export class ConverseChatRepository implements ChatRepository {
     // unhides a room by itself when its bookmark is created (`openBookmarkedRoom` → `maybeShow`).
     this.hideUnlessOpen(chat);
     chat.on('change:hidden', () => this.hideUnlessOpen(chat));
+    chat.notifications.on('change', () => this.onNotifications(chat));
     chat.messages.on('add', (model) => this.onAdded(chat, model as MessageModel));
     for (const event of UPDATE_EVENTS) {
       chat.messages.on(event, (model) => {
@@ -303,6 +315,37 @@ export class ConverseChatRepository implements ChatRepository {
     if (model.get('sender') === 'me' && !model.get('is_carbon')) return;
     const message = this.mapMessage(model, chat);
     for (const handler of this.messageHandlers) handler(message);
+  }
+
+  /**
+   * Incoming XEP-0085 states live on `chat.notifications`: `chat_state` of the peer in a direct
+   * chat (`null` once a message arrives, `plugins/chat/model.js:106-147`), and in a room one list
+   * of nicks per state, a nick leaving a list after 10 s or on its next message (`muc.js:2345`).
+   * `inactive` and `gone` are reported as `active`: the UI only cares about typing.
+   */
+  private onNotifications(chat: ChatModel): void {
+    const chatId = String(chat.get('jid'));
+    if (!isRoom(chat)) {
+      this.emitState(chatId, chatId, toChatState(chat.notifications.get('chat_state')));
+      return;
+    }
+    const previous = this.roomStates.get(chat) ?? new Map<string, ChatState>();
+    const current = new Map<string, ChatState>();
+    for (const state of ['paused', 'composing'] as const) {
+      const nicks = chat.notifications.get(state);
+      if (Array.isArray(nicks)) for (const nick of nicks) current.set(String(nick), state);
+    }
+    for (const nick of previous.keys()) if (!current.has(nick)) current.set(nick, 'active');
+    this.roomStates.set(chat, new Map([...current].filter(([, state]) => state !== 'active')));
+    for (const [nick, state] of current) {
+      if (previous.get(nick) !== state && (state !== 'active' || previous.has(nick))) {
+        this.emitState(chatId, `${chatId}/${nick}`, state);
+      }
+    }
+  }
+
+  private emitState(chatId: string, fromJid: string, state: ChatState): void {
+    for (const handler of this.stateHandlers) handler(chatId, fromJid, state);
   }
 
   private hideUnlessOpen(chat: ChatModel): void {
@@ -362,6 +405,10 @@ export class ConverseChatRepository implements ChatRepository {
  */
 function byTime(a: MessageModel, b: MessageModel): number {
   return String(a.get('time')).localeCompare(String(b.get('time')));
+}
+
+function toChatState(value: unknown): ChatState {
+  return value === 'composing' || value === 'paused' ? value : 'active';
 }
 
 /** `PRIVATE_CHAT_TYPE` and `CHATROOMS_TYPE` (`shared/constants.js:66-67`); feeds (`headline`) are not chats. */
