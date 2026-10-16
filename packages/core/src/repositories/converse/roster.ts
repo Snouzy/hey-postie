@@ -3,10 +3,11 @@ import type { RosterRepository } from '../../contracts/repositories';
 import type { Contact, ContactRequest } from '../../contracts/types';
 import type { ConverseEngine, Loaded } from './engine';
 import { bareJid, toContact } from './mappers';
-import type { CollectionLike, ContactModel } from './models';
+import type { CollectionLike, ContactModel, ModelLike } from './models';
 
 type Handler = (contact: Contact) => void;
 type RequestHandler = (request: ContactRequest) => void;
+type BlockedHandler = (jids: string[]) => void;
 
 /** Our attribute on a requesting contact: the `<status>` of the subscribe presence (never logged). */
 const REQUEST_MESSAGE = 'hp_request_message';
@@ -20,6 +21,7 @@ const BLOCKING_NS = 'urn:xmpp:blocking';
 export class ConverseRosterRepository implements RosterRepository {
   private readonly handlers = new Set<Handler>();
   private readonly requestHandlers = new Set<RequestHandler>();
+  private readonly blockedHandlers = new Set<BlockedHandler>();
   private bound: CollectionLike<ContactModel> | null = null;
   /** The sentence attached to a pending subscribe presence, by bare JID, until its contact exists. */
   private readonly requestMessages = new Map<string, string>();
@@ -31,6 +33,11 @@ export class ConverseRosterRepository implements RosterRepository {
     engine.on('contactRequest', (contact) => this.emitRequest(contact as ContactModel));
     // A reconnection resets Strophe's handlers; Converse re-adds its presence handler on this event.
     engine.on('presencesInitialized', () => this.watchSubscribePresence());
+    // The blocklist too is a fresh collection at every login (`plugins/blocklist/plugin.js`,
+    // `discoInitialized`); the event carries it, once the server's list is in.
+    engine.on('blocklistInitialized', (blocklist) => {
+      this.bindBlocklist(blocklist as CollectionLike<ModelLike>);
+    });
   }
 
   async list(): Promise<Contact[]> {
@@ -112,13 +119,15 @@ export class ConverseRosterRepository implements RosterRepository {
     }
   }
 
-  /** The blocklist IQ and its pushes are not read yet: see converse.md, section 17. */
+  /** The server's list, fetched by the plugin at login and kept up to date by its pushes. */
   async blocked(): Promise<string[]> {
-    return [];
+    const { api } = await this.blocking();
+    return blockedJids(await api.blocklist.get());
   }
 
-  onBlockedChange(): () => void {
-    return () => undefined;
+  onBlockedChange(handler: BlockedHandler): () => void {
+    this.blockedHandlers.add(handler);
+    return () => this.blockedHandlers.delete(handler);
   }
 
   onRequest(handler: RequestHandler): () => void {
@@ -188,6 +197,19 @@ export class ConverseRosterRepository implements RosterRepository {
     });
   }
 
+  /**
+   * Our own block/unblock and the server's pushes (`<iq type="set">` with `<block>`/`<unblock>`,
+   * handled by the plugin) all end as `add`/`remove` on the collection; the plugin removes one
+   * model per JID, so a push of several JIDs fires several times, each with the whole list.
+   */
+  private bindBlocklist(blocklist: CollectionLike<ModelLike>): void {
+    const emit = () => {
+      const jids = blockedJids(blocklist);
+      for (const handler of this.blockedHandlers) handler(jids);
+    };
+    for (const event of ['add', 'remove', 'reset']) blocklist.on(event, emit);
+  }
+
   private emit(model: unknown, patch: Partial<Contact> = {}): void {
     const contact = model as ContactModel;
     if (typeof contact?.get !== 'function' || !isListed(contact)) return;
@@ -225,6 +247,11 @@ function toRequest(contact: ContactModel): ContactRequest {
     name: typeof nickname === 'string' && nickname ? nickname : (jid.split('@')[0] ?? jid),
   };
   return typeof message === 'string' && message ? { ...request, message } : request;
+}
+
+/** The server holds bare JIDs (XEP-0191 §3.1); lowercased, as the fake and the roster keys are. */
+function blockedJids(blocklist: CollectionLike<ModelLike>): string[] {
+  return blocklist.models.map((model) => bareJid(String(model.get('jid'))).toLowerCase());
 }
 
 /** `unsubscribed` then the local model goes: Converse's own order (`plugins/blocklist/collection.js:50`). */

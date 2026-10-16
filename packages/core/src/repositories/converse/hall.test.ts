@@ -11,6 +11,8 @@ import { JID, JULIET, type Mock, MockHarness, type Stanza } from './test-support
  */
 
 const STRANGER = 'tybalt@montague.lit';
+/** On the server's blocklist at login, as the server spells it; the repository lowercases. */
+const CAPULET = 'CAPULET@montague.lit';
 const DOMAIN = 'montague.lit';
 const BLOCKING = 'urn:xmpp:blocking';
 const CHATSTATES = 'http://jabber.org/protocol/chatstates';
@@ -27,31 +29,36 @@ const contacts: Contact[] = [];
 const requests: ContactRequest[] = [];
 const avatars: Array<string | undefined> = [];
 const states: Array<[string, string, ChatState]> = [];
+const blocklists: string[][] = [];
 repositories.roster.onChange((contact) => contacts.push(contact));
 repositories.roster.onRequest((request) => requests.push(request));
+repositories.roster.onBlockedChange((jids) => blocklists.push(jids));
 repositories.xmpp.onAvatarChange((url) => avatars.push(url));
 repositories.chat.onChatState((chatId, fromJid, state) => states.push([chatId, fromJid, state]));
 
 let harness: MockHarness;
 let mock: Mock;
+let stopAnswering: () => void;
 
 beforeAll(async () => {
   harness = await MockHarness.create(repositories);
   mock = harness.mock;
-  harness.autoAnswer(answers);
+  stopAnswering = harness.autoAnswer(answers);
   await harness.connectAndLoadRoster();
 });
 
-/** The server advertises XEP-0191, its blocklist is empty, our vCard carries a photo. */
-function answers(iq: Element): Stanza | undefined {
+/** The server advertises XEP-0191, its blocklist holds one JID, our vCard carries a photo. */
+function answers(iq: Element, blocking = true): Stanza | undefined {
   const { stx, sizzle, Strophe } = mock.converse.env;
   const to = iq.getAttribute('to');
   if (to === DOMAIN && sizzle(`query[xmlns="${Strophe.NS.DISCO_INFO}"]`, iq).length) {
     return stx`<iq type="result" xmlns="jabber:client"><query xmlns="${Strophe.NS.DISCO_INFO}">
-      <identity category="server" type="im"/><feature var="${BLOCKING}"/></query></iq>`;
+      <identity category="server" type="im"/>${blocking ? stx`<feature var="${BLOCKING}"/>` : ''}
+      </query></iq>`;
   }
   if (sizzle(`blocklist[xmlns="${BLOCKING}"]`, iq).length) {
-    return stx`<iq type="result" xmlns="jabber:client"><blocklist xmlns="${BLOCKING}"/></iq>`;
+    return stx`<iq type="result" xmlns="jabber:client"><blocklist xmlns="${BLOCKING}">
+      <item jid="${CAPULET}"/></blocklist></iq>`;
   }
   if (sizzle(`block[xmlns="${BLOCKING}"], unblock[xmlns="${BLOCKING}"]`, iq).length) {
     return stx`<iq type="result" xmlns="jabber:client"/>`;
@@ -142,6 +149,7 @@ describe('ConverseRosterRepository: subscription requests', () => {
     expect(block).toBeDefined();
     expect(presenceTo(sent, other, 'unsubscribed')).toBeDefined();
     expect(await repositories.roster.requests()).toEqual([]);
+    expect(await repositories.roster.blocked()).toContain(other);
 
     const unblockBefore = sentCount();
     await repositories.roster.unblock(other);
@@ -149,6 +157,35 @@ describe('ConverseRosterRepository: subscription requests', () => {
       (s) => sizzle(`unblock[xmlns="${BLOCKING}"] item[jid="${other}"]`, s).length,
     );
     expect(unblock).toBeDefined();
+    expect(await repositories.roster.blocked()).not.toContain(other);
+  });
+});
+
+describe('ConverseRosterRepository: blocklist', () => {
+  const capulet = CAPULET.toLowerCase();
+  const benvolio = 'benvolio@montague.lit';
+
+  it('lists the blocklist fetched at login, bare and lowercase', async () => {
+    expect(await repositories.roster.blocked()).toEqual([capulet]);
+    // The block and unblock of the previous case each handed out the whole list.
+    expect(blocklists.slice(-2)).toEqual([[capulet, 'paris@montague.lit'], [capulet]]);
+  });
+
+  it('a push from the server adds one and the whole list is handed out', async () => {
+    const { stx, u } = mock.converse.env;
+    const before = blocklists.length;
+    harness.inject(stx`<iq type="set" id="push-1" to="${JID}" xmlns="jabber:client">
+        <block xmlns="${BLOCKING}"><item jid="${benvolio}"/></block></iq>`);
+    await u.waitUntil(() => blocklists.length > before);
+    expect(blocklists.at(-1)).toEqual([capulet, benvolio]);
+    expect(await repositories.roster.blocked()).toEqual([capulet, benvolio]);
+  });
+
+  it('an unblock removes one and hands out the rest', async () => {
+    const before = blocklists.length;
+    await repositories.roster.unblock(benvolio);
+    expect(blocklists.slice(before)).toEqual([[capulet]]);
+    expect(await repositories.roster.blocked()).toEqual([capulet]);
   });
 });
 
@@ -200,5 +237,18 @@ describe('ConverseChatRepository: chat states', () => {
         <body>typed</body><active xmlns="${CHATSTATES}"/></message>`);
     await u.waitUntil(() => states.at(-1)?.[2] === 'active');
     expect(states.at(-1)).toEqual([JULIET, JULIET, 'active']);
+  });
+});
+
+describe('ConverseRosterRepository: a server without XEP-0191', () => {
+  it('refuses to read the blocklist with Unknown', async () => {
+    await repositories.xmpp.disconnect();
+    stopAnswering();
+    harness.autoAnswer((iq) => answers(iq, false));
+    await harness.connectAndLoadRoster();
+    await expect(repositories.roster.blocked()).rejects.toMatchObject({
+      code: 'Unknown',
+      message: 'Unknown: the server has no blocklist (XEP-0191)',
+    });
   });
 });

@@ -781,7 +781,7 @@ part of `pnpm test:contract`), both green on 2026-10-16._
 | `RosterRepository.accept(jid)` | `contact.authorize().subscribeToPresence()` (`plugins/roster/contact.js`) | RFC 6121 §3.1.4, §3.1.5 |
 | `RosterRepository.decline(jid)` | `contact.unauthorize().destroy()` | RFC 6121 §3.1.6 |
 | `RosterRepository.block(jid)` / `unblock(jid)` | `api.blocklist.add` / `remove` (`plugins/blocklist/`, present in headless 14) | XEP-0191 |
-| `RosterRepository.blocked()` / `onBlockedChange()` | **not implemented** (stub: `[]`, never fires, added 2026-10-16): `<iq type='get'><blocklist xmlns='urn:xmpp:blocking'/></iq>` at login, then the server's pushes (`<block>` / `<unblock>` in an `<iq type='set'>`); headless keeps them in `state.blocklist` (`plugins/blocklist/collection.js`): read it and listen to its `add`/`remove`, hand out the whole list of bare JIDs each time | XEP-0191 §3.2–3.4 |
+| `RosterRepository.blocked()` / `onBlockedChange()` | `api.blocklist.get()` (the `state.blocklist` collection, `plugins/blocklist/collection.js`), bound at `blocklistInitialized`: `add`/`remove`/`reset` hand out the whole list of bare lowercase JIDs | XEP-0191 §3.2–3.4 |
 | `XmppRepository.setPresence({ show, status })` | `profile.save(..., { silent })` then `api.user.presence.send({ show, status })` (`shared/api/presence.js`) | RFC 6121 §4.2 |
 | `XmppRepository.onAvatarChange(handler)` | `state.profile.getVCard()` then `change:image` on the vCard (`plugins/vcard`) | XEP-0054, XEP-0153 |
 | `ChatRepository.setComposing(chatId, composing)` | `chat.set({ chat_state })` → `change:chat_state` → `sendChatState` (`plugins/chat/model.js:58`, `muc.js:121`) | XEP-0085 |
@@ -815,8 +815,19 @@ server's disco#info advertises `urn:xmpp:blocking`, and `api.blocklist.*` waits 
 refuses with `Unknown`. `block` drops a pending request of the JID *before* the IQ: the plugin
 does it too on the collection's `add` (`unauthorize().destroy()` after two `await`s,
 `plugins/blocklist/collection.js:43-52`), on a model the repository had already destroyed, which
-was an unhandled rejection in the mock test; dropped first, the plugin finds nothing. The blocklist
-push (`<iq type="set"><block/>`) is handled by the plugin. Prosody: `mod_blocklist` is in
+was an unhandled rejection in the mock test; dropped first, the plugin finds nothing. `blocked()`
+and `onBlockedChange` (implemented 2026-10-16) read the same collection: the plugin fetches the
+server's list at login (`<iq type="get"><blocklist/></iq>`, `fetchBlocklistFromServer`) and fires
+`blocklistInitialized` with the collection once it is in, so the repository binds `add`, `remove`
+and `reset` on that event, at every login (the collection is recreated at `discoInitialized` and
+deleted at `clearSession`; the promise is replaced at logout, so `api.blocklist.get()` never hands
+out a stale one). The server's pushes (`<iq type="set"><block/>` / `<unblock/>`) are handled by
+the plugin's own Strophe handler, which calls `api.blocklist.add`/`remove` without a stanza: they
+end as the same `add`/`remove`. Each event hands out the whole list; the plugin destroys one model
+per unblocked JID, so a push of several JIDs fires several times. Our own block is also pushed back
+by the server, but `create` of an existing `jid` is no `add`: one event per change. The JIDs are
+bare (XEP-0191 §3.1) and lowercased, like the fake's. Without `urn:xmpp:blocking` on the server
+`blocked()` refuses with `Unknown` like `block`. Prosody: `mod_blocklist` is in
 `tools/xmpp-server/prosody.cfg.lua` (nothing to enable); it **drops** a blocked sender's message
 silently (`bounce_blocked_messages` is off by default), so the contract test synchronizes on a
 ping, and its mod_presence only delivers `subscribed` and roster pushes to a resource that fetched
@@ -860,8 +871,9 @@ alice, alice drops bob, declines every request and unblocks bob). Four cases, al
 in `list()`; `accept` → bob gets `subscribed` and `subscribe`, approves, alice ends `both`;
 `setPresence({ show: 'away', status })` → bob sees `<show>away</show>` and the sentence, `online`
 → neither; bob's `composing` then `paused` → `onChatState` for the direct chat, alice's
-`setComposing(true)` → a bodiless `<composing/>` message at bob; `block` → bob's message is dropped
-(ping-synchronized), `unblock` → the next one arrives. Observed: six stale `alice@localhost`
+`setComposing(true)` → a bodiless `<composing/>` message at bob; `block` → bob is in `blocked()`,
+`onBlockedChange` fired with him, his message is dropped (ping-synchronized), `unblock` → he is
+out of both, the next message arrives. Observed: six stale `alice@localhost`
 resources (other agents' Converse sessions) were online during the run, harmless at priority 10.
 
 Rules already enforced by the services (do not duplicate): strangers never raise a notification,
