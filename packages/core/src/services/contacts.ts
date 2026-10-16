@@ -14,6 +14,7 @@ export function createContactsService(
 ): ContactsService {
   deps.roster.onChange((contact) => events.emit('contact.updated', contact));
   deps.roster.onRequest((request) => events.emit('contact.requested', cleanRequest(request)));
+  deps.roster.onBlockedChange((jids) => events.emit('contacts.blocked', sortedBareJids(jids)));
   return {
     async list() {
       const contacts = await deps.roster.list();
@@ -46,7 +47,17 @@ export function createContactsService(
     async unblock(jid) {
       return deps.roster.unblock(bareJid(jid));
     },
+    async blocked() {
+      return sortedBareJids(await deps.roster.blocked());
+    },
   };
+}
+
+/** The blocklist comes from the server: bare, lowercase, no duplicates, in a stable order. */
+function sortedBareJids(jids: string[]): string[] {
+  return [...new Set(jids.map((jid) => jid.toLowerCase().split('/')[0] ?? ''))]
+    .filter(Boolean)
+    .sort();
 }
 
 /**

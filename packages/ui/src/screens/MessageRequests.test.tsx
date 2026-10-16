@@ -120,11 +120,11 @@ describe('Message requests', () => {
     expect(dialog).toHaveTextContent('drop everything they send');
     fireEvent.click(within(dialog).getByRole('button', { name: 'Cancel' }));
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
-    expect(deps.fakes.roster.blocked.size).toBe(0);
+    expect(deps.fakes.roster.blocklist.size).toBe(0);
 
     fireEvent.click(screen.getByRole('button', { name: 'Block…' }));
     fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Block' }));
-    await waitFor(() => expect(deps.fakes.roster.blocked.has('eve@x.org')).toBe(true));
+    await waitFor(() => expect(deps.fakes.roster.blocklist.has('eve@x.org')).toBe(true));
     expect(screen.queryByRole('region', { name: 'Eve' })).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Message requests/ })).toHaveTextContent('1');
 

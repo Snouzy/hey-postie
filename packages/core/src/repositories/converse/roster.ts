@@ -72,6 +72,14 @@ export class ConverseRosterRepository implements RosterRepository {
     throw NOT_IMPLEMENTED();
   }
 
+  async blocked(): Promise<string[]> {
+    return [];
+  }
+
+  onBlockedChange(): () => void {
+    return () => undefined;
+  }
+
   onRequest(): () => void {
     return () => undefined;
   }

@@ -60,6 +60,84 @@ describe('message requests', () => {
     await tick();
     expect(seen.map((c) => c.fromStranger)).toEqual([true, false]);
   });
+
+  describe('isRequest', () => {
+    const eve = { chatId: 'eve@example.org', fromJid: 'eve@example.org' };
+
+    it('is true for a stranger who wrote and was never answered', async () => {
+      deps.fakes.chat.receive({ ...eve, body: 'a' });
+      const [chat] = await core.chats.list();
+      expect(chat?.isRequest).toBe(true);
+      expect((await core.chats.open('eve@example.org')).isRequest).toBe(true);
+    });
+
+    it('is false for a chat the user started, even once the stranger answers', async () => {
+      await core.chats.open('eve@example.org');
+      await core.chats.send('eve@example.org', 'hello');
+      deps.fakes.chat.receive({ ...eve, body: 'hi back' });
+      const [chat] = await core.chats.list();
+      expect(chat?.lastMessage?.direction).toBe('in');
+      expect(chat?.fromStranger).toBe(true);
+      expect(chat?.isRequest).toBe(false);
+    });
+
+    it('is false for a chat opened with a stranger who has not written', async () => {
+      const chat = await core.chats.open('eve@example.org');
+      expect(chat.fromStranger).toBe(true);
+      expect(chat.isRequest).toBe(false);
+    });
+
+    it('is false once the user answers, and chat.updated says so', async () => {
+      const seen: Array<boolean | undefined> = [];
+      core.events.on('chat.updated', (chat) => seen.push(chat.isRequest));
+      deps.fakes.chat.receive({ ...eve, body: 'a' });
+      await tick();
+      await core.chats.send('eve@example.org', 'welcome');
+      await tick();
+      deps.fakes.chat.receive({ ...eve, body: 'b' });
+      await tick();
+      expect(seen).toEqual([true, false, false]);
+    });
+
+    it('reads an older reply from the latest page of the history', async () => {
+      deps.fakes.chat.receive({ ...eve, body: 'a' });
+      deps.fakes.chat.receive({ ...eve, body: 'b' });
+      // An answer the repository already holds, which no event of this session carried.
+      deps.fakes.chat.history('eve@example.org', [
+        {
+          id: 'old',
+          chatId: 'eve@example.org',
+          fromJid: 'me@example.org',
+          body: 'answered long ago',
+          sentAt: new Date(2026, 0, 1),
+          direction: 'out',
+          status: 'sent',
+          encryption: 'none',
+          attachments: [],
+          reactions: [],
+          isMention: false,
+        },
+      ]);
+      await core.chats.messages('eve@example.org');
+      expect((await core.chats.open('eve@example.org')).isRequest).toBe(true);
+      await core.chats.loadOlder('eve@example.org');
+      expect((await core.chats.open('eve@example.org')).isRequest).toBe(false);
+    });
+
+    it('is false for a contact and absent for a room', async () => {
+      bob();
+      deps.fakes.chat.receive({ chatId: 'bob@example.org', fromJid: 'bob@example.org', body: 'a' });
+      deps.fakes.chat.receive({
+        chatId: 'hall@rooms.example.org',
+        fromJid: 'hall@rooms.example.org/eve',
+        body: 'a',
+        kind: 'room',
+      });
+      const chats = await core.chats.list();
+      expect(chats.find((c) => c.kind === 'direct')?.isRequest).toBe(false);
+      expect(chats.find((c) => c.kind === 'room')?.isRequest).toBeUndefined();
+    });
+  });
 });
 
 describe('typing', () => {

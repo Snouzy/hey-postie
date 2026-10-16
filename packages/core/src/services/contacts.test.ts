@@ -107,7 +107,7 @@ describe('message requests', () => {
   it('blocking drops the request, blocks, and later requests never arrive', async () => {
     deps.fakes.roster.request(eve);
     await core.contacts.block('eve@x.org');
-    expect(deps.fakes.roster.blocked.has('eve@x.org')).toBe(true);
+    expect(deps.fakes.roster.blocklist.has('eve@x.org')).toBe(true);
     expect(await core.contacts.requests()).toEqual([]);
     deps.fakes.roster.request(eve);
     expect(await core.contacts.requests()).toEqual([]);
@@ -132,5 +132,31 @@ describe('message requests', () => {
   it('refuses an invalid jid before touching the roster', async () => {
     await expect(core.contacts.accept('eve')).rejects.toThrow(/InvalidJid/);
     await expect(core.contacts.block('eve')).rejects.toThrow(/InvalidJid/);
+  });
+});
+
+describe('blocked list', () => {
+  it('is empty at first, then lists blocked jids sorted and bare', async () => {
+    expect(await core.contacts.blocked()).toEqual([]);
+    await core.contacts.block('Zed@X.org/phone');
+    await core.contacts.block('eve@x.org');
+    expect(await core.contacts.blocked()).toEqual(['eve@x.org', 'zed@x.org']);
+  });
+
+  it('emits contacts.blocked on block and unblock, with the whole list', async () => {
+    const seen: string[][] = [];
+    core.events.on('contacts.blocked', (jids) => seen.push(jids));
+    await core.contacts.block('eve@x.org');
+    await core.contacts.block('al@x.org');
+    await core.contacts.unblock('eve@x.org');
+    expect(seen).toEqual([['eve@x.org'], ['al@x.org', 'eve@x.org'], ['al@x.org']]);
+    expect(await core.contacts.blocked()).toEqual(['al@x.org']);
+  });
+
+  it('stays quiet when unblocking someone who was not blocked', async () => {
+    const seen: string[][] = [];
+    core.events.on('contacts.blocked', (jids) => seen.push(jids));
+    await core.contacts.unblock('eve@x.org');
+    expect(seen).toEqual([]);
   });
 });

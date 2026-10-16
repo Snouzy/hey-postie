@@ -13,7 +13,8 @@ export {
 } from './fakes';
 export type { ConverseRepositories, EngineOptions } from './repositories/converse';
 export { createConverseRepositories } from './repositories/converse';
-export { MIN_PASSWORD_LENGTH } from './services/accounts';
+export { MAX_STATUS_LENGTH, MIN_PASSWORD_LENGTH } from './services/accounts';
 export { INLINE_IMAGE_MAX_BYTES } from './services/files';
 export { domainOf, normalizeJid } from './services/jid';
 export { HIDDEN_PREVIEW } from './services/notifications';
+export { COMPOSING_REPEAT_MS, PAUSED_AFTER_MS } from './services/typing';

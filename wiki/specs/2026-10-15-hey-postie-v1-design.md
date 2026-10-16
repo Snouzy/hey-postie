@@ -106,7 +106,8 @@ Contact    { jid, name, avatarUrl?, presence: 'online' | 'away' | 'dnd' | 'offli
 ContactRequest { jid, name, message? }                         // a stranger's subscription request, held until answered
 Room       { jid, name, nick, joined: boolean, unreadCount, mentionsCount }
 Chat       { id, kind: 'direct' | 'room', peerJid, title, lastMessage?, unreadCount, encrypted: boolean,
-             fromStranger? }                                   // true: a message request (peer not in the roster)
+             fromStranger?, isRequest? }                       // fromStranger: peer not in the roster;
+                                                               // isRequest: they wrote and this account never did
 ChatState  'composing' | 'paused' | 'active'                   // XEP-0085, what a peer is doing in a chat
 Message    { id, chatId, fromJid, fromNick?, body, sentAt, direction: 'in' | 'out',
              status: 'pending' | 'sent' | 'delivered' | 'read' | 'failed',

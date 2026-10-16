@@ -781,11 +781,13 @@ never fire. The repository lane replaces them. Stubs: `roster.ts`, `chat.ts`, `x
 | `RosterRepository.accept(jid)` | `contact.authorize()` then subscribe back (`api.contacts.add` or `contact.subscribe()`) | `plugins/roster/contact.js` | RFC 6121 |
 | `RosterRepository.decline(jid)` | `contact.unauthorize()` and drop the unsaved contact | same | RFC 6121 |
 | `RosterRepository.block(jid)` / `unblock(jid)` | `<iq type='set'><block xmlns='urn:xmpp:blocking'><item jid/></block></iq>` and `<unblock>`; headless has no blocking plugin as of 14 (check) | our own IQ | XEP-0191 |
+| `RosterRepository.blocked()` / `onBlockedChange()` | `<iq type='get'><blocklist xmlns='urn:xmpp:blocking'/></iq>` at login, then the pushes the server sends to every resource (`<block>` / `<unblock>` in an `<iq type='set'>`); hand out the whole list of bare JIDs each time (added 2026-10-16, stub: `[]`, never fires) | our own IQ | XEP-0191 §3.2, §3.3, §3.4 |
 | `XmppRepository.setPresence({ show, status })` | `api.user.presence.send(show === 'online' ? undefined : show, status)`; the service re-sends after `reconnected` | `plugins/status` | RFC 6121 |
 | `XmppRepository.onAvatarChange(handler)` | the own profile's `image`/`image_type` (vCard, `plugins/vcard`) or XEP-0084 PEP; hand out a data URL | `plugins/vcard`, `plugins/profile` | XEP-0084, XEP-0153 |
 | `ChatRepository.setComposing(chatId, composing)` | `chat.sendChatState()` with `composing` / `paused`; `sendMessage` already sends `active` | `plugins/chat/model.js` | XEP-0085 |
 | `ChatRepository.onChatState(handler)` | the `chat_state` attribute of the chat (or occupant in a room) on `change:chat_state` | same | XEP-0085 |
 
 Rules already enforced by the services (do not duplicate): strangers never raise a notification,
-`Chat.fromStranger` is computed from the roster, `composing` is sent at most once per 10 s and
-`paused` after 5 s of silence, the status sentence is bounded to 140 characters.
+`Chat.fromStranger` is computed from the roster and `Chat.isRequest` from it plus the history
+(they wrote, we never did), the blocklist is sorted and made bare, `composing` is sent at most once
+per 10 s and `paused` after 5 s of silence, the status sentence is bounded to 140 characters.
