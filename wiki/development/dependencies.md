@@ -41,6 +41,7 @@ listed at the end. Checked on 2026-10-15.
 | `futures-util` | 0.3.34 | MIT or Apache-2.0 | `Stream`/`Sink` extension traits for the WebSocket. Already pulled by `tokio-tungstenite`. |
 | `rand` | 0.10.3 | MIT or Apache-2.0 | The relay token and the SRV weighted draw. |
 | `log` | 0.4.34 | MIT or Apache-2.0 | Relay events behind `RELAY_DEBUG`; silent otherwise. |
+| `notify-rust` | 4.18 (macOS only) | MIT or Apache-2.0 | `set_application`, to claim the app's identifier for dev notifications (`notification_identity.rs`). Already in the tree through `tauri-plugin-notification`. Added 2026-10-16. |
 
 ## The licenses file
 

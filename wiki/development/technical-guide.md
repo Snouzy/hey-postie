@@ -324,15 +324,29 @@ cache is cleared, so the next sign-in tries again.
   `chat.requested` with the chat id. Nothing about the message is logged.
 - Known limits (plugin docs): on Windows a click is reported only while the toast is on screen,
   not from the Action Center.
-- macOS and `tauri dev` (verified in the plugin's `src/desktop.rs`, 2.7.0: `if tauri::is_dev()
-  { "com.apple.Terminal" }`): in dev every notification is sent in the name of **Terminal.app**,
-  whatever terminal launched the app. If Terminal.app is not allowed to notify (System Settings >
-  Notifications > Terminal), or a Focus mode is on, nothing shows while the dock badge still counts.
-  A non-dev build uses the bundle identifier `com.snouzylabs.heypostie`, which macOS only knows once
-  the app is bundled (`pnpm desktop:build`). Assumed, not tested: an unbundled binary cannot claim
-  it, since `setApplication` in `mac-notification-sys` (`objc/notify.m`) only accepts an
-  identifier that Launch Services knows. To test notifications for
-  real, run the bundled `.app` and allow "Hey Postie" in System Settings > Notifications.
+- macOS identity (decision of 2026-10-16: dev notifications come from Hey Postie, because the
+  author chats in `pnpm desktop:dev` every day). The plugin sends in the name of
+  `com.apple.Terminal` whenever `tauri::is_dev()` (`src/desktop.rs`, 2.7.0, lines 520-524); there is
+  no setting for it. `mac-notification-sys` 0.6.15 keeps only the first application name of the
+  process (a `Once`, `src/lib.rs` `set_application`), so `src-tauri/src/notification_identity.rs`
+  claims the identifier of `tauri.conf.json` (`com.snouzylabs.heypostie`) in `setup`, before any
+  notification, and the plugin's own Terminal claim becomes a no-op. Clicks still go through the
+  plugin's `onAction`. Verified in the crate sources on 2026-10-16.
+- The claim only succeeds when Launch Services knows an app with that identifier
+  (`objc/notify.m`, `LSCopyApplicationURLsForBundleIdentifier`). Without one, the claim fails, dev
+  notifications keep coming from Terminal (the swizzle falls back to `com.apple.Terminal`,
+  `objc/notify.h`), and the dev terminal prints how to fix it. **One-time step**: `pnpm
+  desktop:build`, copy `Hey Postie.app` from `apps/desktop/src-tauri/target/release/bundle/macos/`
+  to `/Applications`, open it once, and allow Hey Postie in System Settings > Notifications
+  (banners and sound). `/Applications` rather than a worktree's `target/`, which disappears with
+  the worktree.
+- Side effect, as before with Terminal: the hook answers `NSBundle.mainBundle.bundleIdentifier`
+  for the whole dev process. Tauri creates the configured windows before `setup` (`tauri` 2.12.4,
+  `app.rs` `fn setup`), so the webview's data store is not affected.
+- Points to check: macOS shows the banner under the dev process only if Notification Center
+  accepts a process that is not the registered bundle. The claim was verified (a scratch program
+  got `set_application` → `Ok` on 2026-10-16); a banner seen on screen under "Hey Postie" from a
+  real `pnpm desktop:dev` run has not been confirmed yet.
 
 ### Window focus (`app/focus.ts`)
 

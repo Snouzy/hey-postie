@@ -4,6 +4,8 @@
 mod i18n;
 mod keychain;
 mod links;
+#[cfg(target_os = "macos")]
+mod notification_identity;
 mod relay;
 mod save;
 mod smoke;
@@ -115,6 +117,8 @@ pub fn run() {
             if smoke {
                 app.set_activation_policy(tauri::ActivationPolicy::Accessory);
             }
+            #[cfg(target_os = "macos")]
+            notification_identity::claim(&app.config().identifier);
             app.manage(relay::start()?);
             tray::install(app.handle(), *app.state::<i18n::Language>())?;
             links::arm(app.handle());

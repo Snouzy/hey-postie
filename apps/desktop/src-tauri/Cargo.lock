@@ -1804,6 +1804,7 @@ dependencies = [
  "keyring",
  "keyring-core",
  "log",
+ "notify-rust",
  "percent-encoding",
  "proptest",
  "quick-xml",
