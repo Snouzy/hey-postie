@@ -181,9 +181,12 @@ export function createChatsService(
 export function sanitize(message: Message): Message {
   const body = stripControlCharacters(message.body);
   const reactions = sanitizeReactions(message.reactions);
-  return body === message.body && reactions === message.reactions
-    ? message
-    : { ...message, body, reactions };
+  const versions = message.versions?.map((version) => ({
+    ...version,
+    body: stripControlCharacters(version.body),
+  }));
+  const same = body === message.body && reactions === message.reactions && !versions;
+  return same ? message : { ...message, body, reactions, ...(versions ? { versions } : {}) };
 }
 
 const MAX_REACTIONS = 32;

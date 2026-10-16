@@ -42,6 +42,11 @@ describe('editing and deleting letters', () => {
     await act(async () => fireEvent.keyDown(area, { key: 'Enter' }));
     await waitFor(() => expect(bubble('Hello')).toBeInTheDocument());
     expect(within(bubble('Hello')).getByText('edited')).toBeInTheDocument();
+    // What it said before is one click away.
+    fireEvent.click(within(bubble('Hello')).getByRole('button', { name: 'edited' }));
+    expect(screen.getByRole('dialog', { name: 'Before the corrections' })).toHaveTextContent(
+      'Helo',
+    );
     // A correction, not a second letter.
     expect(deps.fakes.chat.sent.map((m) => m.body)).toEqual(['Helo']);
   });

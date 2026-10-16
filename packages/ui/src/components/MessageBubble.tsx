@@ -5,6 +5,7 @@ import { formatTime } from '../i18n/dates';
 import { cn } from '../lib/cn';
 import { Attachments, type SaveFile } from './Attachments';
 import { Button } from './Button';
+import { EditHistory } from './EditHistory';
 import { Linkify } from './Linkify';
 import { actionsFor, type MessageAction, MessageActions } from './MessageActions';
 import { ReactionBar } from './ReactionBar';
@@ -134,7 +135,7 @@ export function MessageBubble({
       <span
         className={cn(META, (last || status === 'failed' || status === 'pending') && 'opacity-100')}
       >
-        {message.edited && !message.retracted && <span>{text('message.edited')}</span>}
+        {message.edited && !message.retracted && <EditHistory message={message} />}
         <time dateTime={message.sentAt.toISOString()}>{formatTime(locale, message.sentAt)}</time>
         {message.direction === 'out' && (
           <span

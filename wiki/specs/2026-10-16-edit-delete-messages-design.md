@@ -121,8 +121,16 @@ matching methods over Converse; every service method has unit tests against fake
   the hall (with an optional reason).
 - Tests: the rules in `services/editDelete.test.ts`, the mapper, `MessageActions.test.tsx`,
   `Composer.test.tsx` and the whole flow in `screens/EditDelete.test.tsx`.
-- Not yet: the MCP tools (`edit_message`, `retract_message`), and contract tests against the local
-  server (the moderation module is not enabled there yet).
+- **Edit history**: `Message.versions` holds the earlier texts of a corrected letter, oldest first,
+  from Converse's `older_versions` (also for corrections received); "edited" is then a button
+  (`EditHistory`) that lists them with their time. Only what this device saw: a correction made
+  before the history reached this device has no earlier text.
+- **Against the real server** (`edit.contract.test.ts`, run with `pnpm test:contract` and the mkcert
+  root in `NODE_EXTRA_CA_CERTS`, 2026-10-16): alice's correction reaches bob as a `<replace>` naming
+  the first letter; her retraction reaches him as a `<retract>` naming it; bob's correction reaches
+  alice as an edited letter with its earlier text. All three pass.
+- Not yet: the MCP tools (`edit_message`, `retract_message`), and moderation against the server
+  (its module is not enabled on the test server yet).
 
 ## Points to check
 

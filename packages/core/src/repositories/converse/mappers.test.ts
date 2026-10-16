@@ -122,6 +122,26 @@ describe('toMessage', () => {
     expect(fixed).toMatchObject({ body: 'hello', retracted: false, edited: true });
   });
 
+  it('keeps the earlier texts of a corrected letter, oldest first', () => {
+    const fixed = toMessage(
+      model({
+        ...incoming,
+        body: 'third',
+        edited: '2026-10-15T10:02:00Z',
+        older_versions: {
+          '2026-10-15T10:01:00Z': 'second',
+          '2026-10-15T10:00:00Z': 'first',
+          bad: 'skipped',
+        },
+      }),
+      context,
+    );
+    expect(fixed.versions).toEqual([
+      { body: 'first', at: new Date('2026-10-15T10:00:00Z') },
+      { body: 'second', at: new Date('2026-10-15T10:01:00Z') },
+    ]);
+  });
+
   it('tells who took a letter back, with the moderator’s reason', () => {
     const own = toMessage(model({ ...incoming, retracted: '2026-10-15T10:01:00Z' }), context);
     expect(own).toMatchObject({ retracted: true, retractedBy: 'sender' });

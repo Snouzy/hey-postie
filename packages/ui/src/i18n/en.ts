@@ -175,6 +175,7 @@ export const en = {
   'message.action.deleteForEveryone': 'Delete for everyone…',
   'message.action.moderate': 'Remove from the hall…',
   'message.edited': 'edited',
+  'message.versions': 'Before the corrections',
   'message.deleted': 'This letter was deleted.',
   'message.removed': 'A moderator removed this letter.',
   'message.confirm.deleteForEveryone.title': 'Delete for everyone?',

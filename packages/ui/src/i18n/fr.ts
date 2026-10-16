@@ -185,6 +185,7 @@ export const fr: Record<MessageKey, string> = {
   'message.action.deleteForEveryone': 'Supprimer pour tout le monde…',
   'message.action.moderate': 'Retirer du salon…',
   'message.edited': 'modifié',
+  'message.versions': 'Avant les corrections',
   'message.deleted': 'Cette lettre a été supprimée.',
   'message.removed': 'Un modérateur a retiré cette lettre.',
   'message.confirm.deleteForEveryone.title': 'Supprimer pour tout le monde ?',

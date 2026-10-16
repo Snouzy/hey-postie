@@ -53,6 +53,8 @@ export function toMessage(model: MessageModel, context: MessageContext): Message
     edited: Boolean(model.get('edited')),
   };
   if (retracted) message.retractedBy = moderated ? 'moderator' : 'sender';
+  const versions = earlierVersions(model.get('older_versions'));
+  if (message.edited && !retracted && versions.length > 0) message.versions = versions;
   const reason = string(model.get('moderation_reason'));
   if (moderated && reason) message.moderationReason = reason;
   return nick ? { ...message, fromNick: nick } : message;
@@ -255,4 +257,17 @@ export function string(value: unknown): string {
 
 export function number(value: unknown): number {
   return typeof value === 'number' && Number.isFinite(value) ? value : 0;
+}
+
+/**
+ * Converse keeps the texts a correction replaced as `older_versions`: the time each one was
+ * written → its text (`model-with-messages.js:239-255`). Oldest first; anything odd is skipped.
+ */
+function earlierVersions(value: unknown): { body: string; at: Date }[] {
+  if (!value || typeof value !== 'object') return [];
+  return Object.entries(value as Record<string, unknown>)
+    .filter((entry): entry is [string, string] => typeof entry[1] === 'string')
+    .map(([time, body]) => ({ body, at: new Date(time) }))
+    .filter((version) => !Number.isNaN(version.at.getTime()))
+    .sort((a, b) => a.at.getTime() - b.at.getTime());
 }

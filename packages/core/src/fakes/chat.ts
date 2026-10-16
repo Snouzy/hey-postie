@@ -164,7 +164,8 @@ export class FakeChat implements ChatRepository {
   async correct(chatId: string, messageId: string, body: string): Promise<Message> {
     const current = await this.message(chatId, messageId);
     if (!current) throw new DomainError('Unknown', 'Unknown: no such message');
-    const corrected = { ...current, body, edited: true };
+    const versions = [...(current.versions ?? []), { body: current.body, at: current.sentAt }];
+    const corrected = { ...current, body, edited: true, versions };
     this.update(corrected);
     return corrected;
   }

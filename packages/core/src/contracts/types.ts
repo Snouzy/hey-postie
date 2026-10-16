@@ -148,6 +148,8 @@ export interface Message {
   moderationReason?: string;
   /** XEP-0308: the body is a correction of an earlier version. */
   edited?: boolean;
+  /** The earlier texts of a corrected letter, oldest first, as this device saw them. Untrusted. */
+  versions?: { body: string; at: Date }[];
 }
 
 export type Trust = 'untrusted' | 'trusted' | 'verified' | 'blocked';
