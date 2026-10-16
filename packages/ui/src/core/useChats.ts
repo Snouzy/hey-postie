@@ -5,7 +5,8 @@ import { useCoreEvent } from './useCoreEvent';
 
 /**
  * The chat list as the service sorts it. Every `chat.updated` asks the service again rather than
- * patching locally, so the order on screen is always the one `chats.list()` defines.
+ * patching locally, so the order on screen is always the one `chats.list()` defines. A
+ * `contact.updated` asks again too: whether a chat is a stranger's depends on the address book.
  */
 export function useChats(): { chats: Chat[]; refresh: () => Promise<void> } {
   const core = useCore();
@@ -22,5 +23,6 @@ export function useChats(): { chats: Chat[]; refresh: () => Promise<void> } {
     refresh().catch(() => setChats([]));
   }, [refresh]);
   useCoreEvent('chat.updated', () => void refresh().catch(() => {}));
+  useCoreEvent('contact.updated', () => void refresh().catch(() => {}));
   return { chats, refresh };
 }

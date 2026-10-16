@@ -25,10 +25,12 @@ export async function withChat(
   body = 'hello',
   encryption?: 'undecryptable',
 ) {
+  const name = jid.split('@')[0] ?? jid;
   act(() => {
+    // A contact: a stranger's letter waits in the requests group, not in the chat list.
+    deps.fakes.roster.seed({ jid, name, presence: 'offline', subscription: 'both' });
     deps.fakes.chat.receive({ chatId: jid, fromJid: jid, body, ...(encryption && { encryption }) });
   });
-  const name = jid.split('@')[0] ?? jid;
   fireEvent.click(await screen.findByRole('button', { name: new RegExp(name) }));
   return screen.getByRole('region', { name });
 }

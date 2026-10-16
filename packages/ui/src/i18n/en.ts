@@ -131,6 +131,22 @@ export const en = {
   'conversation.empty': 'A blank page',
   'conversation.emptyHint': 'No letter here yet. I will carry the first one.',
 
+  'requests.title': 'Message requests',
+  'requests.waiting': 'waiting',
+  'requests.explain':
+    'Someone outside your address book would like to write to you. Until you decide, I keep their letters here: no bell rings, and no picture of theirs is fetched.',
+  'requests.theirNote': 'Their note',
+  'requests.accepting':
+    'Accepting adds them to your address book, lets them see when you are around, and moves this chat in with the others.',
+  'requests.accept': 'Accept',
+  'requests.ignore': 'Ignore',
+  'requests.block': 'Block…',
+  'requests.blockTitle': 'Block',
+  'requests.confirmBlock':
+    'Block {name}? The server will drop everything they send: letters, parcels and requests. I will not hear from them again.',
+  'requests.confirm': 'Block',
+  'requests.lettersHeld': 'Letters held at the door',
+
   'message.undecryptable': 'This letter was sealed for another device. I cannot open it here.',
   'message.loadOlder': 'Load older',
   'message.retry': 'Retry',

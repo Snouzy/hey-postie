@@ -246,6 +246,13 @@ describe('A hall', () => {
   it('puts a freshly joined hall at the top of the list', async () => {
     const { deps, core } = await signedIn();
     act(() => {
+      // A contact: a stranger's letter waits in the requests group, not in the chat list.
+      deps.fakes.roster.seed({
+        jid: 'bob@x.org',
+        name: 'bob',
+        presence: 'offline',
+        subscription: 'both',
+      });
       deps.fakes.chat.receive({ chatId: 'bob@x.org', fromJid: 'bob@x.org', body: 'hi' });
     });
     await screen.findByRole('button', { name: /bob/ });

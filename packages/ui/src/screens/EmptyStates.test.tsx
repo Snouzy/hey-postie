@@ -59,6 +59,13 @@ describe('Empty states', () => {
 
   it('shows nothing to show, and still closes, when the pane is open on a hall without a record', async () => {
     const { deps } = await signedIn();
+    // A contact: a stranger's letter waits in the requests group, not in the chat list.
+    deps.fakes.roster.seed({
+      jid: 'bob@x.org',
+      name: 'Bob',
+      presence: 'online',
+      subscription: 'both',
+    });
     act(() => {
       deps.fakes.chat.receive({ chatId: 'bob@x.org', fromJid: 'bob@x.org', body: 'hi' });
       deps.fakes.chat.receive({ chatId: HALL, kind: 'room', fromJid: `${HALL}/bob`, body: 'old' });
