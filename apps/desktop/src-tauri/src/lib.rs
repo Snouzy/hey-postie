@@ -107,7 +107,14 @@ pub fn run() {
         })
         .manage(login)
         .manage(i18n::system_language())
+        .manage(window::Smoke(smoke))
         .setup(move |app| {
+            // A `--smoke` run is driven by a script while someone may be working: no dock icon,
+            // no activation, the window never takes the focus (see `window.rs`).
+            #[cfg(target_os = "macos")]
+            if smoke {
+                app.set_activation_policy(tauri::ActivationPolicy::Accessory);
+            }
             app.manage(relay::start()?);
             tray::install(app.handle(), *app.state::<i18n::Language>())?;
             links::arm(app.handle());
