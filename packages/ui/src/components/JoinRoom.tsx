@@ -18,7 +18,7 @@ interface JoinRoomProps {
 type Tab = 'address' | 'browse';
 
 /**
- * "Join a room": an address and a nick, or the server's directory to pick one from. The password
+ * "Join a hall": an address and a nick, or the server's directory to pick one from. The password
  * field appears only once the hall asks for it.
  */
 export function JoinRoom({ account, onJoined, onClose }: JoinRoomProps) {

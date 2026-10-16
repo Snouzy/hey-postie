@@ -23,12 +23,12 @@ function atTheDoor(deps: FakeDependencies) {
 }
 
 async function openRequests() {
-  const group = await screen.findByRole('button', { name: /Message requests/ });
+  const group = await screen.findByRole('button', { name: /Letters from strangers/ });
   fireEvent.click(group);
   return group;
 }
 
-describe('Message requests', () => {
+describe('Letters from strangers', () => {
   it('lists pending requests and strangers who wrote, most recent first, with the count', async () => {
     await signedIn(atTheDoor);
     const group = await openRequests();
@@ -82,7 +82,7 @@ describe('Message requests', () => {
       expect.objectContaining({ jid: 'eve@x.org' }),
     ]);
     // The chat now sits among the chats, and the group counts Eve alone.
-    const group = screen.getByRole('button', { name: /Message requests/ });
+    const group = screen.getByRole('button', { name: /Letters from strangers/ });
     expect(group).toHaveTextContent('1');
     const chats = screen.getAllByRole('button', { name: /^frank/ });
     expect(chats.some((row) => row.getAttribute('aria-current') === 'true')).toBe(true);
@@ -100,11 +100,11 @@ describe('Message requests', () => {
     );
     expect(await deps.fakes.roster.requests()).toEqual([]);
     expect(screen.getByText(/No letter open/)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Message requests/ })).toHaveTextContent('1');
+    expect(screen.getByRole('button', { name: /Letters from strangers/ })).toHaveTextContent('1');
 
     act(() => deps.fakes.roster.request({ jid: 'eve@x.org', name: 'Eve', message: 'Again' }));
     await waitFor(() =>
-      expect(screen.getByRole('button', { name: /Message requests/ })).toHaveTextContent('2'),
+      expect(screen.getByRole('button', { name: /Letters from strangers/ })).toHaveTextContent('2'),
     );
   });
 
@@ -126,17 +126,21 @@ describe('Message requests', () => {
     fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Block' }));
     await waitFor(() => expect(deps.fakes.roster.blocked.has('eve@x.org')).toBe(true));
     expect(screen.queryByRole('region', { name: 'Eve' })).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Message requests/ })).toHaveTextContent('1');
+    expect(screen.getByRole('button', { name: /Letters from strangers/ })).toHaveTextContent('1');
 
     // Like a server with XEP-0191: a new request from a blocked JID gets nowhere.
     act(() => deps.fakes.roster.request({ jid: 'eve@x.org', name: 'Eve' }));
-    expect(screen.getByRole('button', { name: /Message requests/ })).toHaveTextContent('1');
+    expect(screen.getByRole('button', { name: /Letters from strangers/ })).toHaveTextContent('1');
   });
 
   it('shows the group only when someone is at the door', async () => {
     const { deps } = await signedIn();
-    expect(screen.queryByRole('button', { name: /Message requests/ })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: /Letters from strangers/ }),
+    ).not.toBeInTheDocument();
     act(() => deps.fakes.roster.request({ jid: 'eve@x.org', name: 'Eve' }));
-    expect(await screen.findByRole('button', { name: /Message requests/ })).toHaveTextContent('1');
+    expect(await screen.findByRole('button', { name: /Letters from strangers/ })).toHaveTextContent(
+      '1',
+    );
   });
 });
