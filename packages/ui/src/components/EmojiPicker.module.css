@@ -44,15 +44,21 @@
   display: grid;
   /* minmax(0, 1fr): a wide glyph (a flag, a family) never widens its column past the card. */
   grid-template-columns: repeat(8, minmax(0, 1fr));
-  gap: 2px;
+  /* Rows get an explicit height: `aspect-ratio` on a <button> is not honoured by WebKit, and a
+     cell without padding would then be only as tall as its glyph. */
+  grid-auto-rows: 36px;
+  gap: 4px;
   max-height: 240px;
   overflow-x: hidden;
   overflow-y: auto;
 }
 
 .cell {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   min-width: 0;
-  aspect-ratio: 1;
+  height: 36px;
   padding: 0;
   overflow: hidden;
   border: none;

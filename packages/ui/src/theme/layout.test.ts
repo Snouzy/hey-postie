@@ -58,6 +58,9 @@ describe('what scrolls', () => {
     expect(rule(picker, '.grid')).toContain(`repeat(${COLUMNS}, minmax(0, 1fr))`);
     expect(rule(picker, '.grid')).toMatch(/overflow-x:\s*hidden;/);
     expect(rule(picker, '.cell')).toMatch(/min-width:\s*0;/);
+    // WebKit ignores aspect-ratio on a <button>: the rows carry the height.
+    expect(rule(picker, '.grid')).toMatch(/grid-auto-rows:\s*\d+px;/);
+    expect(rule(picker, '.cell')).toMatch(/height:\s*\d+px;/);
     expect(rule(picker, '.picker')).toMatch(/width:\s*320px;/);
   });
 });
