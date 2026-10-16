@@ -14,7 +14,8 @@ https://github.com/user-attachments/assets/9db9c88e-9c1c-4163-825b-9db26ada2a22
 
 ## Keep your server. Upgrade the experience.
 
-Hey Postie is an open-source XMPP client for macOS, Windows and Linux. It works with existing XMPP
+Hey Postie is an open-source XMPP client for macOS, Windows and Linux (the Windows and Linux
+builds are not tested yet). It works with existing XMPP
 servers and with people using Conversations, Gajim, Monal, Dino and other federated clients.
 
 The current code includes:
@@ -22,7 +23,7 @@ The current code includes:
 - one-to-one conversations and group rooms;
 - OMEMO end-to-end encryption;
 - files, images, reactions and server-backed history;
-- local search, read synchronization and desktop notifications;
+- search in a conversation, read state synchronized across your devices, desktop notifications;
 - a local MCP server that lets Claude read, draft and act through explicit permission levels.
 
 Claude access is off by default. Direct sending requires the highest permission level and an
@@ -95,12 +96,10 @@ release; sources and caveats in [the report](wiki/reports/2026-10-17-xmpp-client
 
 ¹ Built for them, not tested on them yet. ² Not yet tested against a server that has the module.
 
-**In short.** Gajim comes closest on features; Hey Postie adds a real Mac app, full
-reactions, the "read" state for the sender, and an interface that takes after Slack rather than
-after a 2005 instant messenger. Against Fluux, the other modern one, it keeps encryption the phone
-apps can read (OMEMO), and lets you create your account from the app. And Claude can read, draft
-and, with your approval, send. **Why not, yet**: there is no release to download, Gajim and Dino
-have years of use behind them, and search across all conversations is still to come.
+**In short.** Gajim comes closest on features. Hey Postie adds a real Mac app, full reactions,
+the "read" state for the sender and an interface built for teams. Fluux, the other modern client,
+has no encryption the phone apps can read. Still missing on our side: a public release, search
+across all conversations, and link previews in one-to-one chats.
 
 ## Business model
 
