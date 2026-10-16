@@ -14,17 +14,21 @@ interface DialogProps {
   children: ReactNode;
 }
 
-const FOCUSABLE = 'input, textarea, button, a[href], [tabindex]';
+const FOCUSABLE = 'input, textarea, select, button, a[href], [tabindex]';
 
 /**
  * A modal card. Focus starts on the element marked `data-autofocus`, else in the first field,
  * else on the card; Tab cycles inside it, Esc or the close button closes it and focus goes back
- * to whatever opened it.
+ * to whatever opened it. Everything outside the card is `inert` while it is open, so a screen
+ * reader's cursor cannot wander behind it either.
  */
 export function Dialog({ title, onClose, closable = true, size = 'small', children }: DialogProps) {
   const text = useText();
   const titleId = useId();
   const card = useRef<HTMLDivElement>(null);
+  const backdrop = useRef<HTMLDivElement>(null);
+
+  useEffect(() => (backdrop.current ? inertOutside(backdrop.current) : undefined), []);
 
   useEffect(() => {
     const opener = document.activeElement;
@@ -67,7 +71,7 @@ export function Dialog({ title, onClose, closable = true, size = 'small', childr
   }
 
   return (
-    <div className={styles.backdrop}>
+    <div ref={backdrop} className={styles.backdrop}>
       <div
         ref={card}
         className={size === 'large' ? `${styles.card} ${styles.large}` : styles.card}
@@ -94,4 +98,24 @@ export function Dialog({ title, onClose, closable = true, size = 'small', childr
       </div>
     </div>
   );
+}
+
+/** Marks every sibling on the way up to `body` as `inert`; returns the undo. */
+function inertOutside(element: HTMLElement): () => void {
+  const marked: Element[] = [];
+  for (
+    let node: HTMLElement | null = element;
+    node && node !== document.body;
+    node = node.parentElement
+  ) {
+    for (const sibling of node.parentElement?.children ?? []) {
+      if (sibling !== node && !sibling.hasAttribute('inert')) {
+        sibling.setAttribute('inert', '');
+        marked.push(sibling);
+      }
+    }
+  }
+  return () => {
+    for (const sibling of marked) sibling.removeAttribute('inert');
+  };
 }

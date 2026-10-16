@@ -91,12 +91,15 @@ export function AccountMenu({
     if (!root.current?.contains(event.relatedTarget as Node | null)) setOpen(false);
   }
 
+  // Heard on the whole card: Esc closes it from the picker and the status field too.
+  function onCardKeyDown(event: KeyboardEvent<HTMLDivElement>) {
+    if (event.key !== 'Escape') return;
+    event.preventDefault();
+    event.stopPropagation();
+    close();
+  }
+
   function onKeyDown(event: KeyboardEvent<HTMLDivElement>) {
-    if (event.key === 'Escape') {
-      event.preventDefault();
-      event.stopPropagation();
-      return close();
-    }
     if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') return;
     event.preventDefault();
     const all = items();
@@ -131,7 +134,8 @@ export function AccountMenu({
         <ChevronDown size={16} aria-hidden />
       </button>
       {open && (
-        <div className={styles.card}>
+        // biome-ignore lint/a11y/noStaticElementInteractions: the keys are handled for the controls inside
+        <div className={styles.card} onKeyDown={onCardKeyDown} onBlur={onBlur}>
           <p className={styles.jid}>{account.jid}</p>
           <fieldset className={styles.presence} disabled={!online}>
             <legend className={styles.legend}>{text('accountMenu.presence')}</legend>
@@ -183,7 +187,6 @@ export function AccountMenu({
             role="menu"
             aria-label={text('accountMenu.open')}
             onKeyDown={onKeyDown}
-            onBlur={onBlur}
           >
             <button
               type="button"

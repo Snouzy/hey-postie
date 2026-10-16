@@ -1,4 +1,4 @@
-import { type FormEvent, useState } from 'react';
+import { type FormEvent, useId, useState } from 'react';
 import { useText } from '../core/CoreProvider';
 import type { MessageKey } from '../i18n';
 import { Button } from './Button';
@@ -16,6 +16,7 @@ interface NewChatProps {
 /** "+" in the sidebar: a JID, handed to Main which opens the chat (and shows any error). */
 export function NewChat({ error, onOpen, onClose }: NewChatProps) {
   const text = useText();
+  const errorId = useId();
   const [jid, setJid] = useState('');
 
   function submit(event: FormEvent) {
@@ -33,9 +34,11 @@ export function NewChat({ error, onOpen, onClose }: NewChatProps) {
           value={jid}
           onChange={(e) => setJid(e.target.value)}
           required
+          aria-invalid={error ? true : undefined}
+          aria-describedby={error ? errorId : undefined}
         />
         {error && (
-          <p className={styles.error} role="alert">
+          <p id={errorId} className={styles.error} role="alert">
             {text(error)}
           </p>
         )}

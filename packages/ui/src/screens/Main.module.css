@@ -1,7 +1,15 @@
 .main {
   height: 100%;
   display: flex;
-  overflow: hidden;
+  /* Zoomed past the minimum window, the columns scroll sideways rather than squash or clip. */
+  overflow: auto;
+}
+
+.center {
+  flex: 1;
+  min-width: 320px;
+  display: flex;
+  flex-direction: column;
 }
 
 .empty {

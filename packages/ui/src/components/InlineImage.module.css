@@ -49,7 +49,7 @@
   display: inline-flex;
   padding: 2px;
   border-radius: var(--radius-sm);
-  background: var(--kraft);
+  background: var(--kraft-ink);
   color: var(--paper);
 }
 

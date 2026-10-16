@@ -65,4 +65,14 @@ describe('Composer', () => {
     await waitFor(() => expect(area).toHaveValue(''));
     expect(onComposing).toHaveBeenLastCalledWith(false);
   });
+
+  it('keeps the file input out of the Tab order: the paperclip is the one stop', () => {
+    const { core } = setupCore();
+    renderWithCore(<Composer onSend={vi.fn(async () => {})} onAttach={vi.fn()} />, core);
+    const [input, button] = screen.getAllByLabelText('Attach a parcel');
+    expect(input).toHaveAttribute('type', 'file');
+    expect(input).toHaveAttribute('tabindex', '-1');
+    expect(button).toHaveAttribute('type', 'button');
+    expect(button).not.toHaveAttribute('tabindex');
+  });
 });

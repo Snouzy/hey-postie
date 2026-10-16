@@ -1,5 +1,5 @@
 import { type Account, DomainError, type Room } from '@hey-postie/core';
-import { type FormEvent, useEffect, useState } from 'react';
+import { type FormEvent, useEffect, useId, useState } from 'react';
 import { useCore, useText } from '../core/CoreProvider';
 import type { MessageKey } from '../i18n';
 import { errorKey } from '../i18n/errors';
@@ -24,6 +24,7 @@ type Tab = 'address' | 'browse';
 export function JoinRoom({ account, onJoined, onClose }: JoinRoomProps) {
   const core = useCore();
   const text = useText();
+  const errorId = useId();
   const [localPart, domain] = account.jid.split('@');
   const [tab, setTab] = useState<Tab>('address');
   const [jid, setJid] = useState('');
@@ -94,6 +95,8 @@ export function JoinRoom({ account, onJoined, onClose }: JoinRoomProps) {
             value={jid}
             onChange={(e) => setJid(e.target.value)}
             required
+            aria-invalid={error && !needsPassword ? true : undefined}
+            aria-describedby={error && !needsPassword ? errorId : undefined}
           />
           <Field
             label={text('joinRoom.nick')}
@@ -111,7 +114,7 @@ export function JoinRoom({ account, onJoined, onClose }: JoinRoomProps) {
             />
           )}
           {error && (
-            <p className={styles.error} role="alert">
+            <p id={errorId} className={styles.error} role="alert">
               {text(error)}
             </p>
           )}

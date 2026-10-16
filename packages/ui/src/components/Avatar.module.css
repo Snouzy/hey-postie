@@ -19,7 +19,7 @@
 }
 
 .avatar[data-tone='kraft'] {
-  --tone: var(--kraft);
+  --tone: var(--kraft-ink);
 }
 
 .avatar[data-tone='success'] {

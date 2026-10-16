@@ -1,4 +1,4 @@
-import { type FormEvent, useState } from 'react';
+import { type FormEvent, useId, useState } from 'react';
 import { useCore, useText } from '../core/CoreProvider';
 import type { MessageKey } from '../i18n';
 import { errorKey } from '../i18n/errors';
@@ -15,6 +15,7 @@ interface AddContactProps {
 export function AddContact({ onClose }: AddContactProps) {
   const core = useCore();
   const text = useText();
+  const errorId = useId();
   const [jid, setJid] = useState('');
   const [name, setName] = useState('');
   const [error, setError] = useState<MessageKey | null>(null);
@@ -39,6 +40,8 @@ export function AddContact({ onClose }: AddContactProps) {
           value={jid}
           onChange={(e) => setJid(e.target.value)}
           required
+          aria-invalid={error ? true : undefined}
+          aria-describedby={error ? errorId : undefined}
         />
         <Field
           label={text('addContact.name')}
@@ -47,7 +50,7 @@ export function AddContact({ onClose }: AddContactProps) {
           onChange={(e) => setName(e.target.value)}
         />
         {error && (
-          <p className={styles.error} role="alert">
+          <p id={errorId} className={styles.error} role="alert">
             {text(error)}
           </p>
         )}

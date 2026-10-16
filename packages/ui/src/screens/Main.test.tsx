@@ -230,4 +230,10 @@ describe('Main', () => {
     act(() => deps.fakes.chat.receiveChatState('bob@x.org', 'bob@x.org', 'paused'));
     await waitFor(() => expect(screen.queryByText(/is typing/)).not.toBeInTheDocument());
   });
+
+  it('exposes the conversation column as the main landmark', async () => {
+    await signedIn();
+    expect(screen.getByRole('main')).toBeInTheDocument();
+    expect(screen.getByRole('navigation')).not.toContainElement(screen.getByRole('main'));
+  });
 });

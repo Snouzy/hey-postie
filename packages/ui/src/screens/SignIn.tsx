@@ -1,4 +1,4 @@
-import { type FormEvent, useRef, useState } from 'react';
+import { type FormEvent, useId, useRef, useState } from 'react';
 import { Button } from '../components/Button';
 import { Field } from '../components/Field';
 import { useCore, useText } from '../core/CoreProvider';
@@ -21,6 +21,7 @@ export function SignIn({ onBack, prefill }: SignInProps) {
   const core = useCore();
   const text = useText();
   const account = useAccount();
+  const messageId = useId();
   const [jid, setJid] = useState(prefill?.jid ?? '');
   const [password, setPassword] = useState('');
   const [remember, setRemember] = useState(true);
@@ -62,6 +63,9 @@ export function SignIn({ onBack, prefill }: SignInProps) {
   }
 
   const mood = connecting ? 'delivering' : error ? 'oops' : 'sealed';
+  // Which field Postie's sentence is about, so a screen reader hears it from there.
+  const jidInvalid = error === 'error.InvalidJid';
+  const passwordInvalid = error === 'error.InvalidCredentials';
 
   return (
     <main className={styles.signIn}>
@@ -79,6 +83,8 @@ export function SignIn({ onBack, prefill }: SignInProps) {
           onBlur={() => void prefillPassword()}
           disabled={connecting}
           required
+          aria-invalid={jidInvalid || undefined}
+          aria-describedby={jidInvalid ? messageId : undefined}
         />
         <Field
           label={text('signIn.password')}
@@ -89,6 +95,8 @@ export function SignIn({ onBack, prefill }: SignInProps) {
           onChange={(e) => setPassword(e.target.value)}
           disabled={connecting}
           required
+          aria-invalid={passwordInvalid || undefined}
+          aria-describedby={passwordInvalid ? messageId : undefined}
         />
         <label className={styles.remember}>
           <input
@@ -99,7 +107,7 @@ export function SignIn({ onBack, prefill }: SignInProps) {
           />
           {text('signIn.remember')}
         </label>
-        <p className={styles.message} role={error ? 'alert' : 'status'}>
+        <p id={messageId} className={styles.message} role={error ? 'alert' : 'status'}>
           {connecting ? text('signIn.connecting') : error ? text(error) : ''}
         </p>
         <div className={styles.actions}>

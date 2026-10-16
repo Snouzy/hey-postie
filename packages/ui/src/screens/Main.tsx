@@ -220,54 +220,56 @@ export function Main({ account, onOpenLink, onSaveFile, onLeave }: MainProps) {
         onDeleteAccount={() => setDialog('deleteAccount')}
         onSignInAgain={() => void leave('signIn')}
       />
-      {request ? (
-        <MessageRequest
-          key={request.jid}
-          row={request}
-          // Accepted: the service put them in the address book; open the chat as a normal one.
-          onAccepted={(jid) => void openWith(jid)}
-          onIgnored={(jid) => {
-            requests.hide(jid);
-            setRequestJid(null);
-            setSelected(null);
-          }}
-          onBlocked={(jid) => {
-            requests.hide(jid);
-            void requests.refresh().catch(() => {});
-            setRequestJid(null);
-            setSelected(null);
-          }}
-          onOpenLink={onOpenLink}
-          onSaveFile={onSaveFile}
-        />
-      ) : chat ? (
-        <Conversation
-          // A new key per chat: the draft, the loaded messages and in-flight work stay with their chat.
-          key={chat.id}
-          chat={chat}
-          contact={contact}
-          room={room}
-          detailsOpen={detailsOpen}
-          onToggleDetails={() => showDetails(false)}
-          onOpenEncryption={() => showDetails(true)}
-          onOpenLink={onOpenLink}
-          onSaveFile={onSaveFile}
-          uploads={uploads.forChat(chat.id)}
-        />
-      ) : welcoming ? (
-        <section className={styles.empty}>
-          <WelcomeCard onDismiss={dismissWelcome} />
-        </section>
-      ) : (
-        <section className={styles.empty}>
-          <EmptyState
-            size="full"
-            illustration={<Postie mood="waving" label={text('postie.alt.waving')} />}
-            title={text('main.emptyTitle')}
-            sentence={text('main.empty')}
+      <main className={styles.center}>
+        {request ? (
+          <MessageRequest
+            key={request.jid}
+            row={request}
+            // Accepted: the service put them in the address book; open the chat as a normal one.
+            onAccepted={(jid) => void openWith(jid)}
+            onIgnored={(jid) => {
+              requests.hide(jid);
+              setRequestJid(null);
+              setSelected(null);
+            }}
+            onBlocked={(jid) => {
+              requests.hide(jid);
+              void requests.refresh().catch(() => {});
+              setRequestJid(null);
+              setSelected(null);
+            }}
+            onOpenLink={onOpenLink}
+            onSaveFile={onSaveFile}
           />
-        </section>
-      )}
+        ) : chat ? (
+          <Conversation
+            // A new key per chat: the draft, the loaded messages and in-flight work stay with their chat.
+            key={chat.id}
+            chat={chat}
+            contact={contact}
+            room={room}
+            detailsOpen={detailsOpen}
+            onToggleDetails={() => showDetails(false)}
+            onOpenEncryption={() => showDetails(true)}
+            onOpenLink={onOpenLink}
+            onSaveFile={onSaveFile}
+            uploads={uploads.forChat(chat.id)}
+          />
+        ) : welcoming ? (
+          <section className={styles.empty}>
+            <WelcomeCard onDismiss={dismissWelcome} />
+          </section>
+        ) : (
+          <section className={styles.empty}>
+            <EmptyState
+              size="full"
+              illustration={<Postie mood="waving" label={text('postie.alt.waving')} />}
+              title={text('main.emptyTitle')}
+              sentence={text('main.empty')}
+            />
+          </section>
+        )}
+      </main>
       {chat && detailsOpen && (
         <DetailsPane
           chat={chat}
