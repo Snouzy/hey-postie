@@ -68,6 +68,11 @@ export interface ChatsService {
   messages(chatId: string): Promise<Message[]>;
   /** Loads the page before the oldest message already loaded; returns it (oldest first). */
   loadOlder(chatId: string): Promise<Message[]>;
+  /**
+   * A page of history that changes nothing in the open chat's paging (for Claude): the newest
+   * messages, or those before `before`, oldest first, at most `limit` (`MESSAGE_PAGE_SIZE`).
+   */
+  history(chatId: string, options?: { before?: string; limit?: number }): Promise<Message[]>;
   /** Trims the body; refuses an empty one with `EmptyMessage`. */
   send(chatId: string, body: string): Promise<Message>;
   /** Toggles one emoji of this account on a message. */

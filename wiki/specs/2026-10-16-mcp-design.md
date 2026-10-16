@@ -72,7 +72,7 @@ one Claude Code rule (`mcp__hey-postie__read_*` and so on) while writes keep ask
 |---|---|---|---|---|---|
 | `list_chats` | Chats and halls by last activity: name, JID, kind, unread count, sealed or not, last-letter preview. Filters `unread_only`, `kind`; cursor. | `chats.list`, `rooms.list` | ✓ | | ✓ |
 | `get_chat` | One chat or hall: title, JID, sealed, members and roles (hall), topic, peer presence. | `chats`, `rooms.members`, `contacts.list` | ✓ | | ✓ |
-| `read_messages` | Messages of one chat, newest page first (default 30, max 100), `before` cursor; never marks as read. | `chats.messages`, `chats.loadOlder` | ✓ | | ✓ |
+| `read_messages` | Messages of one chat, the newest page or the page `before` a message id (default 30, max 50); never marks as read. | `chats.history` | ✓ | | ✓ |
 | `find_contacts` | Contacts matching a name or JID, with presence. | `contacts.list` | ✓ | | ✓ |
 | `draft_message` | Put text in the composer of an existing chat or a contact's chat; the user edits and sends it. Nothing is sent. | `assistant.draft` | | | |
 | `send_message` | Send text at once, only in the `readDraftAndSend` mode; `requiresUserInteraction`, so Claude Code asks the user before each call. | `chats.send` | | | |
@@ -189,10 +189,10 @@ an MCPB bundle on the site later. Neither ships in the App Store build.
 - **Headers to forward** from Rust, or the SDK answers 400: `MCP-Protocol-Version`, `Mcp-Method`,
   `Mcp-Name` (spec 2026-07-28), with `Content-Type` and `Accept`. Older clients (2025-11-25) are
   answered in SSE; 2026-07-28 ones in plain JSON.
-- **Deferred to keep it small**: `read_messages` returns the latest messages the service holds (at
-  most 50), with no `before` cursor yet (the service's `loadOlder` is shared with the UI, so the
-  cursor needs a stateless history call in `ChatsService` first); results are text only, no
-  `structuredContent` yet.
+- **History**: `read_messages` pages back with `before=<message id>`, given on the answer's last
+  line ("More: read_messages chat=… before=…"), over `ChatsService.history`, a stateless call that
+  leaves the open chat's paging (`loadOlder`) alone and leaves hidden letters out (added
+  2026-10-16). Results are text only, no `structuredContent` yet.
 - Tests (`server.test.ts`) call the handler with real 2026-07-28 requests on a signed-in core over
   fakes: the tool list and annotations, sealed chats hidden, fenced bodies, contacts, signed out,
   drafts refused, delivered (nothing sent) and kept out of sealed chats, and direct sending refused

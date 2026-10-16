@@ -119,3 +119,17 @@ describe('moderating a hall', () => {
     expect(deps.fakes.room.moderated).toEqual([]);
   });
 });
+
+describe('history pages', () => {
+  it('pages back without moving the open chat’s paging, hidden letters left out', async () => {
+    deps.fakes.chat.history('bob@x.org', [{ ...fromBob(), id: 'old1', body: 'old one' }]);
+    const live = [fromBob(), fromBob()];
+    await core.chats.hideForMe('bob@x.org', live[0]?.id ?? '');
+    const newest = await core.chats.history('bob@x.org', { limit: 2 });
+    expect(newest.map((m) => m.id)).toEqual([live[1]?.id]);
+    const before = await core.chats.history('bob@x.org', { before: live[0]?.id ?? '' });
+    expect(before.map((m) => m.body)).toContain('old one');
+    // The open chat's own paging did not move.
+    expect(await core.chats.loadOlder('bob@x.org')).toEqual([]);
+  });
+});

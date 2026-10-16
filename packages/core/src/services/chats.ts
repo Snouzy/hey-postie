@@ -108,6 +108,11 @@ export function createChatsService(
       remember(oldest, chatId, messages);
       return visible(messages);
     },
+    async history(chatId, options = {}) {
+      const limit = Math.min(Math.max(1, options.limit ?? MESSAGE_PAGE_SIZE), MESSAGE_PAGE_SIZE);
+      const page = options.before ? { before: options.before, limit } : { limit };
+      return visible((await deps.chat.messages(chatId, page)).map(sanitize));
+    },
     async send(chatId, body) {
       const trimmed = body.trim();
       if (!trimmed) throw new DomainError('EmptyMessage');

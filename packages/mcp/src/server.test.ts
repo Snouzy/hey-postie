@@ -135,3 +135,28 @@ describe('sending directly', () => {
     expect(t.deps.fakes.chat.sent).toHaveLength(0);
   });
 });
+
+describe('history', () => {
+  it('goes back a page with the id the previous answer gave', async () => {
+    t.deps.fakes.chat.history('bob@x.org', [
+      {
+        id: 'old1',
+        chatId: 'bob@x.org',
+        fromJid: 'bob@x.org',
+        body: 'An old letter',
+        sentAt: new Date(2026, 0, 1),
+        direction: 'in',
+        status: 'delivered',
+        encryption: 'none',
+        attachments: [],
+        reactions: [],
+        isMention: false,
+      },
+    ]);
+    const first = await t.call('read_messages', { chat: 'bob@x.org', limit: 1 });
+    const cursor = /before=(\S+)/.exec(first.text)?.[1];
+    expect(cursor).toBeTruthy();
+    const older = await t.call('read_messages', { chat: 'bob@x.org', before: cursor });
+    expect(older.text).toContain('<message>An old letter</message>');
+  });
+});
