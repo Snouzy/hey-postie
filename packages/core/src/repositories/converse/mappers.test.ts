@@ -7,6 +7,7 @@ function model(attrs: Record<string, unknown>): MessageModel {
   return {
     get: (key) => attrs[key],
     save: () => undefined,
+    set: () => undefined,
     on: () => undefined,
     off: () => undefined,
   };
@@ -185,6 +186,10 @@ describe('toContact', () => {
       getDisplayName: () => 'Juliet',
       getStatus: () => status,
       isUnsaved: () => subscription === undefined,
+      authorize: () => contact(status, 'from'),
+      unauthorize: () => contact(status, subscription),
+      subscribeToPresence: () => contact(status, subscription),
+      destroy: () => undefined,
     };
   }
 
@@ -296,6 +301,7 @@ describe('toChat for a room', () => {
         num_unread: 1,
         num_unread_general: 3,
       }),
+      notifications: model({}),
       messages: {
         models: [],
         length: 0,

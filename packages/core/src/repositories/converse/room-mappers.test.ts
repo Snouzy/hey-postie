@@ -10,6 +10,7 @@ function model(attrs: Record<string, unknown>): BookmarkModel {
   return {
     get: (key) => attrs[key],
     save: () => undefined,
+    set: () => undefined,
     on: () => undefined,
     off: () => undefined,
   };
@@ -20,6 +21,7 @@ function room(attrs: Record<string, unknown>, status: number | null = ENTERED): 
   return {
     ...model({ type: 'chatroom', ...attrs }),
     ...(status === null ? {} : { session: model({ connection_status: status }) }),
+    notifications: model({}),
     occupants: {
       models: [],
       length: 0,
