@@ -3,6 +3,7 @@ node_modules/
 dist/
 .astro/
 apps/desktop/src-tauri/target/
+apps/cli/target/
 apps/desktop/src-tauri/gen/schemas/
 apps/desktop/dist-smoke/
 

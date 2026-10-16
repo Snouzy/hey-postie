@@ -138,6 +138,9 @@ pub fn run() {
         .expect("error while building Hey Postie");
 
     app.run(|_app, _event| {
+        if let tauri::RunEvent::Exit = _event {
+            mcp::forget(_app);
+        }
         // A click on the dock icon while the window is hidden brings it back.
         #[cfg(target_os = "macos")]
         if let tauri::RunEvent::Reopen {

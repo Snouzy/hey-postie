@@ -48,6 +48,12 @@ listed at the end. Checked on 2026-10-15.
 | `log` | 0.4.34 | MIT or Apache-2.0 | Relay events behind `RELAY_DEBUG`; silent otherwise. |
 | `notify-rust` | 4.18 (macOS only) | MIT or Apache-2.0 | `set_application`, to claim the app's identifier for dev notifications (`notification_identity.rs`). Already in the tree through `tauri-plugin-notification`. Added 2026-10-16. |
 
+## Command line (`apps/cli`)
+
+| Crate | Version | License | Why |
+|---|---|---|---|
+| `serde_json` | 1.0.154 | MIT or Apache-2.0 | JSON-RPC requests, the endpoint file, the JSON output. The only dependency of `postie`: arguments and the loopback HTTP request are parsed by hand ([spec](../specs/2026-10-17-agent-cli-design.md)). Added 2026-10-17. |
+
 ## The licenses file
 
 `pnpm run licenses` runs `apps/desktop/scripts/licenses.mjs`, which writes

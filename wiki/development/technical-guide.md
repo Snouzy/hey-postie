@@ -13,6 +13,7 @@ packages/core/     the engine, TypeScript, no React
   src/container.ts createCore(deps): the single place where everything is wired
 packages/ui/       React: theme/, i18n/, illustrations/, screens/, components/
 packages/mcp/      the MCP server for Claude: tools over the core services (spec 2026-10-16-mcp-design)
+apps/cli/          `postie`, the command line for AI agents, a thin client of the MCP endpoint (Rust)
 apps/desktop/      Tauri 2: app/ (Vite entry, Tauri-backed repositories), src-tauri/ (Rust)
 wiki/              this documentation
 tasks/             agents' plans and lessons, untracked
@@ -55,7 +56,7 @@ tasks/             agents' plans and lessons, untracked
 | `pnpm check` | TypeScript, every package. |
 | `pnpm lint` | Biome (lint and format). `pnpm lint:fix` writes the fixes. |
 | `pnpm test` | Vitest, every package. |
-| `pnpm rust` | `cargo fmt --check`, `cargo clippy -D warnings`, `cargo test` in `apps/desktop/src-tauri`. |
+| `pnpm rust` | `cargo fmt --check`, `cargo clippy -D warnings`, `cargo test` in `apps/desktop/src-tauri`, then in `apps/cli`. |
 | `pnpm run licenses` | Regenerates `packages/ui/src/data/licenses.json` from the dependency trees (see [dependencies.md](dependencies.md)). `run` is needed: `pnpm licenses` alone is pnpm's own built-in command. |
 | `pnpm verify` | All of the above, then the Vite build. Must be green before a pull request. |
 | `pnpm --filter @hey-postie/desktop app:dev`, then `/preview.html` | The interface on fakes (`apps/desktop/app/preview.tsx`): a few contacts, chats and a hall, no network. `?theme=dark`, `?layout=bubbles\|lines`, `?density=compact\|spacious`, `?signin=1`, `?click=Add\|New chat` (clicks in order, by aria-label or text). Dev server only, never in the app bundle. |
@@ -153,6 +154,33 @@ changes and stops it (`mcp_stop`) when it goes back to `off`, following `assista
 - **Logs**: `mcp: <method> -> <status>` and refusals by status; never a body or the token.
 - **Sandbox**: listening needs `com.apple.security.network.server` (`Entitlements.plist`, added
   2026-10-16 for this and the XMPP relay, which also listens on loopback).
+- **The endpoint file** (`mcp/discovery.rs`, added 2026-10-17 for the command line below): while
+  the listener runs, `<app data dir>/mcp-endpoint.json` holds `{"url", "token"}`, mode 0600,
+  written atomically at each `mcp_start` (so "New token" rewrites it), removed by `mcp_stop`, a
+  port change and the app's exit (`RunEvent::Exit`), only if it still names this window's port.
+  A write failure is logged (file name only) and costs only the command line.
+
+### The command line, `postie` (`apps/cli/`)
+
+Agents with a shell reach the same tools with commands ([spec](../specs/2026-10-17-agent-cli-design.md),
+skill in `.claude/skills/postie-cli/SKILL.md` and `docs/agents/postie-cli/SKILL.md`). A small Rust
+binary, its own crate (only `serde_json`), not bundled with the app yet: `cargo install --path
+apps/cli` puts `postie` on the `PATH`.
+
+| File | Role |
+|---|---|
+| `commands.rs` | The table: one row per MCP tool (group, name, tool, positionals, options), and the parser that turns arguments into `tools/call` arguments. `-` as a text value reads stdin. |
+| `help.rs` | `--help` at every level, written from the table. |
+| `endpoint.rs` | `POSTIE_MCP_TOKEN` (+ `POSTIE_MCP_URL`), else the endpoint file in Tauri's app data dir (on macOS also the sandboxed container). Only `127.0.0.1` or `localhost`. |
+| `http.rs` | One HTTP/1.1 POST over a `TcpStream`, `Connection: close`; parses the answer (chunked too). |
+| `mcp.rs` | The stateless JSON-RPC request of spec 2026-07-28 (`_meta` with version, client info, capabilities; `Mcp-Method`, `Mcp-Name`), and the answer mapped to `{"tool", "text"}` or a JSON error with its exit code (1 usage, 2 network, 3 auth, 4 other or refused by the app). |
+
+The app checks every value and permission; the CLI only knows tool and argument names, so a new
+tool needs one row in `COMMANDS` (or works at once through `postie call <tool> '<json>'`).
+Verified on 2026-10-17: unit tests (`cargo test` in `apps/cli`, a fake endpoint on loopback for
+the whole run), and a run of the release binary against the real `packages/mcp` handler over the
+core fakes (every command, a refusal, a wrong token, a stopped server). Not yet tried against a
+running app's Rust listener.
 
 ### The XMPP relay (`src-tauri/src/relay/`)
 

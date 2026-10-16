@@ -4,7 +4,9 @@
 //! webview (event `mcp-request`), which runs the MCP server over the core services and answers
 //! with the `mcp_reply` command. The webview starts and stops it (`mcp_start`, `mcp_stop`) when the
 //! user's settings change; it is off by default. Logs: method and status, never a body or a token.
+//! While it listens, `discovery` keeps the file the `postie` command line reads to find it.
 
+mod discovery;
 mod guard;
 mod server;
 
@@ -12,6 +14,7 @@ use std::collections::HashMap;
 use std::net::TcpListener;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
+use tauri::Manager;
 use tokio::sync::oneshot;
 
 /// The webview's answer to one forwarded request.
@@ -67,13 +70,16 @@ pub fn mcp_start(
 ) -> Result<(), String> {
     let mut running = lock(&state.running);
     if let Some(current) = running.as_ref().filter(|current| current.port == port) {
+        publish(&app, port, &token);
         *lock(&current.token) = token;
         return Ok(());
     }
     if let Some(previous) = running.take() {
         let _ = previous.shutdown.send(());
+        unpublish(&app, previous.port);
     }
     let listener = bind(port)?;
+    publish(&app, port, &token);
     let (shutdown, stopped) = oneshot::channel();
     let token: Token = Arc::new(Mutex::new(token));
     let context = server::Context {
@@ -116,8 +122,31 @@ fn bind(port: u16) -> Result<TcpListener, String> {
 }
 
 #[tauri::command]
-pub fn mcp_stop(state: tauri::State<'_, McpState>) {
-    stop(&state);
+pub fn mcp_stop(app: tauri::AppHandle, state: tauri::State<'_, McpState>) {
+    stop(&app, &state);
+}
+
+/// When the app quits: the listener goes with it, and so does the file pointing at it.
+pub fn forget(app: &tauri::AppHandle) {
+    stop(app, &app.state::<McpState>());
+}
+
+/// Tells the `postie` command line where to connect. A failure only costs the command line.
+fn publish(app: &tauri::AppHandle, port: u16, token: &str) {
+    let written = app
+        .path()
+        .app_data_dir()
+        .map_err(|error| error.to_string())
+        .and_then(|dir| discovery::write(&dir, port, token).map_err(|error| error.to_string()));
+    if let Err(error) = written {
+        log::warn!("mcp: cannot write {}: {error}", discovery::FILE_NAME);
+    }
+}
+
+fn unpublish(app: &tauri::AppHandle, port: u16) {
+    if let Ok(dir) = app.path().app_data_dir() {
+        discovery::remove(&dir, port);
+    }
 }
 
 /// The webview's answer to the request `id`; an unknown id (timed out) is ignored.
@@ -128,9 +157,10 @@ pub fn mcp_reply(state: tauri::State<'_, McpState>, id: u64, reply: Reply) {
     }
 }
 
-fn stop(state: &McpState) {
+fn stop(app: &tauri::AppHandle, state: &McpState) {
     if let Some(running) = lock(&state.running).take() {
         let _ = running.shutdown.send(());
+        unpublish(app, running.port);
         log::info!("mcp: stopped");
     }
 }

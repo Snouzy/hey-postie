@@ -155,3 +155,26 @@ const button = cva('inline-flex … rounded-full px-4 py-2', {
   defaultVariants: { variant: 'secondary' },
 });
 ```
+
+## One table of commands (`postie`)
+
+**What.** The command line (`apps/cli/src/commands.rs`) is a static table, `COMMANDS`: each row
+names a group and a command, the MCP tool it calls, its positionals and its options with the tool
+argument each fills. One parser reads any row; `help.rs` writes every `--help` from the same rows.
+
+**Why.** Twelve commands that all do the same thing (arguments in, one tool call out) would be
+twelve copies of the same parsing code. With a table, a new tool is one row, the help can never
+drift from the parser, and the test "every tool has one command" reads the table. The app keeps
+the rules: the table holds names, never checks.
+
+**Example.**
+
+```rust
+Command {
+    group: "messages", name: "list", tool: "read_messages",
+    summary: "Messages of a chat, oldest first; does not mark them read",
+    positionals: &[CHAT],
+    options: &[option("limit", "limit", Kind::Number, "How many, 1 to 50 (default 30)"), …],
+    example: "postie messages list alice@example.org --limit 10",
+}
+```

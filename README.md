@@ -101,6 +101,7 @@ development packages required by Tauri. Details in [CONTRIBUTING.md](CONTRIBUTIN
 - `packages/core/`: TypeScript contracts, services and repositories over `@converse/headless`;
 - `packages/ui/`: React interface, design system, screens and illustrations;
 - `packages/mcp/`: local MCP tools over the core services;
+- `apps/cli/`: `postie`, a command line for AI agents over the same MCP tools;
 - `apps/desktop/`: Tauri 2 desktop app, XMPP relay, keychain and notifications;
 - `wiki/`: product decisions, feature specifications and technical guides.
 

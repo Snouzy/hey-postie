@@ -12,7 +12,7 @@
     "lint:fix": "biome check --write .",
     "test": "pnpm -r --parallel test",
     "build": "pnpm -r build",
-    "rust": "cd apps/desktop/src-tauri && cargo fmt --check && cargo clippy --all-targets -- -D warnings && cargo test",
+    "rust": "cd apps/desktop/src-tauri && cargo fmt --check && cargo clippy --all-targets -- -D warnings && cargo test && cd ../../cli && cargo fmt --check && cargo clippy --all-targets -- -D warnings && cargo test",
     "licenses": "node apps/desktop/scripts/licenses.mjs",
     "version:set": "node scripts/version-set.mjs",
     "release:build": "pnpm verify && pnpm desktop:build",

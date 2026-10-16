@@ -1,0 +1,11 @@
+[package]
+name = "postie"
+version = "0.1.0"
+description = "Hey Postie for AI agents: a command line over the app's local MCP endpoint."
+authors = ["Snouzylabs S.R.L. and the Hey Postie contributors"]
+license = "AGPL-3.0-or-later"
+edition = "2021"
+rust-version = "1.88"
+
+[dependencies]
+serde_json = "1.0.154"
