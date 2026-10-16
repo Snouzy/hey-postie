@@ -9,7 +9,7 @@
     "test": "vitest run --passWithNoTests",
     "build": "vite build",
     "app:dev": "vite",
-    "dev": "tauri dev",
+    "dev": "node scripts/dev.mjs",
     "bundle": "tauri build",
     "smoke": "tauri build --debug --no-bundle && src-tauri/target/debug/hey-postie --smoke",
     "smoke:login": "HEY_POSTIE_SMOKE_LOGIN=alice@localhost:alice-pw RELAY_DEBUG=1 pnpm smoke",

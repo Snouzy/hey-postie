@@ -1,6 +1,7 @@
 import type { Core } from '@hey-postie/core';
 import { useEffect, useRef, useState } from 'react';
 import type { SaveFile } from './components/Attachments';
+import { DevRibbon } from './components/DevRibbon';
 import { CoreProvider } from './core/CoreProvider';
 import { downloadBlob } from './core/download';
 import { SettingsProvider } from './core/SettingsProvider';
@@ -29,6 +30,8 @@ interface AppProps {
   version?: string;
   /** Where a saved parcel goes. Default: a browser download; the desktop app opens a file dialog. */
   onSaveFile?: SaveFile;
+  /** In a dev window only: which worktree and branch it runs from, shown in a corner ribbon. */
+  devLabel?: string;
 }
 
 /**
@@ -36,7 +39,7 @@ interface AppProps {
  * on the first render, applied at once, and handed to the Settings dialog through
  * `SettingsProvider`. A language change swaps the dictionary and the whole tree re-renders.
  */
-export function App({ core, locale, onOpenLink, version, onSaveFile }: AppProps) {
+export function App({ core, locale, onOpenLink, version, onSaveFile, devLabel }: AppProps) {
   const [theme, setTheme] = useTheme();
   const [localeChoice, setLocaleChoice] = useState<LocaleChoice>(readLocaleChoice);
   const [showPreview, setShowPreviewState] = useState<boolean>(readShowPreview);
@@ -82,6 +85,7 @@ export function App({ core, locale, onOpenLink, version, onSaveFile }: AppProps)
           onOpenLink={onOpenLink ?? openInNewWindow}
           onSaveFile={onSaveFile ?? downloadBlob}
         />
+        {devLabel && <DevRibbon label={devLabel} />}
       </SettingsProvider>
     </CoreProvider>
   );

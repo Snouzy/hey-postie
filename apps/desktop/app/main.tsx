@@ -43,6 +43,7 @@ reactRoot.render(
       core={core}
       locale={locale}
       version={import.meta.env.VITE_APP_VERSION}
+      {...(import.meta.env.VITE_DEV_LABEL ? { devLabel: import.meta.env.VITE_DEV_LABEL } : {})}
       {...(desktop ? { onOpenLink: openLink, onSaveFile: saveFileToDisk } : {})}
     />
     <SmokeSignal />

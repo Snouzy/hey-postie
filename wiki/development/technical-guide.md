@@ -44,7 +44,7 @@ tasks/             agents' plans and lessons, untracked
 
 | Command | What |
 |---|---|
-| `pnpm desktop:dev` | Opens the app with Vite hot reload. |
+| `pnpm desktop:dev` | Opens the app with Vite hot reload, labelled with its worktree (see "Dev windows" below). |
 | `pnpm desktop:smoke` | Debug build, starts the app with `--smoke`, exits 0 when the webview has rendered. |
 | `pnpm desktop:smoke:login` | The same, plus a real sign-in as `alice` on the local Prosody (see the Desktop section). |
 | `pnpm desktop:smoke:scenario` | The scripted end-to-end scenario in the real app: `alice` in the Tauri window, `bob` from Node, direct and room messages both ways, a server restart and the reconnection (see the Desktop section). |
@@ -106,6 +106,27 @@ _Checked on 2026-10-15 against Tauri 2.12.4, `tauri-plugin-notification` 2.7.0,
   `window.rs`, `save.rs`, `i18n.rs` are described below; `smoke.rs` implements `--smoke`.
 - macOS entitlements (`src-tauri/Entitlements.plist`): app sandbox, network client, user-selected
   files. They are on from the first build so that the App Store build is the same build.
+
+### Dev windows (`scripts/dev.mjs`, `src-tauri/.cargo/config.toml`)
+
+Many sessions work at once, one worktree each, and the author watches their work live. So
+`pnpm desktop:dev` (decision of 2026-10-16):
+
+- **Says which worktree it shows.** The window title is `Hey Postie · <worktree> · <branch>`, a
+  yellow `DEV · <worktree> · <branch>` ribbon sits in the bottom-right corner
+  (`packages/ui/src/components/DevRibbon.tsx`, through `VITE_DEV_LABEL`, which only `dev.mjs`
+  sets: never in a build), and the terminal prints it. The repository itself reads `main checkout`.
+  The Dock keeps the binary's name, `hey-postie`.
+- **Takes its own Vite port**, the same for a given worktree on every run (1420 plus a hash of its
+  name, the next free one if taken), so two dev servers never clash.
+- **Warns when the installed app runs**: one instance at a time (`tauri-plugin-single-instance`),
+  the dev window would hand over to it and quit. Quit the installed app first.
+- **Signs the debug binary on macOS** before running it (`src-tauri/scripts/dev-sign-run.sh`, the
+  Cargo runner of `.cargo/config.toml`): the keychain ties "Always Allow" to the signer, not to the
+  binary's hash, so after one "Always Allow" a rebuild or another worktree no longer asks for the
+  password. The identity is `HEY_POSTIE_DEV_IDENTITY`, else the first "Apple Development" one of the
+  login keychain; without any, the binary runs unsigned as before. Its signing identifier is
+  `com.snouzylabs.heypostie.dev`. Release builds (`tauri build`) never go through the runner.
 
 ### The XMPP relay (`src-tauri/src/relay/`)
 

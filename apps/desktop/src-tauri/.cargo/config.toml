@@ -1,0 +1,4 @@
+# Debug runs and tests on macOS go through a runner that signs the binary with a stable
+# identity, so the keychain stops asking for the password after each rebuild (see the script).
+[target.'cfg(target_os = "macos")']
+runner = "scripts/dev-sign-run.sh"
