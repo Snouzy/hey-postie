@@ -282,6 +282,11 @@ export const fr: Record<MessageKey, string> = {
   'settings.about.license':
     'Logiciel libre sous licence AGPL-3.0. Vous pouvez le lire, le modifier et le partager aux mêmes conditions.',
   'settings.website': 'Site web',
+  'settings.privacy.blocked': 'Contacts bloqués',
+  'settings.privacy.blockedExplain':
+    'Le serveur jette tout ce qu’une adresse bloquée vous envoie : lettres, colis et demandes. Elle n’en est pas avertie.',
+  'settings.privacy.blockedEmpty': 'Personne n’est bloqué.',
+  'settings.privacy.unblock': 'Débloquer',
   'licenses.title': 'Licences',
   'licenses.intro': 'Les pièces dont je suis fait, et leurs conditions.',
   'licenses.search': 'Chercher par nom ou licence',

@@ -273,6 +273,11 @@ export const en = {
   'settings.about.license':
     'Free software under the AGPL-3.0 license. You may read, change and share it under the same terms.',
   'settings.website': 'Website',
+  'settings.privacy.blocked': 'Blocked contacts',
+  'settings.privacy.blockedExplain':
+    'The server drops everything a blocked address sends you: letters, parcels and requests. They are not told.',
+  'settings.privacy.blockedEmpty': 'Nobody is blocked.',
+  'settings.privacy.unblock': 'Unblock',
   'licenses.title': 'Licenses',
   'licenses.intro': 'The parts I am made of, and the terms they come with.',
   'licenses.search': 'Search by name or license',

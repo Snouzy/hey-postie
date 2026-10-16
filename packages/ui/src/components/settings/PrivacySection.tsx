@@ -1,11 +1,13 @@
 import { useText } from '../../core/CoreProvider';
 import { OwnDevices } from '../OwnDevices';
+import { BlockedContacts } from './BlockedContacts';
 import styles from './section.module.css';
 
 /**
  * Postie Seal: my devices (with "Remove"), and how trust works (spec 3.6). The rules live in
  * the core; the sentences here only explain them. Pictures from strangers waiting for a click is
  * a rule of the `files` service too, stated here so the user knows where the behaviour comes from.
+ * Last, the blocked addresses, with "Unblock" (`BlockedContacts`).
  */
 export function PrivacySection({ titleId }: { titleId: string }) {
   const text = useText();
@@ -33,6 +35,12 @@ export function PrivacySection({ titleId }: { titleId: string }) {
           {text('settings.privacy.parcels')}
         </h4>
         <p className={styles.hint}>{text('settings.privacy.parcelsExplain')}</p>
+      </section>
+      <section className={styles.group} aria-labelledby={`${titleId}-blocked`}>
+        <h4 id={`${titleId}-blocked`} className={styles.heading}>
+          {text('settings.privacy.blocked')}
+        </h4>
+        <BlockedContacts />
       </section>
     </div>
   );

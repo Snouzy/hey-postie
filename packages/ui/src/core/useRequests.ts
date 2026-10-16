@@ -18,11 +18,11 @@ export interface RequestRow {
 }
 
 /**
- * A stranger's chat is a request only while their letter is the last one: a chat the user opened
- * with someone outside the address book, or answered, is an ordinary chat.
+ * The service settles it with `Chat.isRequest`: they wrote and this account never did. A chat
+ * the user opened with someone outside the address book, or answered, is an ordinary chat.
  */
 export function isRequest(chat: Chat): boolean {
-  return chat.kind === 'direct' && !!chat.fromStranger && chat.lastMessage?.direction === 'in';
+  return chat.isRequest === true;
 }
 
 /**

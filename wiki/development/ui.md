@@ -159,7 +159,7 @@ avatar, status sentence, logs) is left out rather than shown dead.
 | Account | Display name and JID (read-only until a service can change them), whether the password is kept (`accounts.rememberedPassword`, nothing said until the keychain answers), "Sign out" and "Delete my account…" with a plain hint. | `accounts.signOut` through `Main`; delete opens `DeleteAccountDialog` **in place of** the window and comes back to it on close (focus on that button). |
 | Appearance | Radios "Follow the system" / "Light" / "Dark" (`fieldset` + `legend`). | `data-theme` on `<html>` (`'light'` / `'dark'`, removed for "system": the tokens then follow `prefers-color-scheme`), remembered in `localStorage` `hey-postie:theme`. |
 | Notifications | A checkbox "Show the letter in notifications" with its explanation, and a line saying a hall's bell is set in the hall's own pane. | `core.notifications.setShowPreview(value)`; remembered in `localStorage` `hey-postie:notify-preview` (`off`, or absent). |
-| Privacy and encryption | `OwnDevices` with this device's fingerprint stated above the list, then how trust works (spec 3.6: blind trust, verify after comparing, own devices follow the same rule) and why a stranger's picture waits for a click. | The rules live in the core; the sentences only explain them. |
+| Privacy and encryption | `OwnDevices` with this device's fingerprint stated above the list, then how trust works (spec 3.6: blind trust, verify after comparing, own devices follow the same rule), why a stranger's picture waits for a click, and the blocked contacts (`BlockedContacts`: one sentence on what blocking does, the JIDs in monospace with "Unblock" each, "Nobody is blocked." when the list is empty). | The rules live in the core; the sentences only explain them. The blocklist is the server's: `contacts.blocked()`, refreshed on the `contacts.blocked` event, `contacts.unblock(jid)`. |
 | Advanced | About: "Hey Postie <version>", the AGPL-3.0 note, "Website" and "Source code" links, a "Licenses" button. | `version` prop of `App` ("dev" when absent). Links go through `onOpenLink`. |
 
 **Keyboard.** `SettingsNav` is a vertical `role="tablist"` (six panels: past the two-or-three
@@ -275,10 +275,11 @@ block; nothing of a stranger's is loaded or notified until accepted). Sources:
 
 The rules live in the core: `contacts.requests()` holds the pending subscription requests (name and
 sentence already sanitized), `Chat.fromStranger` marks a direct chat whose peer is not in the
-address book, the notifications service stays silent for them and `files.autoLoad` refuses their
-pictures. The UI adds one rule of its own, in `isRequest(chat)` (`core/useRequests.ts`): **a
-stranger's chat is a request only while their letter is the last one.** A chat the user opened with
-someone outside the address book, or answered, is an ordinary chat with a composer.
+address book, `Chat.isRequest` says whether that chat is a request (they wrote and this account
+never did, as far as the latest page of the history shows; since 2026-10-16), the notifications
+service stays silent for them and `files.autoLoad` refuses their pictures. `isRequest(chat)`
+(`core/useRequests.ts`) only reads that flag: a chat the user opened with someone outside the
+address book, or answered, is an ordinary chat with a composer.
 
 - **`useRequests(chats)`**: `contacts.requests()` on mount, again on every `contact.requested` and
   `contact.updated` (accepting removes one), merged by `requestRows` with the strangers' chats
@@ -315,17 +316,16 @@ someone outside the address book, or answered, is an ordinary chat with a compos
   - Their letters, when they wrote, sit below in the ordinary `MessageList` (`HeldLetters`,
     keyed by the chat, on `useMessages`): the existing `Attachments` path keeps a stranger's
     picture behind "Load image" (`files.autoLoad` says no). No composer: one answers after accepting.
-- **Not built**: a "Blocked contacts" list in Settings > Privacy. The contract is ready
-  (2026-10-16, branch `feat/b-contracts-2`): `contacts.blocked()` lists the blocked bare JIDs,
-  sorted, and `contacts.blocked` (an event, the whole list) follows every block and unblock.
-  The Converse roster returns an empty list until XEP-0191 is implemented there. The UI is to come.
+- **Blocked contacts** (built 2026-10-16): `BlockedContacts` in Settings > Privacy and
+  encryption, see [Settings](#settings). `contacts.blocked()` on mount, then the `contacts.blocked`
+  event (the whole list, sorted) after every block and unblock, from this window or from the
+  request screen. One "Unblock" per row (`contacts.unblock`), disabled while its call is in
+  flight, a refusal as a `role="alert"` sentence under the list.
 
-**Points to check.** `isRequest(chat)` in `core/useRequests.ts` still reads "their letter is the
-last one": if the user starts a chat with a non-contact and the other side answers, the chat moves
-to the requests group until the user replies again or accepts. The service now settles it with
-`Chat.isRequest` (2026-10-16): true when `fromStranger`, they wrote, and this account never did, as
-far as the latest page of the history shows. `isRequest(chat)` should read that flag instead of
-`lastMessage.direction` (a UI lane's change, not done here).
+**Points to check.** A reply older than the latest page of the history is not seen by the
+service, so a long-silent chat the user once answered may come back as a request; the UI follows
+the flag and has no rule of its own. The Converse roster returns an empty blocklist until XEP-0191
+is implemented there, so the settings list stays empty on a real account for now.
 
 ## Rooms (halls)
 

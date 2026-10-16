@@ -244,6 +244,31 @@ describe('Settings window: privacy and encryption', () => {
     await waitFor(() => expect(within(panel).getAllByRole('listitem')).toHaveLength(1));
     expect((await deps.fakes.crypto.ownDevices()).map((d) => d.deviceId)).toEqual([1]);
   });
+
+  it('lists the blocked addresses, and unblocks one', async () => {
+    const { deps, core } = await openSettings();
+    await act(() => core.contacts.block('eve@x.org'));
+    await act(() => core.contacts.block('mallory@x.org'));
+    const panel = show('Privacy and encryption');
+    expect(within(panel).getByText(/drops everything a blocked address sends/)).toBeInTheDocument();
+    const list = await within(panel).findByRole('list', { name: 'Blocked contacts' });
+    expect(
+      within(list)
+        .getAllByRole('listitem')
+        .map((row) => row.textContent),
+    ).toEqual([expect.stringContaining('eve@x.org'), expect.stringContaining('mallory@x.org')]);
+    fireEvent.click(within(list).getByRole('button', { name: 'Unblock eve@x.org' }));
+    await waitFor(() => expect(within(list).getAllByRole('listitem')).toHaveLength(1));
+    expect(within(list).getByText('mallory@x.org')).toBeInTheDocument();
+    expect(deps.fakes.roster.blocklist.has('eve@x.org')).toBe(false);
+  });
+
+  it('says so when nobody is blocked', async () => {
+    await openSettings();
+    const panel = show('Privacy and encryption');
+    expect(within(panel).getByText('Nobody is blocked.')).toBeInTheDocument();
+    expect(within(panel).queryByRole('list', { name: 'Blocked contacts' })).not.toBeInTheDocument();
+  });
 });
 
 describe('Settings window: advanced (about)', () => {

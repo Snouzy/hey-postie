@@ -133,6 +133,16 @@ describe('Message requests', () => {
     expect(screen.getByRole('button', { name: /Message requests/ })).toHaveTextContent('1');
   });
 
+  it('keeps a chat the user started with a non-contact, answered by them, among the chats', async () => {
+    const { deps, core } = await signedIn();
+    await act(() => core.chats.send('grace@x.org', 'hello Grace'));
+    act(() => {
+      deps.fakes.chat.receive({ chatId: 'grace@x.org', fromJid: 'grace@x.org', body: 'hi back' });
+    });
+    expect(await screen.findByRole('button', { name: /grace/ })).toHaveTextContent('hi back');
+    expect(screen.queryByRole('button', { name: /Message requests/ })).not.toBeInTheDocument();
+  });
+
   it('shows the group only when someone is at the door', async () => {
     const { deps } = await signedIn();
     expect(screen.queryByRole('button', { name: /Message requests/ })).not.toBeInTheDocument();
