@@ -9,12 +9,14 @@ import { useRoomMembers } from '../core/useRoomMembers';
 import { useTyping } from '../core/useTyping';
 import type { ChatUploads } from '../core/useUploads';
 import { errorKey } from '../i18n/errors';
+import { Postie } from '../illustrations/Postie';
 import type { SaveFile } from './Attachments';
 import { Avatar } from './Avatar';
 import { Button } from './Button';
 import { Composer } from './Composer';
 import styles from './Conversation.module.css';
 import { DropOverlay } from './DropOverlay';
+import { EmptyState } from './EmptyState';
 import { MessageList } from './MessageList';
 import { PendingParcel } from './PendingParcel';
 import { PresenceDot } from './PresenceDot';
@@ -139,6 +141,16 @@ export function Conversation({
         onSaveFile={onSaveFile}
         showSenders={chat.kind === 'room'}
         onShowDevices={hasDetails ? onOpenEncryption : undefined}
+        empty={
+          letters.loaded && (
+            <EmptyState
+              size="full"
+              illustration={<Postie mood="writing" label={text('postie.alt.writing')} size={120} />}
+              title={text('conversation.empty')}
+              sentence={text('conversation.emptyHint')}
+            />
+          )
+        }
         // A parcel that landed is already in the list: its bubble is not drawn once more.
         footer={uploads.list
           .filter((upload) => !upload.sent)

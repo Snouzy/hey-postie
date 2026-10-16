@@ -1,4 +1,12 @@
-export type PostieMood = 'happy' | 'delivering' | 'sealed' | 'oops' | 'asleep';
+export type PostieMood =
+  | 'happy'
+  | 'delivering'
+  | 'sealed'
+  | 'oops'
+  | 'asleep'
+  | 'waving'
+  | 'searching'
+  | 'writing';
 
 interface PostieProps {
   mood: PostieMood;
@@ -9,7 +17,8 @@ interface PostieProps {
 
 /**
  * Postie, the postman. Placeholder line art until an illustrator draws him; the moods, the cap,
- * the satchel and the bike are the brief. Colors come from the design tokens.
+ * the satchel and the bike are the brief. Colors come from the design tokens. The last three
+ * moods are the empty-state poses: a wave hello, a look around, a pen over a blank letter.
  */
 export function Postie({ mood, label, size = 160 }: PostieProps) {
   return (
@@ -98,6 +107,29 @@ export function Postie({ mood, label, size = 160 }: PostieProps) {
         </text>
       )}
       {mood === 'happy' && <path d="M126 120 Q140 112 150 124" />}
+      {mood === 'waving' && (
+        <>
+          <path d="M126 118 L152 92" />
+          <path d="M146 84 L152 92 L160 88" />
+          <path d="M156 76 L162 70" />
+          <path d="M166 86 L174 84" />
+        </>
+      )}
+      {mood === 'searching' && (
+        <>
+          <path d="M126 118 L150 112 L156 94" />
+          <circle cx="160" cy="86" r="10" fill="var(--paper-raised)" />
+          <path d="M167 93 L176 102" strokeWidth="5" />
+        </>
+      )}
+      {mood === 'writing' && (
+        <>
+          <path d="M126 122 L168 122 L168 150 L126 150 Z" fill="var(--paper-raised)" />
+          <path d="M134 134 L152 134" stroke="var(--ink-muted)" />
+          <path d="M134 142 L146 142" stroke="var(--ink-muted)" />
+          <path d="M150 148 L166 118" stroke="var(--navy)" strokeWidth="5" />
+        </>
+      )}
     </svg>
   );
 }

@@ -1,6 +1,6 @@
 import type { FakeDependencies } from '@hey-postie/core';
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it } from 'vitest';
 import { App } from '../App';
 import { setupCore } from '../test-utils';
 
@@ -13,10 +13,46 @@ async function signedIn(before: (deps: FakeDependencies) => void = () => {}) {
 }
 
 describe('Main', () => {
-  it('shows Postie asleep while no chat is open', async () => {
-    await signedIn();
-    expect(screen.getByRole('img', { name: /asleep/ })).toBeInTheDocument();
+  beforeEach(() => window.localStorage.clear());
+
+  it('shows Postie waving while no chat is open', async () => {
+    await signedIn((deps) =>
+      deps.fakes.roster.seed({
+        jid: 'bob@x.org',
+        name: 'Bob',
+        presence: 'online',
+        subscription: 'both',
+      }),
+    );
+    expect(screen.getByRole('img', { name: /waving/ })).toBeInTheDocument();
+    expect(screen.getByText('Pick a conversation')).toBeInTheDocument();
     expect(screen.getByText(/No letter open/)).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Got it' })).not.toBeInTheDocument();
+  });
+
+  it('welcomes a first launch with an empty address book, once per account', async () => {
+    const { core } = await signedIn();
+    expect(await screen.findByRole('heading', { name: 'Welcome aboard' })).toBeInTheDocument();
+    expect(screen.getByText(/Add a contact/)).toBeInTheDocument();
+    expect(screen.getByText(/Join a hall/)).toBeInTheDocument();
+    expect(screen.getByText(/sealed/)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Got it' }));
+    expect(screen.queryByRole('heading', { name: 'Welcome aboard' })).not.toBeInTheDocument();
+    expect(screen.getByText('Pick a conversation')).toBeInTheDocument();
+
+    // Signed out and back in: the card does not come back for this account.
+    fireEvent.click(screen.getByRole('button', { name: 'alice' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Sign out' }));
+    await screen.findByRole('button', { name: 'Create an account' });
+    await act(() => core.accounts.signIn({ jid: 'alice@x.org', password: 'pw', remember: false }));
+    expect(screen.getByText('Pick a conversation')).toBeInTheDocument();
+    await waitFor(() => expect(screen.queryByRole('button', { name: 'Got it' })).toBeNull());
+  });
+
+  it('keeps the welcome card for another account', async () => {
+    window.localStorage.setItem('hey-postie:welcomed', JSON.stringify(['someone@x.org']));
+    await signedIn();
+    expect(await screen.findByRole('button', { name: 'Got it' })).toBeInTheDocument();
   });
 
   it('marks a chat read and tells notifications which chat is open when it is selected', async () => {

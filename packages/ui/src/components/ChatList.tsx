@@ -3,8 +3,10 @@ import { Users } from 'lucide-react';
 import { type KeyboardEvent, useState } from 'react';
 import { useLocale, useText } from '../core/CoreProvider';
 import { formatRecent } from '../i18n/dates';
+import { Postie } from '../illustrations/Postie';
 import { Avatar } from './Avatar';
 import styles from './ChatList.module.css';
+import { EmptyState } from './EmptyState';
 import { RoomRowMenu } from './RoomRowMenu';
 
 interface ChatListProps {
@@ -17,6 +19,8 @@ interface ChatListProps {
   onSelect: (chat: Chat) => void;
   /** "Leave the hall…" from a room row's menu; without it, rows have no menu. */
   onLeaveRoom?: (room: Room) => void;
+  /** "Start a chat" on the empty state; without it, the sentence alone. */
+  onStartChat?: () => void;
 }
 
 /**
@@ -30,6 +34,7 @@ export function ChatList({
   selectedId,
   onSelect,
   onLeaveRoom,
+  onStartChat,
 }: ChatListProps) {
   const text = useText();
   const locale = useLocale();
@@ -40,7 +45,16 @@ export function ChatList({
       ? contacts.find((contact) => contact.jid === chat.peerJid)?.avatarUrl
       : undefined;
 
-  if (chats.length === 0) return <p className={styles.empty}>{text('chatList.empty')}</p>;
+  if (chats.length === 0) {
+    return (
+      <EmptyState
+        illustration={<Postie mood="writing" label={text('postie.alt.writing')} size={96} />}
+        title={text('chatList.empty')}
+        sentence={text('chatList.emptyHint')}
+        action={onStartChat && { label: text('chatList.startChat'), onClick: onStartChat }}
+      />
+    );
+  }
 
   return (
     <ul className={styles.list} onKeyDown={moveWithArrows}>

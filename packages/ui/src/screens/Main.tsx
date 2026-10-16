@@ -5,6 +5,7 @@ import type { SaveFile } from '../components/Attachments';
 import { Conversation } from '../components/Conversation';
 import { DeleteAccountDialog } from '../components/DeleteAccountDialog';
 import { DetailsPane } from '../components/DetailsPane';
+import { EmptyState } from '../components/EmptyState';
 import { JoinRoom } from '../components/JoinRoom';
 import { LeaveRoomDialog } from '../components/LeaveRoomDialog';
 import { Licenses } from '../components/Licenses';
@@ -13,7 +14,9 @@ import { NewChat } from '../components/NewChat';
 import { Sidebar } from '../components/Sidebar';
 import { SettingsWindow } from '../components/settings/SettingsWindow';
 import type { SettingsSection } from '../components/settings/sections';
+import { WelcomeCard } from '../components/WelcomeCard';
 import { useCore, useText } from '../core/CoreProvider';
+import { readWelcomed, writeWelcomed } from '../core/settings';
 import { useChats } from '../core/useChats';
 import { useContacts } from '../core/useContacts';
 import { useCoreEvent } from '../core/useCoreEvent';
@@ -60,6 +63,8 @@ export function Main({ account, onOpenLink, onSaveFile, onLeave }: MainProps) {
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [encryptionFocus, setEncryptionFocus] = useState(0); // "Check their devices" requests
   const [error, setError] = useState<MessageKey | null>(null);
+  // The first-launch card: once per account, and only for an empty address book.
+  const [welcoming, setWelcoming] = useState(false);
   const searchRef = useRef<HTMLInputElement>(null);
 
   // The list is the fresh source once the chat is in it (title, unread count).
@@ -73,6 +78,23 @@ export function Main({ account, onOpenLink, onSaveFile, onLeave }: MainProps) {
     core.notifications.setOpenChat(chatId);
     if (chatId) core.chats.markRead(chatId).catch(() => {});
   }, [core, chatId]);
+
+  useEffect(() => {
+    if (readWelcomed(account.jid)) return;
+    let cancelled = false;
+    core.contacts
+      .list()
+      .then((list) => !cancelled && list.length === 0 && setWelcoming(true))
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [core, account.jid]);
+
+  function dismissWelcome() {
+    writeWelcomed(account.jid);
+    setWelcoming(false);
+  }
 
   useEffect(() => {
     const focus = () => core.notifications.setWindowFocused(true);
@@ -189,10 +211,18 @@ export function Main({ account, onOpenLink, onSaveFile, onLeave }: MainProps) {
           onSaveFile={onSaveFile}
           uploads={uploads.forChat(chat.id)}
         />
+      ) : welcoming ? (
+        <section className={styles.empty}>
+          <WelcomeCard onDismiss={dismissWelcome} />
+        </section>
       ) : (
         <section className={styles.empty}>
-          <Postie mood="asleep" label={text('postie.alt.asleep')} />
-          <p className={styles.emptyText}>{text('main.empty')}</p>
+          <EmptyState
+            size="full"
+            illustration={<Postie mood="waving" label={text('postie.alt.waving')} />}
+            title={text('main.emptyTitle')}
+            sentence={text('main.empty')}
+          />
         </section>
       )}
       {chat && detailsOpen && (

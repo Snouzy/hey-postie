@@ -33,7 +33,7 @@ sentence).
 | Welcome | `screens/Welcome.tsx` | Postie `happy`, "Sign in", "Create an account". |
 | Sign in | `screens/SignIn.tsx` | JID, password, "Remember me"; an optional `prefill` (JID and sentence) when coming from account creation. On blur of a valid-looking JID, asks `accounts.rememberedPassword` and prefills. While `connecting`: Postie `delivering`, form disabled. |
 | Create account | `screens/CreateAccount.tsx`, `screens/RegistrationForm.tsx` | Two steps, see [Create account](#create-account) below. |
-| Main | `screens/Main.tsx` | Three columns: `Sidebar`, `Conversation` (keyed by chat id, so drafts and in-flight loads stay with their chat; or the empty state with Postie `asleep`), optional `Details`. Owns the selected chat, the open dialog and the error sentence of background actions. Subscribes to `chat.requested` (notification click, `xmpp:` link) and opens the chat if it is not listed yet. |
+| Main | `screens/Main.tsx` | Three columns: `Sidebar`, `Conversation` (keyed by chat id, so drafts and in-flight loads stay with their chat; or the `EmptyState` with Postie `waving`, "Pick a conversation"; or the [first-launch card](#first-launch)), optional `Details`. Owns the selected chat, the open dialog and the error sentence of background actions. Subscribes to `chat.requested` (notification click, `xmpp:` link) and opens the chat if it is not listed yet. |
 
 ## Create account
 
@@ -67,6 +67,46 @@ server, `oops` on an error, `sealed` otherwise) and the focus in the first field
 
 The typed values live in `CreateAccount`, so "Back" from "Who?" to "Where?" and "Continue" again
 lose nothing (the domain is kept too); "Back" from "Where?" goes to Welcome.
+
+## Empty states and first launch
+
+_Added 2026-10-16 (decision of the author, "Night of 2026-10-16": empty states and first-launch
+screens with Postie). Sources: `components/EmptyState.tsx`, `components/WelcomeCard.tsx`,
+`illustrations/Postie.tsx`, `core/settings.ts`, `screens/EmptyStates.test.tsx`,
+`screens/Main.test.tsx`, `components/EmptyState.test.tsx`._
+
+Every place that can be empty shows one `EmptyState` (see [design-system.md](design-system.md#components)):
+Postie in a pose, a title, one sentence in his voice, and at most one button, the one thing to do
+from there. A failed load is never an empty state (`RetryNotice`).
+
+| Where | Pose | Title | Button |
+|---|---|---|---|
+| `ChatList`, no chat | `writing` | No letter yet | "Start a chat" → the New chat dialog (`Sidebar` hands `onNewChat` as `onStartChat`) |
+| `ContactList`, no contact | `searching` | An empty address book | "Add a contact" → the Add contact dialog (`onAddContact`) |
+| `MessageList`, no letter in the open chat | `writing` | A blank page | none: the composer is right below |
+| `RoomBrowser`, nothing listed on the server | `searching` | No hall here | none |
+| `Main`, no chat selected | `waving` | Pick a conversation | none |
+| `DetailsPane`, a hall without a record | `searching` | Nothing to show | none; the pane keeps its close X (Esc works too) |
+
+`MessageList` takes the empty state as an `empty` prop and renders it only while the list is
+empty; `Conversation` passes it only once `useMessages().loaded` is true (the first page answered,
+or failed), so a chat whose history is still on its way does not flash "A blank page". The sidebar
+search with no match shows the same empty state as an empty list (not a separate "no result").
+There is no rooms-only list in the sidebar, so "no rooms" has no state of its own: a hall with no
+letter yet shows the blank page, and browsing shows "No hall here".
+
+### First launch
+
+After a sign-in (or a registration, which signs in) whose address book is empty, `Main` shows
+`WelcomeCard` in the conversation area instead of "Pick a conversation": Postie `waving`, three
+lines (add a contact, join a hall, letters are sealed when the other side has a key) and "Got
+it". No tour, no wizard. `Main` asks `contacts.list()` once on mount, only when the account has not
+been welcomed yet; the card appears when the list comes back empty, so a full roster never flashes
+it. "Got it" calls `writeWelcomed(jid)` (`core/settings.ts`, `localStorage`
+`hey-postie:welcomed`, a JSON list of the welcomed JIDs, read and written under the same
+`try/catch` rules as the other per-viewer choices) and the card never comes back for that account,
+on this machine. Opening a chat hides it until the chat is closed; only "Got it" ends it.
+Tests that are not about the first launch call `writeWelcomed('alice@x.org')` before rendering.
 
 ## Account menu
 
@@ -527,12 +567,16 @@ a letter arriving right after render, storage `getItem` throwing, language switc
 startup, version or "dev", repository link through `onOpenLink`, Licenses in place of Settings and
 back with the focus on "Licenses"), `Licenses.test.tsx` (every entry under its license, filter by
 name or license with the empty sentence, live count, two versions of one name and https-only
-links, link through `onOpenLink`, grouping and sorting), `DeleteAccountDialog.test.tsx`
+links, link through `onOpenLink`, grouping and sorting), `EmptyState.test.tsx` (title, sentence, illustration and action; no button without an action),
+`EmptyStates.test.tsx` ("Start a chat" and "Add a contact" open their dialogs, the blank page in a
+chat with no letter and no button, "No hall here" when browsing finds nothing, "Nothing to show"
+in the pane of a hall without a record and its close X), `DeleteAccountDialog.test.tsx`
 (two clicks away, button asleep until the JID matches, `deleteCurrent` recorded and Welcome
-shown, failure sentence, not closable while deleting, Esc with focus back on the row), `ChatList.test.tsx` (order, badge, sealed preview),
+shown, failure sentence, not closable while deleting, Esc with focus back on the row), `ChatList.test.tsx` (empty state with Postie and no button, "Start a chat" when handed, order, badge, sealed preview),
 `MessageList.test.tsx` (grouping, day labels, retry, undecryptable, links, load older),
 `Composer.test.tsx` (Enter / Shift+Enter, empty disabled, inline error), `Main.test.tsx`
-(empty state, markRead and notification rules, new chat dialog, contacts, sign out through the
+(Postie waving with a full roster, the welcome card on an empty roster shown once then never for
+that account but still for another, markRead and notification rules, new chat dialog, contacts, sign out through the
 account menu),
 `LeaveRoom.test.tsx` ("More" only on a hall row, the menu with the focus on its item, right-click,
 Esc back to the row, confirmation with the name → `rooms.leave` and the selection dropped, Esc on

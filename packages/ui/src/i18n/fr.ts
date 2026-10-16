@@ -12,6 +12,9 @@ export const fr: Record<MessageKey, string> = {
   'postie.alt.sealed': 'Postie tenant une lettre scellée à la cire rouge',
   'postie.alt.oops': 'Postie, surpris, une lettre tombée à ses pieds',
   'postie.alt.asleep': 'Postie endormi sur sa sacoche',
+  'postie.alt.waving': 'Postie qui fait coucou',
+  'postie.alt.searching': 'Postie qui cherche, une loupe à la main',
+  'postie.alt.writing': 'Postie, stylo en main, devant une lettre vierge',
 
   'signIn.title': 'Se connecter',
   'signIn.jid': 'Adresse',
@@ -97,12 +100,19 @@ export const fr: Record<MessageKey, string> = {
   'banner.reconnecting': 'Je reprends le vélo pour rejoindre le serveur…',
   'banner.offline': 'J’ai perdu la ligne avec le serveur.',
   'banner.signInAgain': 'Se reconnecter',
+  'main.emptyTitle': 'Choisissez une discussion',
+  'main.detailsEmpty': 'Rien à montrer',
+  'main.detailsEmptyHint': 'Je n’ai plus trace de ce salon.',
 
-  'chatList.empty': 'Pas encore de discussion. Appuyez sur + pour écrire une première lettre.',
+  'chatList.empty': 'Pas encore de lettre',
+  'chatList.emptyHint': 'Votre première discussion commence par une adresse.',
+  'chatList.startChat': 'Commencer une discussion',
   'chatList.unread': 'non lus',
   'chatList.undecryptablePreview': 'Lettre scellée',
 
-  'contacts.empty': 'Personne dans le carnet d’adresses pour l’instant.',
+  'contacts.empty': 'Un carnet d’adresses vide',
+  'contacts.emptyHint': 'Ajoutez quelqu’un et je vous dirai quand il est là.',
+  'contacts.addContact': 'Ajouter un contact',
   'presence.online': 'En ligne',
   'presence.away': 'Absent',
   'presence.dnd': 'Ne pas déranger',
@@ -123,6 +133,8 @@ export const fr: Record<MessageKey, string> = {
   'details.confirmRemove': 'Retirer ce contact du carnet d’adresses ?',
   'details.confirm': 'Retirer',
   'conversation.log': 'Messages',
+  'conversation.empty': 'Une page blanche',
+  'conversation.emptyHint': 'Pas encore de lettre ici. Je porterai la première.',
 
   'message.undecryptable':
     'Cette lettre a été scellée pour un autre appareil. Je ne peux pas l’ouvrir ici.',
@@ -159,6 +171,7 @@ export const fr: Record<MessageKey, string> = {
   'joinRoom.noRooms': 'Aucun salon affiché sur ce serveur.',
   'joinRoom.membersCount': '{count} membres',
   'joinRoom.badDomain': 'Cela ne ressemble pas à un nom de serveur. Essayez rooms.serveur.',
+  'joinRoom.noRoomsTitle': 'Aucun salon ici',
 
   'room.topicEmpty': 'Pas encore de sujet.',
   'room.notJoined': 'Je ne suis pas dans ce salon pour le moment.',
@@ -288,4 +301,10 @@ export const fr: Record<MessageKey, string> = {
 
   'date.today': 'Aujourd’hui',
   'date.yesterday': 'Hier',
+
+  'welcomeCard.title': 'Bienvenue à bord',
+  'welcomeCard.contact': 'Ajoutez un contact : appuyez sur + et donnez-moi son adresse.',
+  'welcomeCard.room': 'Rejoignez un salon pour parler à plusieurs.',
+  'welcomeCard.sealed': 'Vos lettres sont scellées dès que l’autre côté a une clé.',
+  'welcomeCard.dismiss': 'Compris',
 };

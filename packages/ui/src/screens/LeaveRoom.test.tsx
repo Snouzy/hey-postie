@@ -2,6 +2,7 @@ import { DomainError } from '@hey-postie/core';
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { App } from '../App';
+import { writeWelcomed } from '../core/settings';
 import { setupCore } from '../test-utils';
 
 const HALL = 'hall@rooms.x.org';
@@ -9,6 +10,7 @@ const HALL = 'hall@rooms.x.org';
 /** Signed in, one direct chat with bob and one hall joined; the hall is the first row. */
 async function withHall() {
   const { deps, core } = setupCore();
+  writeWelcomed('alice@x.org'); // not a first launch: the empty state, not the welcome card
   render(<App core={core} locale="en" />);
   await act(() => core.accounts.signIn({ jid: 'alice@x.org', password: 'pw', remember: false }));
   act(() => {

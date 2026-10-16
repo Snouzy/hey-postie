@@ -2,12 +2,14 @@ import { DomainError, type FakeDependencies } from '@hey-postie/core';
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import { App } from '../App';
+import { writeWelcomed } from '../core/settings';
 import { setupCore } from '../test-utils';
 
 const HALL = 'hall@rooms.x.org';
 
 async function signedIn(before: (deps: FakeDependencies) => void = () => {}) {
   const { deps, core } = setupCore();
+  writeWelcomed('alice@x.org'); // not a first launch: the empty state, not the welcome card
   before(deps);
   render(<App core={core} locale="en" />);
   await act(() => core.accounts.signIn({ jid: 'alice@x.org', password: 'pw', remember: false }));
