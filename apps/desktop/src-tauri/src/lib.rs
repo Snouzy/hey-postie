@@ -1,6 +1,7 @@
 //! The Rust side of Hey Postie: plugins, commands, tray, links, save panel, and the `--smoke`
 //! self-check.
 
+mod dev_login;
 mod i18n;
 mod keychain;
 mod links;
@@ -94,6 +95,7 @@ pub fn run() {
             keychain_delete,
             relay_url,
             smoke_login,
+            dev_login::dev_login,
             set_unread_count,
             save_file,
             mcp::mcp_start,

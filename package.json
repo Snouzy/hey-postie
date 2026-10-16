@@ -18,6 +18,7 @@
     "release:build": "pnpm verify && pnpm desktop:build",
     "verify": "pnpm check && pnpm lint && pnpm test && pnpm rust && pnpm build",
     "desktop:dev": "pnpm --filter @hey-postie/desktop dev",
+    "desktop:dev:alice": "pnpm --filter @hey-postie/desktop dev:alice",
     "desktop:build": "pnpm --filter @hey-postie/desktop bundle",
     "desktop:smoke": "pnpm --filter @hey-postie/desktop smoke",
     "desktop:smoke:login": "pnpm --filter @hey-postie/desktop smoke:login",

@@ -46,6 +46,7 @@ tasks/             agents' plans and lessons, untracked
 | Command | What |
 |---|---|
 | `pnpm desktop:dev` | Opens the app with Vite hot reload, labelled with its worktree (see "Dev windows" below). |
+| `pnpm desktop:dev:alice` | The same, already signed in as `alice@localhost` on the local test server (start it first, see "Test server"): no form, no keychain. `HEY_POSTIE_DEV_LOGIN="jid:password"` names another test account; debug builds only (`src-tauri/src/dev_login.rs`). |
 | `pnpm desktop:smoke` | Debug build, starts the app with `--smoke`, exits 0 when the webview has rendered. |
 | `pnpm desktop:smoke:login` | The same, plus a real sign-in as `alice` on the local Prosody (see the Desktop section). |
 | `pnpm desktop:smoke:scenario` | The scripted end-to-end scenario in the real app: `alice` in the Tauri window, `bob` from Node, direct and room messages both ways, a server restart and the reconnection (see the Desktop section). |

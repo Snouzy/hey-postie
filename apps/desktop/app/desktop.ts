@@ -1,5 +1,6 @@
 import type { Core } from '@hey-postie/core';
 import { serveAssistant } from './assistant';
+import { signInForDev } from './devLogin';
 import { trackWindowFocus } from './focus';
 import { openChatsFromXmppLinks } from './links';
 import { openChatOnNotificationClick } from './notificationClicks';
@@ -17,6 +18,7 @@ export async function startDesktopIntegrations(core: Core, version: string): Pro
     serveAssistant(core, version),
   ]);
   await runSmokeLogin(core);
+  await signInForDev(core);
   // Last and never blocking: an unreachable release server must not delay the sign-in.
   checkForUpdatesAtStartup().catch((error: unknown) =>
     console.warn('[updater] check failed', error),
