@@ -52,6 +52,13 @@ When the protocol behavior is unclear, look at how [Gajim](https://github.com/ga
   visual parity. Messages get two layouts (bubbles, lines) behind a setting. The text of a sealed
   letter stays out of notifications unless the user turns it on.
   Design: [specs/2026-10-16-buzz-ui-tailwind-design.md](../specs/2026-10-16-buzz-ui-tailwind-design.md).
+- Decision of 2026-10-17: [processone/fluux-messenger](https://github.com/processone/fluux-messenger)
+  (AGPL-3.0, TypeScript, by ProcessOne, the makers of ejabberd) is the second reference, beside
+  Buzz. It is a competitor on our own ground (a modern desktop XMPP client), so it shows how the
+  XMPP features we need behave in a modern interface: moderation, polls, whispers, link previews,
+  unread badges, read sync, search. We take ideas, flows and protocol behaviour, **not its code**:
+  our App Store permission (LICENSE-EXCEPTION.md) only covers code whose copyright we hold, so
+  AGPL code copied from Fluux would block store distribution unless ProcessOne agrees in writing.
 
 ## Process
 
