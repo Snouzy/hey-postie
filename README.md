@@ -72,6 +72,36 @@ need through paid pilots.
   draft and send permissions.
 - **Open source:** inspect, self-build and adapt the client under AGPL-3.0-or-later.
 
+## How it compares
+
+Checked on 2026-10-17 against each client's own XEP declaration (DOAP), its source and its latest
+release; sources and caveats in [the report](wiki/reports/2026-10-17-xmpp-clients-compared.md).
+"Yes" means in a released version, except for Hey Postie, which has no release yet.
+
+|  | **Hey Postie** | Gajim | Dino | Pidgin 2 | Fluux | Converse.js | Monal |
+|---|---|---|---|---|---|---|---|
+| Mac · Windows · Linux | ✅ ✅¹ ✅¹ | how-to · ✅ · ✅ | Linux only | — · ✅ · ✅ | ✅ ✅ ✅ | in a browser | Mac only (+ iOS) |
+| Encryption that Conversations, Monal… read (OMEMO) | ✅ 0.3 and OMEMO 2 | ✅ 0.3 | ✅ 0.3 | plugin (lurch, 2021) | ❌ OpenPGP only | ✅ 0.3 and OMEMO 2 | ✅ 0.3 |
+| Edit · delete for everyone | ✅ · ✅ | ✅ · ✅ | ✅ · ❌ | ❌ · ❌ | ✅ · ✅ | ✅ · ✅ | ✅ · ✅ |
+| Reactions · replies | ✅ · ✅ | partial · ✅ | ✅ · ✅ | ❌ · ❌ | ✅ · ✅ | ✅ · ✅ | ❌ · ❌ |
+| "Read" for the sender · read state on all your devices | ✅ · ✅ | partial · ✅ | ✅ · ❌ | ❌ · ❌ | ❌ · ✅ | partial · ❌ | ✅ · ✅ |
+| Room moderation | ✅² | ✅ | ❌ | ❌ | ✅ | ✅ | ✅ |
+| Create · delete your account from the app | ✅ · ✅ | ✅ · ✅ | ✅ · ❌ | ✅ · ✅ | ❌ · ❌ | ✅ · ❌ | partial · ✅ |
+| Link previews | rooms, from the server | ✅ | ❌ | ❌ | ✅ | rooms | ✅ |
+| Search | in a conversation | ✅ | ✅ | log viewer | ✅ | ❌ | ✅ |
+| AI assistant (Claude, over MCP) | ✅ 12 tools, sending only with your approval | ❌ | ❌ | ❌ | ✅ 3 tools | ❌ | ❌ |
+| Latest release | none yet | 2.6.0 (Aug 2026) | 0.5.1 (Nov 2025) | 2.14.14 (Jan 2025) | 0.17.4 (Sep 2026) | 14.0.0 (Jun 2026) | 6.4.23 (Oct 2026) |
+| License | AGPL-3.0 | GPL-3.0 | GPL-3.0 | GPL-2.0 | AGPL-3.0 | MPL-2.0 | BSD-2 |
+
+¹ Built for them, not tested on them yet. ² Not yet tested against a server that has the module.
+
+**In short.** Gajim comes closest on features; Hey Postie adds a real Mac app, full
+reactions, the "read" state for the sender, and an interface that takes after Slack rather than
+after a 2005 instant messenger. Against Fluux, the other modern one, it keeps encryption the phone
+apps can read (OMEMO), and lets you create your account from the app. And Claude can read, draft
+and, with your approval, send. **Why not, yet**: there is no release to download, Gajim and Dino
+have years of use behind them, and search across all conversations is still to come.
+
 ## Business model
 
 The desktop client stays free and open source. Hey Postie intends to earn revenue from services that
