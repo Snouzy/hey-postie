@@ -112,6 +112,15 @@ export class ConverseRosterRepository implements RosterRepository {
     }
   }
 
+  /** The blocklist IQ and its pushes are not read yet: see converse.md, section 17. */
+  async blocked(): Promise<string[]> {
+    return [];
+  }
+
+  onBlockedChange(): () => void {
+    return () => undefined;
+  }
+
   onRequest(handler: RequestHandler): () => void {
     this.requestHandlers.add(handler);
     return () => this.requestHandlers.delete(handler);

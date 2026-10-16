@@ -57,6 +57,8 @@ export interface ContactsService {
   ignore(jid: string): Promise<void>;
   block(jid: string): Promise<void>;
   unblock(jid: string): Promise<void>;
+  /** The blocked bare JIDs (XEP-0191), sorted; `contacts.blocked` carries every change. */
+  blocked(): Promise<string[]>;
 }
 
 export interface ChatsService {

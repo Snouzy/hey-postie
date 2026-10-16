@@ -86,6 +86,13 @@ export interface Chat {
    * 2026-10-16). Set by `ChatsService` on every chat it returns or emits; rooms never have it.
    */
   fromStranger?: boolean;
+  /**
+   * True when the chat is a message request: `fromStranger`, they wrote, and this account never
+   * wrote in it. A chat the user started, or answered, is an ordinary chat even with a stranger.
+   * Set by `ChatsService` next to `fromStranger`; rooms never have it. "Never wrote" is read from
+   * the most recent page of the history: a reply older than that page is not seen.
+   */
+  isRequest?: boolean;
 }
 
 /** XEP-0085: what the peer is doing in a chat, as far as the UI cares. */

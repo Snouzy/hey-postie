@@ -315,14 +315,17 @@ someone outside the address book, or answered, is an ordinary chat with a compos
   - Their letters, when they wrote, sit below in the ordinary `MessageList` (`HeldLetters`,
     keyed by the chat, on `useMessages`): the existing `Attachments` path keeps a stranger's
     picture behind "Load image" (`files.autoLoad` says no). No composer: one answers after accepting.
-- **Not built**: a "Blocked contacts" list in Settings > Privacy. `ContactsService` exposes
-  `block` and `unblock` but no way to list the blocked JIDs, so there is nothing to show; it
-  comes with a contract change (`contacts.blocked()`), in its own pull request first.
+- **Not built**: a "Blocked contacts" list in Settings > Privacy. The contract is ready
+  (2026-10-16, branch `feat/b-contracts-2`): `contacts.blocked()` lists the blocked bare JIDs,
+  sorted, and `contacts.blocked` (an event, the whole list) follows every block and unblock.
+  The Converse roster returns an empty list until XEP-0191 is implemented there. The UI is to come.
 
-**Points to check.** `Chat.fromStranger` says "not in the roster", not "they wrote first": if the
-user starts a chat with a non-contact and the other side answers, their answer is the last letter
-and the chat moves to the requests group until the user replies again or accepts. A `wroteFirst`
-flag from the service would settle it (checked on 2026-10-16).
+**Points to check.** `isRequest(chat)` in `core/useRequests.ts` still reads "their letter is the
+last one": if the user starts a chat with a non-contact and the other side answers, the chat moves
+to the requests group until the user replies again or accepts. The service now settles it with
+`Chat.isRequest` (2026-10-16): true when `fromStranger`, they wrote, and this account never did, as
+far as the latest page of the history shows. `isRequest(chat)` should read that flag instead of
+`lastMessage.direction` (a UI lane's change, not done here).
 
 ## Rooms (halls)
 

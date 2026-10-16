@@ -781,6 +781,7 @@ part of `pnpm test:contract`), both green on 2026-10-16._
 | `RosterRepository.accept(jid)` | `contact.authorize().subscribeToPresence()` (`plugins/roster/contact.js`) | RFC 6121 §3.1.4, §3.1.5 |
 | `RosterRepository.decline(jid)` | `contact.unauthorize().destroy()` | RFC 6121 §3.1.6 |
 | `RosterRepository.block(jid)` / `unblock(jid)` | `api.blocklist.add` / `remove` (`plugins/blocklist/`, present in headless 14) | XEP-0191 |
+| `RosterRepository.blocked()` / `onBlockedChange()` | **not implemented** (stub: `[]`, never fires, added 2026-10-16): `<iq type='get'><blocklist xmlns='urn:xmpp:blocking'/></iq>` at login, then the server's pushes (`<block>` / `<unblock>` in an `<iq type='set'>`); headless keeps them in `state.blocklist` (`plugins/blocklist/collection.js`): read it and listen to its `add`/`remove`, hand out the whole list of bare JIDs each time | XEP-0191 §3.2–3.4 |
 | `XmppRepository.setPresence({ show, status })` | `profile.save(..., { silent })` then `api.user.presence.send({ show, status })` (`shared/api/presence.js`) | RFC 6121 §4.2 |
 | `XmppRepository.onAvatarChange(handler)` | `state.profile.getVCard()` then `change:image` on the vCard (`plugins/vcard`) | XEP-0054, XEP-0153 |
 | `ChatRepository.setComposing(chatId, composing)` | `chat.set({ chat_state })` → `change:chat_state` → `sendChatState` (`plugins/chat/model.js:58`, `muc.js:121`) | XEP-0085 |
@@ -862,3 +863,8 @@ in `list()`; `accept` → bob gets `subscribed` and `subscribe`, approves, alice
 `setComposing(true)` → a bodiless `<composing/>` message at bob; `block` → bob's message is dropped
 (ping-synchronized), `unblock` → the next one arrives. Observed: six stale `alice@localhost`
 resources (other agents' Converse sessions) were online during the run, harmless at priority 10.
+
+Rules already enforced by the services (do not duplicate): strangers never raise a notification,
+`Chat.fromStranger` is computed from the roster and `Chat.isRequest` from it plus the history
+(they wrote, we never did), the blocklist is sorted and made bare, `composing` is sent at most once
+per 10 s and `paused` after 5 s of silence, the status sentence is bounded to 140 characters.

@@ -17,6 +17,8 @@ export interface CoreEvents {
   'contact.updated': Contact;
   /** A stranger asks to be a contact; the request stays in `contacts.requests()` until answered. */
   'contact.requested': ContactRequest;
+  /** The blocklist changed (XEP-0191); the payload is the whole sorted list of bare JIDs. */
+  'contacts.blocked': string[];
   /** The peer of a direct chat started or stopped typing (XEP-0085). */
   'chat.typing': { chatId: string; fromJid: string; typing: boolean };
   'room.updated': Room;

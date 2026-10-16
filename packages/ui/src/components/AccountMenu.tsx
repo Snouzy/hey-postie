@@ -1,4 +1,4 @@
-import type { Account, PresenceShow } from '@hey-postie/core';
+import { type Account, MAX_STATUS_LENGTH, type PresenceShow } from '@hey-postie/core';
 import { ChevronDown, KeyRound, LogOut, Settings, UserX } from 'lucide-react';
 import { type FocusEvent, type KeyboardEvent, useEffect, useId, useRef, useState } from 'react';
 import { useCore, useText } from '../core/CoreProvider';
@@ -9,8 +9,6 @@ import { Avatar } from './Avatar';
 import { PresenceDot } from './PresenceDot';
 
 const SHOWS: readonly PresenceShow[] = ['online', 'away', 'dnd'];
-/** Mirrors `MAX_STATUS_LENGTH` of the accounts service, which refuses a longer sentence. */
-export const STATUS_MAX_LENGTH = 140;
 
 interface AccountMenuProps {
   account: Account;
@@ -167,9 +165,9 @@ export function AccountMenu({
             <span
               id={`${statusId}-count`}
               className={styles.counter}
-              data-over={status.length > STATUS_MAX_LENGTH ? '' : undefined}
+              data-over={status.length > MAX_STATUS_LENGTH ? '' : undefined}
             >
-              {status.length}/{STATUS_MAX_LENGTH}
+              {status.length}/{MAX_STATUS_LENGTH}
             </span>
             {error && (
               <p className={styles.error} role="alert">

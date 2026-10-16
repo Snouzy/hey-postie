@@ -56,6 +56,10 @@ export interface RosterRepository {
   /** Adds the JID to the blocklist (XEP-0191) and drops its pending request, if any. */
   block(jid: string): Promise<void>;
   unblock(jid: string): Promise<void>;
+  /** The blocklist (XEP-0191): bare JIDs, as the server holds them. */
+  blocked(): Promise<string[]>;
+  /** Fires with the whole blocklist after a block or an unblock, ours or from another device. */
+  onBlockedChange(handler: (jids: string[]) => void): () => void;
   onRequest(handler: (request: ContactRequest) => void): () => void;
 }
 

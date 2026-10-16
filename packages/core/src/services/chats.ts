@@ -18,14 +18,43 @@ export function createChatsService(
   const oldest = new Map<string, string>();
   const pending = new Map<string, Promise<void>>();
   const typing = createTypingTracker(deps.chat);
+  /** The chats this account wrote in, as seen in the history, in `send` or in an echoed message. */
+  const written = new Set<string>();
   /** Chat updates are emitted in the order they arrive, even though each one asks the roster. */
   let updates: Promise<void> = Promise.resolve();
 
-  deps.chat.onMessage((message) => events.emit('message.received', sanitize(message)));
+  const noteWritten = (messages: Message[]): void => {
+    for (const message of messages) if (message.direction === 'out') written.add(message.chatId);
+  };
+
+  /**
+   * The rule behind `Chat.isRequest`: they wrote and this account never did. "Never" is read from
+   * the most recent page of the history, so a reply older than that page is not seen.
+   */
+  const unanswered = async (chat: Chat): Promise<boolean> => {
+    if (!chat.lastMessage || written.has(chat.id)) return false;
+    noteWritten([chat.lastMessage]);
+    if (written.has(chat.id)) return false;
+    noteWritten(await deps.chat.messages(chat.id, { limit: PAGE_SIZE }));
+    return !written.has(chat.id);
+  };
+
+  /** Marks a direct chat with a stranger (see `isStranger`); a room is returned as is. */
+  const flag = async (contacts: Contact[], chat: Chat): Promise<Chat> => {
+    if (chat.kind !== 'direct') return chat;
+    const fromStranger = isStranger(contacts, chat);
+    const isRequest = fromStranger && (await unanswered(chat));
+    return { ...chat, fromStranger, isRequest };
+  };
+
+  deps.chat.onMessage((message) => {
+    noteWritten([message]);
+    events.emit('message.received', sanitize(message));
+  });
   deps.chat.onMessageUpdate((message) => events.emit('message.updated', sanitize(message)));
   deps.chat.onChatChange((chat) => {
     updates = updates
-      .then(async () => events.emit('chat.updated', flag(await deps.roster.list(), chat)))
+      .then(async () => events.emit('chat.updated', await flag(await deps.roster.list(), chat)))
       .catch(() => undefined);
   });
   deps.chat.onChatState((chatId, fromJid, state) =>
@@ -35,9 +64,8 @@ export function createChatsService(
   return {
     async list() {
       const [chats, contacts] = await Promise.all([deps.chat.list(), deps.roster.list()]);
-      return chats
-        .map((chat) => flag(contacts, chat))
-        .sort((a, b) => time(b.lastMessage) - time(a.lastMessage));
+      const flagged = await Promise.all(chats.map((chat) => flag(contacts, chat)));
+      return flagged.sort((a, b) => time(b.lastMessage) - time(a.lastMessage));
     },
     async open(jid) {
       const chat = await deps.chat.open(normalizeJid(jid).split('/')[0] ?? '');
@@ -45,6 +73,7 @@ export function createChatsService(
     },
     async messages(chatId) {
       const messages = (await deps.chat.messages(chatId, { limit: PAGE_SIZE })).map(sanitize);
+      noteWritten(messages);
       remember(oldest, chatId, messages);
       return messages;
     },
@@ -54,6 +83,7 @@ export function createChatsService(
       const messages = (await deps.chat.messages(chatId, { before, limit: PAGE_SIZE })).map(
         sanitize,
       );
+      noteWritten(messages);
       remember(oldest, chatId, messages);
       return messages;
     },
@@ -61,6 +91,7 @@ export function createChatsService(
       const trimmed = body.trim();
       if (!trimmed) throw new DomainError('EmptyMessage');
       typing.sent(chatId);
+      written.add(chatId);
       return deps.chat.send(chatId, trimmed);
     },
     async toggleReaction(chatId, messageId, emoji) {
@@ -90,11 +121,6 @@ export function createChatsService(
       else typing.cleared(chatId);
     },
   };
-}
-
-/** Marks a direct chat with a stranger (see `isStranger`); a room is returned as is. */
-function flag(contacts: Contact[], chat: Chat): Chat {
-  return chat.kind === 'direct' ? { ...chat, fromStranger: isStranger(contacts, chat) } : chat;
 }
 
 /** Incoming text is untrusted: the UI renders it as text, never as HTML. Control characters go. */

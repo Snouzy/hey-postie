@@ -4,17 +4,19 @@ import type { Contact, ContactRequest } from '../contracts/types';
 
 type Handler = (contact: Contact) => void;
 type RequestHandler = (request: ContactRequest) => void;
+type BlockedHandler = (jids: string[]) => void;
 
 /**
  * In-memory roster and blocklist. Tests seed it with `seed()`, push changes with `change()` and
  * simulate a stranger's subscription request with `request()`.
  */
 export class FakeRoster implements RosterRepository {
-  readonly blocked = new Set<string>();
+  readonly blocklist = new Set<string>();
   private readonly contacts = new Map<string, Contact>();
   private readonly pending = new Map<string, ContactRequest>();
   private readonly handlers = new Set<Handler>();
   private readonly requestHandlers = new Set<RequestHandler>();
+  private readonly blockedHandlers = new Set<BlockedHandler>();
 
   seed(...contacts: Contact[]): void {
     for (const contact of contacts) this.contacts.set(contact.jid, contact);
@@ -28,7 +30,7 @@ export class FakeRoster implements RosterRepository {
 
   /** A stranger asks to subscribe. Like a server with XEP-0191, a blocked JID gets nowhere. */
   request(request: ContactRequest): void {
-    if (this.blocked.has(request.jid)) return;
+    if (this.blocklist.has(request.jid)) return;
     this.pending.set(request.jid, request);
     for (const handler of this.requestHandlers) handler(request);
   }
@@ -83,16 +85,31 @@ export class FakeRoster implements RosterRepository {
   }
 
   async block(jid: string): Promise<void> {
-    this.blocked.add(jid);
+    this.blocklist.add(jid);
     this.pending.delete(jid);
+    this.emitBlocked();
   }
 
   async unblock(jid: string): Promise<void> {
-    this.blocked.delete(jid);
+    if (this.blocklist.delete(jid)) this.emitBlocked();
+  }
+
+  async blocked(): Promise<string[]> {
+    return [...this.blocklist];
+  }
+
+  onBlockedChange(handler: BlockedHandler): () => void {
+    this.blockedHandlers.add(handler);
+    return () => this.blockedHandlers.delete(handler);
   }
 
   onRequest(handler: RequestHandler): () => void {
     this.requestHandlers.add(handler);
     return () => this.requestHandlers.delete(handler);
+  }
+
+  private emitBlocked(): void {
+    const jids = [...this.blocklist];
+    for (const handler of this.blockedHandlers) handler(jids);
   }
 }
