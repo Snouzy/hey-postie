@@ -335,6 +335,45 @@ service, so a long-silent chat the user once answered may come back as a request
 the flag and has no rule of its own. The Converse roster returns an empty blocklist until XEP-0191
 is implemented there, so the settings list stays empty on a real account for now.
 
+## New chat
+
+_Rewritten 2026-10-16 as one picker (the author's reference: Gajim's "Start / Join Chat").
+Sources: `components/NewChat.tsx`, `NewChatPicker.tsx`, `pickerRows.ts`, `screens/Main.tsx`,
+`NewChat.test.tsx`, `pickerRows.test.ts`._
+
+"New chat" (from the "+" menu and from the empty chat list's "Start a chat") is one search field
+over everything the core already lists, no new contract: `Main` hands the dialog the account, the
+address book (`useContacts`) and the joined or bookmarked halls (`useRooms`); the dialog asks
+`rooms.roomService(accountDomain)` once for the conference service.
+
+- **The rows** come from `pickerRows(query, contacts, rooms, roomService)`, a pure function with
+  its own tests: the contacts whose name or address contains the text (online, away, dnd, then
+  offline; by name inside a presence), then the halls whose name or address contains it (the
+  service's order), then, when the field is not empty, the typed text as an **address row**:
+  "Join the hall …" when it is a valid JID on the conference service or the JID of a known hall,
+  "Write to …" otherwise (also for a text that is not a JID at all: the row stays, `valid: false`,
+  and the service says what is wrong when it is picked). An empty field lists everyone and every
+  hall, with no address row.
+- **Keyboard**: the field is a `role="combobox"` over a `role="listbox"` (`NewChatPicker`), the
+  focus never leaves it (`preventScroll` on open; rows swallow `mousedown`). Up and Down move
+  `aria-activedescendant` (wrapping), Enter picks the active row, a click picks any row, Esc
+  closes through `Dialog`. The first row is active by default, so Enter on a full address with no
+  match writes to it.
+- **Picking**: a contact or a "Write to" row → `Main.openWith(jid)` (`chats.open`, then the chat
+  is selected; a stranger's address lands on the request screen as before). A hall row that is
+  joined → selected at once; one that is only bookmarked → `rooms.join` with the hall's nick (the
+  account's local part when it has none); a "Join the hall" row → `rooms.join` with the local
+  part as nick. The dialog is not closable while a join runs. A refusal (`RoomPasswordRequired`,
+  `NickTaken`, an `InvalidJid` from `chats.open` through `Main`'s `error`) is Postie's sentence
+  under the field, which is `aria-invalid` and described by it; a locked or renamed hall is for
+  `JoinRoom` (password, nick), still in the "+" menu.
+- **Nothing matches**: when no contact or hall matches and the text is not an address, one muted
+  sentence in Postie's voice above the address row (no `EmptyState`: the row is the way out).
+
+**Points to check.** Searching for people outside the address book (a directory of the server)
+needs XEP-0055 (Jabber Search) on the server and a contract item for it: not done; the picker
+only knows the roster, the halls and what is typed.
+
 ## Rooms (halls)
 
 _Added 2026-10-15, leaving from the row added 2026-10-16. Sources: `components/JoinRoom.tsx`,
@@ -592,7 +631,8 @@ button is announced as such by screen readers. Decision of 2026-10-15; revisit i
 past two or three panels. The settings window, with six sections, is the one real `tablist`
 (see [Settings](#settings)). Enter in the composer sends, except while an
 IME is composing (`isComposing`). Arrow keys move
-between rows of the chat list (`ChatList.moveWithArrows`). Every control is a `<button>`,
+between rows of the chat list (`ChatList.moveWithArrows`) and, in the "New chat" picker, move the
+active row under a focused field (`aria-activedescendant`, see [New chat](#new-chat)). Every control is a `<button>`,
 `<input>` or `<a>`, so Tab reaches it; `:focus-visible` is styled once in `tokens.css`.
 
 ## Links in messages
@@ -633,7 +673,7 @@ reasoned from the stylesheets, not run in a browser: **not verified on screen**.
 | LOW | `Reactions` | Who reacted lived in `title` only, out of reach without a pointer. | Yes: a hidden span with the names, `aria-describedby` from the pill. `Reactions.test.tsx`. |
 | LOW | `SignIn`, `CreateAccount`, `RegistrationForm`, `DeleteAccountDialog` | One `<p>` whose role swaps between `status` and `alert` as the text changes; a stable region per role is the safer pattern (some readers miss a role that changes on the same node). | No: the tests of three screens assert the absence of an alert element; two stable regions would change what they check. Left for a lane that owns those screens. |
 | LOW | `Avatar` | Initials on the 24% wash: `--success` / `--warning` / `--red` tones read at 3.6–3.7:1 in light. | Partly: the kraft tone now uses `--kraft-ink` (3.8:1) and the dark success / warning tones follow the new tokens (4.3:1+). The initials are hidden from readers and the name is always written beside; a lighter wash would change the look, so the rest is left. |
-| LOW | `CreateAccount`, `NewChat`, `AddContact`, `JoinRoom`, `RoomBrowser` | Submit buttons disabled until the field has text (the skill asks to validate on submit instead). | No: a behaviour the tests pin ("Continue" asleep until a domain is typed); `required` already guards the submit. |
+| LOW | `CreateAccount`, `AddContact`, `JoinRoom`, `RoomBrowser` | Submit buttons disabled until the field has text (the skill asks to validate on submit instead). | No: a behaviour the tests pin ("Continue" asleep until a domain is typed); `required` already guards the submit. |
 | LOW | `Conversation` | A hall's topic is one line with the full text in `title` only. | No: the full topic is in the details pane, one click away; left as is. |
 
 Checked and found right (no change): every control is a native `button`, `input`, `a` or
@@ -716,8 +756,13 @@ bell, accept → roster and a normal chat among the chats, ignore → declined a
 new request, block with the confirmation (Cancel first) → blocklist and a later request dropped,
 no group when nobody is at the door), `Main.test.tsx`
 (Postie waving with a full roster, the welcome card on an empty roster shown once then never for
-that account but still for another, markRead and notification rules, new chat dialog, contacts, sign out through the
-account menu),
+that account but still for another, markRead and notification rules, the address row of the new chat picker, contacts, sign out through the
+account menu), `NewChat.test.tsx` (the address book and the halls listed with the field focused,
+search filters both groups, arrows and Enter open a contact's chat, a click too, Enter on a
+bookmarked hall joins it with its nick, a typed hall address joins with the account's name, a
+refusal keeps the card with the field invalid, a typed user address opens the chat, a text that is
+not an address shows the sentence and the error on Enter, Esc closes), `pickerRows.test.ts`
+(order, matching on name or address, the kind and validity of the last row),
 `LeaveRoom.test.tsx` ("More" only on a hall row, the menu with the focus on its item, right-click,
 Esc back to the row, confirmation with the name → `rooms.leave` and the selection dropped, Esc on
 the confirmation with the focus back on "More", a refusal keeps the card with the sentence, arrows

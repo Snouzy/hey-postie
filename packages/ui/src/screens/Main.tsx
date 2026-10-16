@@ -298,7 +298,18 @@ export function Main({ account, onOpenLink, onSaveFile, onLeave }: MainProps) {
         />
       )}
       {dialog === 'newChat' && (
-        <NewChat error={error} onOpen={(jid) => void openWith(jid)} onClose={closeDialog} />
+        <NewChat
+          account={account}
+          contacts={contacts}
+          rooms={rooms}
+          error={error}
+          onOpen={(jid) => void openWith(jid)}
+          onJoined={(joined) => {
+            setSelected(roomChat(joined));
+            closeDialog();
+          }}
+          onClose={closeDialog}
+        />
       )}
       {dialog === 'joinRoom' && (
         <JoinRoom

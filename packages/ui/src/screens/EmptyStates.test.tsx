@@ -49,8 +49,9 @@ describe('Empty states', () => {
     await signedIn();
     fireEvent.click(screen.getByRole('button', { name: 'Add' }));
     fireEvent.click(screen.getByRole('menuitem', { name: 'New chat' }));
-    fireEvent.change(screen.getByLabelText('Address'), { target: { value: 'carol@x.org' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Open' }));
+    const field = screen.getByRole('combobox', { name: 'Name or address' });
+    fireEvent.change(field, { target: { value: 'carol@x.org' } });
+    fireEvent.keyDown(field, { key: 'Enter' });
     const log = await screen.findByRole('log');
     expect(await within(log).findByText('A blank page')).toBeInTheDocument();
     expect(within(log).getByRole('img', { name: /pen in hand/ })).toBeInTheDocument();

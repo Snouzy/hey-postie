@@ -102,8 +102,9 @@ describe('Main', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Add' }));
     fireEvent.click(screen.getByRole('menuitem', { name: 'New chat' }));
     const dialog = screen.getByRole('dialog', { name: 'New chat' });
-    fireEvent.change(screen.getByLabelText('Address'), { target: { value: 'Carol@x.org' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Open' }));
+    const field = screen.getByRole('combobox', { name: 'Name or address' });
+    fireEvent.change(field, { target: { value: 'Carol@x.org' } });
+    fireEvent.keyDown(field, { key: 'Enter' });
     await waitFor(() => expect(dialog).not.toBeInTheDocument());
     expect(await screen.findByRole('heading', { name: 'carol' })).toBeInTheDocument();
   });
@@ -179,9 +180,11 @@ describe('Main', () => {
     await signedIn();
     fireEvent.click(screen.getByRole('button', { name: 'Add' }));
     fireEvent.click(screen.getByRole('menuitem', { name: 'New chat' }));
-    fireEvent.change(screen.getByLabelText('Address'), { target: { value: 'nope' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Open' }));
+    const field = screen.getByRole('combobox', { name: 'Name or address' });
+    fireEvent.change(field, { target: { value: 'nope' } });
+    fireEvent.keyDown(field, { key: 'Enter' });
     expect(await screen.findByRole('alert')).toHaveTextContent('That address does not look right.');
+    expect(field).toHaveAttribute('aria-invalid', 'true');
     expect(screen.getByRole('dialog')).toBeInTheDocument();
   });
 
