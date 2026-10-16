@@ -11,7 +11,8 @@ import { TauriTransport } from './repositories/transport';
  * the system's (`./repositories/`).
  */
 export function createTauriDependencies(): CoreDependencies {
-  const { xmpp, roster, chat, room, crypto, registration, file } = createConverseRepositories();
+  const { xmpp, roster, chat, room, roomAdmin, invitations, crypto, registration, file } =
+    createConverseRepositories();
   return {
     keychain: new TauriKeychain(),
     transport: new TauriTransport(),
@@ -19,6 +20,8 @@ export function createTauriDependencies(): CoreDependencies {
     roster,
     chat,
     room,
+    roomAdmin,
+    invitations,
     crypto,
     registration,
     file,

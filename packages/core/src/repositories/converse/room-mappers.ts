@@ -35,6 +35,12 @@ export function toRoom(
     unreadCount: number(model?.get('num_unread_general')),
     mentionsCount: number(model?.get('num_unread')),
   };
+  // Prosody announces `muc_public`, which Converse keeps as `public` (not `publicroom`).
+  const features = model?.features;
+  if (features?.get('membersonly')) room.visibility = 'private';
+  else if (features?.get('public') || features?.get('open')) room.visibility = 'public';
+  const mine = model?.getOwnOccupant?.()?.get('affiliation');
+  if (typeof mine === 'string' && mine) room.affiliation = affiliation(mine);
   return topic ? { ...room, topic } : room;
 }
 

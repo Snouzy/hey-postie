@@ -102,6 +102,8 @@ export const fr: Record<MessageKey, string> = {
   'error.NotAllowed': 'Je ne peux pas faire ça avec cette lettre.',
   'error.NotRetractable':
     'Cette lettre ne peut pas être reprise : le serveur ne lui a jamais donné d’adresse.',
+  'error.RoomExists': 'Un salon habite déjà à cette adresse. Choisis-en une autre.',
+  'error.InvalidRoomName': 'Donne un nom au salon, 64 caractères au plus.',
   'error.Unknown': 'Quelque chose a cloché pendant ma tournée. Réessaie.',
 
   'main.tabs.chats': 'Discussions',

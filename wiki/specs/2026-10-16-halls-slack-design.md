@@ -2,7 +2,8 @@
 
 _Written on 2026-10-16 from two research passes the same day (Buzz's channels, read in its
 `desktop/src`; Converse 14 and Prosody 13.0.7 for XEP-0045 room management). Asked by the author:
-"the adding, managing and display of a group, a bit like Slack", with Buzz as the model. Not built yet._
+"the adding, managing and display of a group, a bit like Slack", with Buzz as the model. Steps 1
+and 2 built on 2026-10-16 (section 8)._
 
 ## 1. Goal
 
@@ -161,6 +162,22 @@ declineInvitation(roomJid: string): Promise<void>;
 4. Invite dialog and invitations received.
 5. Hall panel and header.
 6. Browse halls.
+
+## 8. As built: steps 1 and 2 (2026-10-16)
+
+- Core: `RoomAdminRepository` and `RoomInvitationRepository` (with fakes), the rules in
+  `services/roomAdmin.ts` (spread into `RoomsService`), error codes `RoomExists` and
+  `InvalidRoomName`, events `room.invited` and `room.destroyed`; tests in `services/halls.test.ts`.
+- Converse: `repositories/converse/room-admin.ts` (create with `auto_configure` then our own awaited
+  owner form, partial owner forms, mediated invitations, affiliations, kick, destroy, and the
+  `<destroy>` watch) and `room-invitations.ts` (both kinds of invitation; the hall's seat kept as
+  the inviter when the hall hides real addresses; Prosody's fallback body files a stray direct chat
+  with the hall's address, closed as soon as it appears). `Room.visibility` and `affiliation` read
+  from the room's features and our own occupant.
+- Against the real server (`halls.contract.test.ts`, 5 cases, all passing): create configured before
+  anyone enters and `RoomExists` on a taken address; invite (bob gets it from alice and enters the
+  private hall as a member); admin, topic, member, kick (status 307); bob's invitation reaches alice
+  with no stray chat; destroy reported once.
 
 ## Points to check
 

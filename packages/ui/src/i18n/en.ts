@@ -93,6 +93,8 @@ export const en = {
   'error.InvalidPort': 'Pick a port between 1024 and 65535.',
   'error.NotAllowed': 'I can’t do that with this letter.',
   'error.NotRetractable': 'This letter can’t be taken back: the server never gave it an address.',
+  'error.RoomExists': 'A hall already lives at that address. Pick another one.',
+  'error.InvalidRoomName': 'Give the hall a name, 64 characters at most.',
   'error.Unknown': 'Something went wrong on my round. Try again.',
 
   'main.tabs.chats': 'Chats',

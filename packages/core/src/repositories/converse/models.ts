@@ -43,6 +43,8 @@ export interface ChatModel extends ModelLike {
   sendFiles(files: File[]): Promise<void>;
   /** Synchronous on a direct chat, async on a room (`plugins/muc/muc.js` sends a marker first). */
   clearUnreadMsgCounter(): Promise<unknown> | undefined;
+  /** Closes the chat box and removes its model (`shared/chatbox.js`). */
+  close?(): Promise<unknown>;
   /** XEP-0424 (`model-with-messages.js:417`, `muc.js:860` in a room). */
   retractOwnMessage(message: MessageModel): void | Promise<void>;
   getDisplayName(): string | null | undefined;
@@ -62,6 +64,22 @@ export interface RoomModel extends ChatModel {
   close(): Promise<unknown>;
   /** XEP-0425 (`muc.js:910`): null or an error stanza when the server refused. */
   retractOtherMessage(message: MessageModel, reason?: string): Promise<unknown>;
+  /** `muc.js:443-462`: one key per `muc_X` disco feature (`membersonly`, `public`, ...). */
+  features?: ModelLike;
+  /** Sends `<subject>`; success is the echo (`muc.js:2034`). */
+  setSubject(text: string): void;
+  getOccupant(nickOrJid: string): OccupantModel | undefined;
+  getOwnOccupant?(): OccupantModel | undefined;
+  /** XEP-0045 §8.2 when `role` is `none` (`muc.js:1624`). */
+  setRole(
+    occupant: OccupantModel,
+    role: string,
+    reason: string | undefined,
+    onSuccess: () => void,
+    onError: (error: unknown) => void,
+  ): void;
+  /** XEP-0045 §10.9 (`muc.js:958`): rejects with the error stanza, or null on timeout. */
+  sendDestroyIQ(reason?: string, newJid?: string): Promise<unknown>;
 }
 
 export interface OccupantModel extends ModelLike {
@@ -228,9 +246,23 @@ export interface ConverseApi {
     /** Never pass `password` here: a model attribute is persisted and published with the bookmark. */
     get(
       jid: string,
-      attributes?: { nick?: string; hidden?: boolean },
+      attributes?: {
+        nick?: string;
+        hidden?: boolean;
+        /** A new room: fill the owner form from `roomconfig` before it unlocks (`muc.js:1412`). */
+        auto_configure?: boolean;
+        roomconfig?: Record<string, string | boolean>;
+      },
       create?: boolean,
     ): Promise<RoomModel | null | undefined>;
+    /** `plugins/muc/affiliations/api.js`: `get` resolves to an Error on refusal, `set` rejects. */
+    affiliations: {
+      get(affiliation: string, jid: string): Promise<unknown>;
+      set(
+        jid: string,
+        item: { jid: string; affiliation: string; reason?: string },
+      ): Promise<unknown>;
+    };
   };
   bookmarks: {
     set(
@@ -253,6 +285,8 @@ export interface ConverseApi {
   };
   /** A raw stanza (`Element` or `stx` result) over the connection; IQs go through `sendIQ`. */
   send(stanza: unknown): unknown;
+  /** Rejects with the error stanza, or with null on timeout. */
+  sendIQ(stanza: unknown, timeout?: number): Promise<Element>;
   /** Present once the OMEMO plugin loaded (`plugins/omemo/api.js`). */
   omemo?: {
     send(chat: ChatModel, plaintext: string | null, extensions?: unknown[]): Promise<void>;

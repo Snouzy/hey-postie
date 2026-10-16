@@ -26,6 +26,8 @@ const SENTENCES: Record<ErrorCode, MessageKey> = {
   InvalidPort: 'error.InvalidPort',
   NotAllowed: 'error.NotAllowed',
   NotRetractable: 'error.NotRetractable',
+  RoomExists: 'error.RoomExists',
+  InvalidRoomName: 'error.InvalidRoomName',
   Unknown: 'error.Unknown',
 };
 
