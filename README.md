@@ -11,7 +11,7 @@ macOS · Windows · Linux · OMEMO end-to-end encryption · Claude built in, off
 https://github.com/user-attachments/assets/9db9c88e-9c1c-4163-825b-9db26ada2a22
 
 **In active development: no public download yet.**
-[Join an early pilot](mailto:hello@hey-postie.com?subject=Hey%20Postie%20early%20pilot) ·
+[Join an early pilot](mailto:contact@snouzy.com?subject=Hey%20Postie%20early%20pilot) ·
 [Wiki](wiki/index.md) · [Contribute](CONTRIBUTING.md)
 
 </div>
@@ -73,12 +73,12 @@ across all conversations, and link previews in one-to-one chats.
 team's desktop client without moving accounts or breaking federation. Our first pilots cover
 compatibility checks against your setup, packaging and managed deployment, migration from Pidgin,
 onboarding, updates and support. The client stays free software.
-[Discuss a deployment pilot](mailto:hello@hey-postie.com?subject=Hey%20Postie%20deployment%20pilot)
+[Discuss a deployment pilot](mailto:contact@snouzy.com?subject=Hey%20Postie%20deployment%20pilot)
 
 **Need the server managed too?** A managed Hey Postie space (server, accounts, domain, backups,
 monitoring, updates, support) is being validated, not available yet. It would be billed per local
 account hosted for your organization, never for the people they talk to on other servers.
-[Ask about the managed pilot](mailto:hello@hey-postie.com?subject=Hey%20Postie%20managed%20pilot)
+[Ask about the managed pilot](mailto:contact@snouzy.com?subject=Hey%20Postie%20managed%20pilot)
 
 **How we make money.** From services that need ongoing work: deployment and support for existing
 servers first, managed spaces once teams ask for them, then team administration. Federation and

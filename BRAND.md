@@ -33,4 +33,4 @@ The source files of the logo and the illustrations are part of the program and s
 
 Pick your own name, replace the logo and Postie wherever a user sees them, and remove the name from the user-facing text (`packages/ui/src/i18n/`, the product name and identifier in `apps/desktop/src-tauri/tauri.conf.json`). Leave the license notices untouched. The AGPL asks that your users can get your source; the brand asks that they can tell your project from this one.
 
-Permission requests: [hello@hey-postie.com](mailto:hello@hey-postie.com).
+Permission requests: [contact@snouzy.com](mailto:contact@snouzy.com).
