@@ -241,8 +241,8 @@ Tokens in `packages/ui/src/theme/tokens.css`, light and dark, theme follows the 
 
 A retro postman: cap, satchel, bike. Five moods, as SVG components in `packages/ui/src/illustrations/`:
 `happy` (welcome), `delivering` (sending, loading), `sealed` (encryption on, wax seal in hand),
-`oops` (errors, never mocking), `asleep` (empty states, offline). Version 1 ships simple line-art
-placeholders drawn as SVG; an illustrator later, with these as the brief.
+`oops` (errors, never mocking), `asleep` (empty states, offline). Version 1 ships the ligne-claire drawing decided on 2026-10-16, with eleven expressions
+(see [brand.md](../product/brand.md), "Postie's drawing"); an illustrator later, with it as the brief.
 
 Feature names, for texts and empty states: Postie Seal (encryption), Postie Parcel (files),
 Postie Hall (rooms), Postie Bell (notifications), Postie Ledger (history).

@@ -7,7 +7,7 @@ export function DropOverlay() {
   const text = useText();
   return (
     <div className={styles.overlay} role="status">
-      <Postie mood="delivering" label={text('postie.alt.delivering')} size={120} />
+      <Postie mood="parcel" label={text('postie.alt.parcel')} size={120} />
       <p className={styles.sentence}>{text('parcel.drop')}</p>
     </div>
   );

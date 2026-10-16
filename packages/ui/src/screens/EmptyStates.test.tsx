@@ -54,7 +54,7 @@ describe('Empty states', () => {
     fireEvent.keyDown(field, { key: 'Enter' });
     const log = await screen.findByRole('log');
     expect(await within(log).findByText('A blank page')).toBeInTheDocument();
-    expect(within(log).getByRole('img', { name: /pen in hand/ })).toBeInTheDocument();
+    expect(within(log).getByRole('img', { name: /writing a letter/ })).toBeInTheDocument();
     expect(within(log).queryByRole('button', { name: /Start|Add/ })).not.toBeInTheDocument();
   });
 

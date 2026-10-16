@@ -20,8 +20,37 @@ Rejected or set aside: Dear Postie, Mister Postie, Little Postie, Hi Postie, OK 
 ## Character
 
 A retro postman: cap, bike, satchel. Chosen on 2026-10-15 over a carrier pigeon (risk of confusion
-with Pidgin) and a talkative animal ("Parrot" is taken by drones and Parrot OS). Moods, palette,
-typography and tone of voice are still to design.
+with Pidgin) and a talkative animal ("Parrot" is taken by drones and Parrot OS).
+
+### Postie's drawing
+
+_Decided by the author on 2026-10-16, after two rounds of proposals
+(https://claude.ai/artifact/7AwqidLnjjaZWRHGrQKRdo). Component: `packages/ui/src/illustrations/Postie.tsx`._
+
+- **Ligne claire**: one 2.4px line in `--postie-line`, flat fills, no shading, no motion strokes.
+- **Head in three-quarter view under a kepi**: a short cylinder with its flat top (`--postie-top`),
+  a dark band (`--postie-band`) with the yellow badge, a short visor that stops above the eyes. A
+  baseball cap read as a helmet; the visor must never cover the face.
+- **Nothing floats**: the arm grows from the shoulder, the hand covers the sleeve, what he holds is
+  in his hand.
+- **His colours never change with the theme**: the `--postie-*` tokens are defined once, on `:root`.
+  The dark theme only changes the paper behind him (his face once turned dark with it).
+- **An expression changes only** the arm and what it holds, the eyes, the mouth and the tilt of the
+  head. A new one is a line in `POSES`, not a new drawing.
+
+| Expression | Shows | Used for |
+|---|---|---|
+| `happy` | smiling, arm down | the welcome screen |
+| `waving` | the raised hand | "pick a chat", the first-launch card |
+| `delivering` | a letter held up | a letter on its way |
+| `sealed` | a letter with a red wax seal | sign-in and account creation at rest, encryption |
+| `writing` | a letter against his chest, eyes down | an empty chat list, a chat with no letter yet |
+| `parcel` | a kraft parcel against his chest | dropping a file in a chat |
+| `thinking` | hand on his chin, eyes up | signing in, asking a server, creating an account |
+| `searching` | eyes aside | an empty address book, no hall found, nothing to show |
+| `celebrating` | arm up, eyes closed in joy, mouth open | a success worth a moment (account created) |
+| `oops` | surprised, head tilted | an error, never mocking |
+| `asleep` | eyes closed, head down | offline, nothing happening |
 
 ## Checks of 2026-10-15
 
@@ -36,7 +65,6 @@ typography and tone of voice are still to design.
 ## Still to do
 
 - Check trademarks, then buy the domain(s).
-- Design the character's moods, the palette, the typography and the tone of voice.
 
 ## Voice
 

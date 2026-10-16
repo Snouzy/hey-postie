@@ -1,12 +1,15 @@
 export type PostieMood =
   | 'happy'
+  | 'waving'
   | 'delivering'
   | 'sealed'
-  | 'oops'
-  | 'asleep'
-  | 'waving'
+  | 'writing'
+  | 'parcel'
+  | 'thinking'
   | 'searching'
-  | 'writing';
+  | 'celebrating'
+  | 'oops'
+  | 'asleep';
 
 interface PostieProps {
   mood: PostieMood;
@@ -15,121 +18,164 @@ interface PostieProps {
   size?: number;
 }
 
+type Arm = 'down' | 'raised' | 'chest' | 'chin';
+type Eyes = 'open' | 'aside' | 'down' | 'up' | 'closed' | 'joy';
+type Mouth = 'smile' | 'flat' | 'o' | 'open';
+type Prop = 'none' | 'letter' | 'sealed' | 'note' | 'parcel';
+
+/** What each expression changes: the arm and what it holds, the eyes, the mouth, the head's tilt. */
+const POSES: Record<PostieMood, { arm: Arm; prop: Prop; eyes: Eyes; mouth: Mouth; tilt: number }> =
+  {
+    happy: { arm: 'down', prop: 'none', eyes: 'open', mouth: 'smile', tilt: 0 },
+    waving: { arm: 'raised', prop: 'none', eyes: 'open', mouth: 'smile', tilt: 0 },
+    delivering: { arm: 'raised', prop: 'letter', eyes: 'open', mouth: 'smile', tilt: 0 },
+    sealed: { arm: 'raised', prop: 'sealed', eyes: 'open', mouth: 'smile', tilt: 0 },
+    writing: { arm: 'chest', prop: 'note', eyes: 'down', mouth: 'smile', tilt: 0 },
+    parcel: { arm: 'chest', prop: 'parcel', eyes: 'open', mouth: 'smile', tilt: 0 },
+    thinking: { arm: 'chin', prop: 'none', eyes: 'up', mouth: 'flat', tilt: -4 },
+    searching: { arm: 'down', prop: 'none', eyes: 'aside', mouth: 'flat', tilt: 0 },
+    celebrating: { arm: 'raised', prop: 'none', eyes: 'joy', mouth: 'open', tilt: 4 },
+    oops: { arm: 'down', prop: 'none', eyes: 'open', mouth: 'o', tilt: 8 },
+    asleep: { arm: 'down', prop: 'none', eyes: 'closed', mouth: 'flat', tilt: -10 },
+  };
+
+const SKIN = 'var(--postie-skin)';
+const UNIFORM = 'var(--postie-uniform)';
+const BAND = 'var(--postie-band)';
+const LINE = 'var(--postie-line)';
+
 /**
- * Postie, the postman. Placeholder line art until an illustrator draws him; the moods, the cap,
- * the satchel and the bike are the brief. Colors come from the design tokens. The last three
- * moods are the empty-state poses: a wave hello, a look around, a pen over a blank letter.
+ * Postie, the postman, in ligne claire (decided by the author on 2026-10-16): one silhouette with
+ * the head in three-quarter view under a kepi, one 2.4px line, nothing floating (the arm grows
+ * from the shoulder, the hand covers the sleeve, what he holds is in his hand). His colours are
+ * the `--postie-*` tokens, the same in both themes. An expression only changes the arm, the eyes,
+ * the mouth and the tilt of the head; see wiki/product/brand.md, "Postie".
  */
 export function Postie({ mood, label, size = 160 }: PostieProps) {
+  const pose = POSES[mood];
+  const head = `rotate(${pose.tilt} 100 120)`;
   return (
-    <svg
-      role="img"
-      aria-label={label}
-      width={size}
-      height={size}
-      viewBox="0 0 200 200"
-      fill="none"
-      stroke="var(--ink)"
-      strokeWidth="4"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      {/* Satchel */}
-      <path
-        d="M58 118 L58 158 Q58 166 66 166 L112 166 Q120 166 120 158 L120 118 Z"
-        fill="var(--kraft)"
-      />
-      <path d="M58 126 L120 126" />
-      <path d="M62 118 L128 60" />
-      {/* Body */}
-      <path
-        d="M80 112 Q100 100 120 112 L128 166 L72 166 Z"
-        fill="var(--navy)"
-        stroke="var(--navy)"
-      />
-      {/* Head */}
-      <circle cx="100" cy="76" r="30" fill="var(--paper-raised)" />
-      {/* Cap */}
-      <path d="M68 66 Q100 36 132 66 Z" fill="var(--navy)" stroke="var(--navy)" />
-      <path d="M64 66 L140 66" stroke="var(--navy)" strokeWidth="6" />
-      <circle cx="100" cy="54" r="4" fill="var(--yellow)" stroke="none" />
-      {/* Eyes */}
-      {mood === 'asleep' ? (
-        <>
-          <path d="M86 80 Q90 84 94 80" />
-          <path d="M106 80 Q110 84 114 80" />
-        </>
-      ) : (
-        <>
-          <circle cx="90" cy="78" r="3" fill="var(--ink)" stroke="none" />
-          <circle cx="110" cy="78" r="3" fill="var(--ink)" stroke="none" />
-        </>
-      )}
-      {/* Mouth */}
-      {mood === 'oops' ? (
-        <ellipse cx="100" cy="92" rx="5" ry="7" fill="var(--ink)" stroke="none" />
-      ) : mood === 'asleep' ? (
-        <path d="M94 92 L106 92" />
-      ) : (
-        <path d="M90 90 Q100 98 110 90" />
-      )}
-      {/* Props by mood */}
-      {mood === 'delivering' && (
-        <>
-          <path d="M126 120 L156 108 L160 128 L130 140 Z" fill="var(--paper-raised)" />
-          <path d="M126 120 L143 130 L160 108" />
-        </>
-      )}
-      {mood === 'sealed' && (
-        <>
-          <path d="M126 116 L164 116 L164 142 L126 142 Z" fill="var(--paper-raised)" />
-          <path d="M126 116 L145 130 L164 116" />
-          <circle cx="156" cy="138" r="8" fill="var(--red)" stroke="none" />
-        </>
-      )}
-      {mood === 'oops' && (
-        <>
-          <path d="M132 160 L166 152 L170 168 L136 176 Z" fill="var(--paper-raised)" />
-          <path d="M76 96 L64 84" />
-          <path d="M124 96 L136 84" />
-        </>
-      )}
-      {mood === 'asleep' && (
-        <text
-          x="140"
-          y="60"
-          fontFamily="var(--font-heading)"
-          fontSize="18"
-          fill="var(--ink-muted)"
-          stroke="none"
-        >
-          z z
-        </text>
-      )}
-      {mood === 'happy' && <path d="M126 120 Q140 112 150 124" />}
-      {mood === 'waving' && (
-        <>
-          <path d="M126 118 L152 92" />
-          <path d="M146 84 L152 92 L160 88" />
-          <path d="M156 76 L162 70" />
-          <path d="M166 86 L174 84" />
-        </>
-      )}
-      {mood === 'searching' && (
-        <>
-          <path d="M126 118 L150 112 L156 94" />
-          <circle cx="160" cy="86" r="10" fill="var(--paper-raised)" />
-          <path d="M167 93 L176 102" strokeWidth="5" />
-        </>
-      )}
-      {mood === 'writing' && (
-        <>
-          <path d="M126 122 L168 122 L168 150 L126 150 Z" fill="var(--paper-raised)" />
-          <path d="M134 134 L152 134" stroke="var(--ink-muted)" />
-          <path d="M134 142 L146 142" stroke="var(--ink-muted)" />
-          <path d="M150 148 L166 118" stroke="var(--navy)" strokeWidth="5" />
-        </>
-      )}
+    <svg role="img" aria-label={label} width={size} height={size} viewBox="0 0 200 200">
+      <g stroke={LINE} strokeWidth="2.4" strokeLinejoin="round" strokeLinecap="round">
+        {pose.arm === 'raised' && (
+          <path
+            d="M122 150 L154 104 Q158 98 165 101 L174 108 Q178 113 174 118 L146 166 Z"
+            fill={UNIFORM}
+          />
+        )}
+        {pose.prop === 'letter' && <Letter />}
+        {pose.prop === 'sealed' && <Letter sealed />}
+        {pose.arm === 'raised' && <circle cx="167" cy="98" r="11" fill={SKIN} />}
+        <path
+          d="M42 200 C42 160 60 138 92 134 L108 134 C140 138 156 160 156 200 Z"
+          fill={UNIFORM}
+        />
+        <path
+          d="M60 148 L72 141 L152 192 L154 200 L140 200 Z"
+          fill="var(--postie-kraft)"
+          strokeWidth="2"
+        />
+        <path d="M90 118 L90 134 L100 146 L110 134 L110 118 Z" fill={SKIN} />
+        {pose.prop === 'note' && <Note />}
+        {pose.prop === 'parcel' && <Parcel />}
+        {pose.arm === 'chest' && <circle cx="134" cy="182" r="10" fill={SKIN} />}
+        <g transform={head}>
+          <circle cx="131" cy="94" r="7" fill={SKIN} />
+          <circle cx="100" cy="92" r="33" fill={SKIN} />
+          <Kepi />
+        </g>
+        {pose.arm === 'chin' && (
+          <>
+            <path
+              d="M138 198 L110 138 Q108 128 117 126 Q126 125 129 133 L160 192 Z"
+              fill={UNIFORM}
+            />
+            <circle cx="114" cy="126" r="10" fill={SKIN} />
+          </>
+        )}
+      </g>
+      <g transform={head}>
+        <Face eyes={pose.eyes} mouth={pose.mouth} />
+      </g>
     </svg>
+  );
+}
+
+/** A short cylinder with its flat top, a dark band with the badge, a short visor above the eyes. */
+function Kepi() {
+  return (
+    <>
+      <path d="M64 80 L67 54 Q101 42 136 48 L134 76 Q100 70 64 80 Z" fill={UNIFORM} />
+      <path d="M67 54 Q101 42 136 48 Q103 59 67 54 Z" fill="var(--postie-top)" />
+      <path d="M64 80 Q100 70 134 76 L134 68 Q100 62 65 72 Z" fill={BAND} />
+      <circle cx="84" cy="70" r="4.5" fill="var(--postie-yellow)" strokeWidth="1.8" />
+      <path d="M60 79 Q78 75 96 74 Q90 85 66 89 Q52 90 52 85 Q53 81 60 79 Z" fill={BAND} />
+    </>
+  );
+}
+
+const EYE_SHIFT: Record<'open' | 'aside' | 'down' | 'up', [number, number]> = {
+  open: [0, 0],
+  aside: [4, 0],
+  down: [0, 3],
+  up: [1, -3],
+};
+
+function Face({ eyes, mouth }: { eyes: Eyes; mouth: Mouth }) {
+  const stroke = { fill: 'none', stroke: LINE, strokeWidth: 2.6, strokeLinecap: 'round' as const };
+  return (
+    <>
+      {eyes === 'closed' && <path d="M80 98 Q85 102 90 98 M101 97 Q106 101 111 97" {...stroke} />}
+      {eyes === 'joy' && <path d="M80 99 Q85 94 90 99 M101 98 Q106 93 111 98" {...stroke} />}
+      {eyes !== 'closed' && eyes !== 'joy' && (
+        <g fill={LINE}>
+          <circle cx={85 + EYE_SHIFT[eyes][0]} cy={98 + EYE_SHIFT[eyes][1]} r="3.2" />
+          <circle cx={106 + EYE_SHIFT[eyes][0]} cy={97 + EYE_SHIFT[eyes][1]} r="3.2" />
+        </g>
+      )}
+      {mouth === 'smile' && <path d="M86 111 Q97 119 108 110" {...stroke} />}
+      {mouth === 'flat' && <path d="M90 113 Q97 116 104 113" {...stroke} />}
+      {mouth === 'o' && <ellipse cx="97" cy="113" rx="4" ry="5" fill={LINE} />}
+      {mouth === 'open' && (
+        <path d="M86 109 Q97 111 108 108 Q104 121 96 121 Q88 120 86 109 Z" fill={LINE} />
+      )}
+      <circle cx="116" cy="106" r="4.5" fill="var(--postie-cheek)" opacity=".45" />
+    </>
+  );
+}
+
+/** Held up in the raised hand; the hand is drawn after it, over its corner. */
+function Letter({ sealed = false }: { sealed?: boolean }) {
+  return (
+    <g transform="rotate(-14 170 86)">
+      <rect x="150" y="70" width="40" height="28" rx="2" fill="var(--postie-paper)" />
+      <path d="M150 70 L170 86 L190 70" fill="none" />
+      {sealed && <circle cx="170" cy="86" r="6" fill="var(--postie-red)" strokeWidth="1.8" />}
+    </g>
+  );
+}
+
+/** A letter being written, held against the chest. */
+function Note() {
+  return (
+    <g transform="rotate(-8 118 172)">
+      <rect x="96" y="158" width="44" height="30" rx="2" fill="var(--postie-paper)" />
+      <path d="M104 168 H130 M104 176 H124" fill="none" strokeWidth="1.8" />
+    </g>
+  );
+}
+
+/** A kraft parcel with its tape, held against the chest: files. */
+function Parcel() {
+  return (
+    <g transform="rotate(-6 116 174)">
+      <rect x="90" y="152" width="52" height="40" rx="3" fill="var(--postie-kraft)" />
+      <path
+        d="M116 152 V192 M90 168 H142"
+        fill="none"
+        stroke="var(--postie-band)"
+        strokeWidth="2"
+      />
+    </g>
   );
 }

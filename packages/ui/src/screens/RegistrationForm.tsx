@@ -102,7 +102,7 @@ export function RegistrationForm(props: RegistrationFormProps) {
     return label || name;
   }
 
-  const mood = creating ? 'delivering' : error ? 'oops' : 'sealed';
+  const mood = creating ? 'thinking' : error ? 'oops' : 'sealed';
   const passwordInvalid = error === 'createAccount.passwordTooShort';
   const repeatInvalid = error === 'createAccount.passwordMismatch';
   const usernameInvalid = error === 'error.AccountConflict';

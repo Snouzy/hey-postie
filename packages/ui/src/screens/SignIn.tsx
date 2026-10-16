@@ -62,7 +62,7 @@ export function SignIn({ onBack, prefill }: SignInProps) {
     }
   }
 
-  const mood = connecting ? 'delivering' : error ? 'oops' : 'sealed';
+  const mood = connecting ? 'thinking' : error ? 'oops' : 'sealed';
   // Which field Postie's sentence is about, so a screen reader hears it from there.
   const jidInvalid = error === 'error.InvalidJid';
   const passwordInvalid = error === 'error.InvalidCredentials';

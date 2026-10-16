@@ -60,7 +60,7 @@ export function CreateAccount({ onBack, onOpenLink, onCreatedButNotSignedIn }: C
     );
   }
 
-  const mood = asking ? 'delivering' : error ? 'oops' : 'sealed';
+  const mood = asking ? 'thinking' : error ? 'oops' : 'sealed';
 
   return (
     <main className={styles.screen}>

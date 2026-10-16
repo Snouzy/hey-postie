@@ -1,5 +1,17 @@
 /* Design tokens of the "Postal" design system. See wiki/development/design-system.md. */
 :root {
+  /* Postie keeps his colours in both themes (decision of 2026-10-16): defined here only, never
+     redefined in the dark blocks, so his face never turns dark with the paper. */
+  --postie-skin: #f2d3bc;
+  --postie-uniform: #24427a;
+  --postie-top: #33599a;
+  --postie-band: #172c52;
+  --postie-line: #1b2133;
+  --postie-cheek: #e58f7a;
+  --postie-paper: #fffdf8;
+  --postie-kraft: #b98a4e;
+  --postie-yellow: #f2c14e;
+  --postie-red: #c0392b;
   --paper: #f7f2e8;
   --paper-raised: #fffdf8;
   --ink: #1e2230;

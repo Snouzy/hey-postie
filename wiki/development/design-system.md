@@ -16,7 +16,7 @@ The user's choice (Settings > Appearance) sets or removes that attribute (`core/
 | `--paper-raised` | `#FFFDF8` | `#20242F` | Cards, incoming bubbles |
 | `--ink` | `#1E2230` | `#EEE9DD` | Text |
 | `--ink-muted` | `#5B6272` | `#A9A496` | Secondary text |
-| `--navy` | `#1F3A68` | `#8FB0E8` | Primary actions, outgoing bubbles, Postie's uniform |
+| `--navy` | `#1F3A68` | `#8FB0E8` | Primary actions, outgoing bubbles (Postie has his own `--postie-*` tokens) |
 | `--navy-contrast` | `#FFFFFF` | `#0F1A2E` | Text on navy |
 | `--red` | `#B82B16` | `#F07A66` | Mailbox red: wax seal, destructive actions, errors (light darkened 2026-10-16: 4.8:1 on `--kraft-soft`, where the banners put it) |
 | `--kraft` | `#B98A4E` | `#D9B27C` | Satchel, attachment cards: **fills and borders only** |
@@ -48,16 +48,26 @@ licenses, never loaded from the network.
 
 ## Postie
 
-`<Postie mood label size />`. Five moods: `happy` (welcome), `delivering` (sending, loading),
-`sealed` (encryption, wax seal in hand), `oops` (errors, never mocking), `asleep` (offline). Three
-empty-state poses, added 2026-10-16: `waving` (nothing selected, the first-launch card),
-`searching` (magnifying glass: no contact, no hall found, nothing to show in a pane), `writing`
-(pen over a blank letter: no chat yet, no letter in a chat). `label` comes from the dictionary
-keys `postie.alt.<mood>`. Version 1 ships line-art
-placeholders; an illustrator later, with these moods and props (cap, satchel, bike) as the brief.
+`<Postie mood label size />`, in ligne claire since 2026-10-16. Eleven expressions: `happy`,
+`waving`, `delivering`, `sealed`, `writing`, `parcel`, `thinking`, `searching`, `celebrating`,
+`oops`, `asleep`; what each shows and where it is used is the table in
+[brand.md](../product/brand.md), "Postie's drawing", with the drawing rules. `label` comes from the
+dictionary keys `postie.alt.<mood>`. An expression is one line of `POSES` in `Postie.tsx` (arm and
+what it holds, eyes, mouth, tilt), never a new drawing.
 
-Illustrations are SVG React components in `packages/ui/src/illustrations/`, colored with the tokens
-so that they follow the theme.
+| Token | Value | Role |
+|---|---|---|
+| `--postie-skin` | `#F2D3BC` | face, neck, hands |
+| `--postie-uniform` | `#24427A` | jacket, sleeve, kepi |
+| `--postie-top` | `#33599A` | the kepi's flat top |
+| `--postie-band` | `#172C52` | the kepi's band and visor, the parcel's tape |
+| `--postie-line` | `#1B2133` | the one line, eyes, mouth |
+| `--postie-cheek` | `#E58F7A` | the cheek, at 45% |
+| `--postie-paper`, `--postie-kraft`, `--postie-yellow`, `--postie-red` | `#FFFDF8`, `#B98A4E`, `#F2C14E`, `#C0392B` | letters, satchel strap and parcel, badge, wax seal |
+
+They are defined once, on `:root`, and never in the dark blocks: Postie keeps his colours in both
+themes, only the paper behind him changes. The other illustrations are SVG React components in
+`packages/ui/src/illustrations/`, coloured with the theme tokens.
 
 ## Voice
 
