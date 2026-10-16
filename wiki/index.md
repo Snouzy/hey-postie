@@ -22,6 +22,7 @@ The folder opens as an Obsidian vault.
 ## Reports
 
 - [Visual report, night of 2026-10-16](reports/2026-10-16-night-report.md): screenshots of the real window in light and dark, French and English, and the visual issues found.
+- [Fluux Messenger study, 2026-10-17](reports/2026-10-17-fluux-study.md): what the ProcessOne XMPP client has that we lack, our lead, eight recommendations, XMPP edge cases from its docs.
 
 Contributing: [CONTRIBUTING.md](../CONTRIBUTING.md). Rules for agents and developers: [AGENTS.md](../AGENTS.md).
 
