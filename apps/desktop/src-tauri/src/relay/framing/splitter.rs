@@ -76,24 +76,34 @@ impl Splitter {
         }
     }
 
-    /// Feeds bytes and returns every item completed by them, in order.
-    pub fn push(&mut self, bytes: &[u8]) -> Result<Vec<Item>, FramingError> {
+    /// Feeds bytes and returns every item completed by them, in order. An error comes last, after
+    /// the items completed before it, so that what the caller sees never depends on how the
+    /// bytes were chunked; the splitter is not usable after an error.
+    pub fn push(&mut self, bytes: &[u8]) -> Vec<Result<Item, FramingError>> {
         self.buf.extend_from_slice(bytes);
         let mut items = Vec::new();
         while self.pos < self.buf.len() {
-            if self.buf.len() - self.start > MAX_ELEMENT_BYTES {
-                return Err(FramingError::TooLarge);
+            // Only the element being scanned counts, not what follows it in the same read.
+            if self.pos - self.start >= MAX_ELEMENT_BYTES {
+                items.push(Err(FramingError::TooLarge));
+                return items;
             }
             let byte = self.buf[self.pos];
-            if let Some(item) = self.step(byte)? {
-                items.push(item);
-                // Everything up to and including this byte is consumed.
-                self.buf.drain(..=self.pos);
-                self.pos = 0;
-                self.start = 0;
-                continue;
+            match self.step(byte) {
+                Err(error) => {
+                    items.push(Err(error));
+                    return items;
+                }
+                Ok(Some(item)) => {
+                    items.push(Ok(item));
+                    // Everything up to and including this byte is consumed.
+                    self.buf.drain(..=self.pos);
+                    self.pos = 0;
+                    self.start = 0;
+                    continue;
+                }
+                Ok(None) => self.pos += 1,
             }
-            self.pos += 1;
         }
         if self.state == State::Text && self.stack.is_empty() {
             // Whitespace between stanzas (keep-alives): nothing to keep.
@@ -101,7 +111,7 @@ impl Splitter {
             self.pos = 0;
             self.start = 0;
         }
-        Ok(items)
+        items
     }
 
     fn step(&mut self, byte: u8) -> Result<Option<Item>, FramingError> {
@@ -217,3 +227,8 @@ impl Splitter {
 fn is_stream_root(name: &[u8]) -> bool {
     name == b"stream:stream" || name == b"stream"
 }
+
+#[cfg(test)]
+mod property_tests;
+#[cfg(test)]
+mod tests;

@@ -16,7 +16,7 @@ use super::bridge;
 const MAX_SESSIONS: usize = 8;
 const HANDSHAKE_TIMEOUT: Duration = Duration::from_secs(10);
 /// A stanza is small; anything bigger is not a chat message. Same cap as the splitter's.
-const MAX_FRAME_BYTES: usize = 8 * 1024 * 1024;
+const MAX_FRAME_BYTES: usize = super::framing::MAX_ELEMENT_BYTES;
 
 pub async fn serve(listener: StdListener, token: String) {
     let listener = match TcpListener::from_std(listener) {
@@ -96,6 +96,28 @@ mod tests {
             let refused =
                 check_path("/xmpp/abc")(&request(wrong), Response::new(())).expect_err(wrong);
             assert_eq!(refused.status(), StatusCode::NOT_FOUND);
+        }
+    }
+
+    mod properties {
+        use super::*;
+        use proptest::prelude::*;
+
+        proptest! {
+            #[test]
+            fn only_the_exact_token_path_is_ever_accepted(
+                token in "[0-9a-f]{64}",
+                path in "/[a-zA-Z0-9/._-]{0,80}",
+                query in prop::option::of("[a-z=&]{1,10}"),
+            ) {
+                let expected = format!("/xmpp/{token}");
+                let uri = match &query {
+                    Some(query) => format!("{path}?{query}"),
+                    None => path.clone(),
+                };
+                let outcome = check_path(&expected)(&request(&uri), Response::new(()));
+                prop_assert_eq!(outcome.is_ok(), path == expected, "{}", uri);
+            }
         }
     }
 }

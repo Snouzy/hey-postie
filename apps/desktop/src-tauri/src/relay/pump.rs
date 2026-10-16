@@ -115,8 +115,8 @@ async fn server_to_client<R: AsyncRead + Unpin>(
         if count == 0 {
             return Err(RelayError::ServerUnreachable("connection closed".into()));
         }
-        for item in splitter.push(&chunk[..count]).map_err(stream_error)? {
-            let frame = match item {
+        for item in splitter.push(&chunk[..count]) {
+            let frame = match item.map_err(stream_error)? {
                 Item::Header(header) => {
                     log::debug!("server opens the stream");
                     framing::header_to_open(&header).map_err(stream_error)?

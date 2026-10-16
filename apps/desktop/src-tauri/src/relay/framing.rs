@@ -11,7 +11,7 @@ use quick_xml::events::{BytesStart, Event};
 use quick_xml::{Reader, XmlVersion};
 
 mod splitter;
-pub use splitter::{Item, Splitter};
+pub use splitter::{Item, Splitter, MAX_ELEMENT_BYTES};
 
 pub const FRAMING_NS: &str = "urn:ietf:params:xml:ns:xmpp-framing";
 pub const STREAMS_NS: &str = "http://etherx.jabber.org/streams";
@@ -127,6 +127,10 @@ pub fn header_to_open(header: &[u8]) -> Result<String, FramingError> {
 /// declared on it. Elements that declare their own `xmlns` (SASL, stream management) are untouched.
 pub fn element_to_frame(element: &[u8]) -> Vec<u8> {
     let name = root_name(element);
+    if name.is_empty() || !element.starts_with(b"<") {
+        // Not a tag (the splitter never produces this); nothing to declare on it.
+        return element.to_vec();
+    }
     let start_tag = &element[..start_tag_end(element)];
     let declaration = if name.starts_with(b"stream:") {
         (!declares(start_tag, b"xmlns:stream=")).then(|| format!(r#" xmlns:stream="{STREAMS_NS}""#))
@@ -205,5 +209,7 @@ fn attribute(root: &BytesStart<'_>, name: &str) -> Option<String> {
         .map(|value| value.into_owned())
 }
 
+#[cfg(test)]
+mod property_tests;
 #[cfg(test)]
 mod tests;

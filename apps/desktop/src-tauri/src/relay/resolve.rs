@@ -176,6 +176,9 @@ pub fn order(mut records: Vec<SrvRecord>, rng: &mut impl RngExt) -> Vec<SrvRecor
 }
 
 #[cfg(test)]
+mod property_tests;
+
+#[cfg(test)]
 mod tests {
     use super::*;
     use rand::{rngs::StdRng, SeedableRng};
