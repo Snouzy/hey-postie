@@ -34,3 +34,4 @@ Feature designs live in [`specs/`](specs/), one file per feature: `YYYY-MM-DD-<t
 - [Edit and delete messages](specs/2026-10-16-edit-delete-messages-design.md): edit, delete for me or for everyone, moderation in halls; after the move to Tailwind.
 - [Claude in Hey Postie (MCP)](specs/2026-10-16-mcp-design.md): an MCP server in the app so Claude reads chats and sends with approval; 8 tools, safety, architecture.
 - [Halls the Slack way](specs/2026-10-16-halls-slack-design.md): create, invite, manage and show halls, Buzz as the model.
+- [Inside a conversation, the Slack way](specs/2026-10-17-conversation-slack-design.md): drafts, read markers, scrolling, replies, mentions, styling; lots A and B.
