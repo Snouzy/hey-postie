@@ -18,10 +18,58 @@
   border-color: var(--navy);
 }
 
+/* One line of categories that scrolls sideways; the strip paints a fade on the edge that hides more. */
+.strip {
+  position: relative;
+}
+
+.strip::before,
+.strip::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 28px;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity var(--motion-fast);
+}
+
+.strip::before {
+  left: 0;
+  background: linear-gradient(to right, var(--paper-raised), transparent);
+}
+
+.strip::after {
+  right: 0;
+  background: linear-gradient(to left, var(--paper-raised), transparent);
+}
+
+.strip[data-fade='left']::before,
+.strip[data-fade='both']::before,
+.strip[data-fade='right']::after,
+.strip[data-fade='both']::after {
+  opacity: 1;
+}
+
 .categories {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   gap: var(--space-1);
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+  scroll-behavior: smooth;
+}
+
+.categories::-webkit-scrollbar {
+  display: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .categories {
+    scroll-behavior: auto;
+  }
 }
 
 /* Toggle buttons, like the sidebar tabs: the pressed one wears the navy underline. */
@@ -32,6 +80,8 @@
   background: transparent;
   color: var(--ink-muted);
   font-size: 12px;
+  white-space: nowrap;
+  flex: 0 0 auto;
   cursor: pointer;
 }
 

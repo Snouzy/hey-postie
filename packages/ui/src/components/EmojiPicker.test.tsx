@@ -2,6 +2,7 @@ import { fireEvent, screen, waitFor } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { renderWithCore, setupCore } from '../test-utils';
 import { Composer } from './Composer';
+import { edgeFade } from './EmojiPicker';
 
 function openPicker() {
   const { core } = setupCore();
@@ -72,6 +73,16 @@ describe('EmojiPicker', () => {
     fireEvent.keyDown(first, { key: 'Escape' });
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     expect(smile).toHaveFocus();
+  });
+
+  it('fades the edge of the category strip that hides more', () => {
+    const strip = (scrollLeft: number, clientWidth: number, scrollWidth: number) =>
+      ({ scrollLeft, clientWidth, scrollWidth }) as HTMLElement;
+    expect(edgeFade(null)).toBe('none');
+    expect(edgeFade(strip(0, 320, 320))).toBe('none');
+    expect(edgeFade(strip(0, 320, 500))).toBe('right');
+    expect(edgeFade(strip(100, 320, 500))).toBe('both');
+    expect(edgeFade(strip(180, 320, 500))).toBe('left');
   });
 
   it('closes on a click outside', () => {

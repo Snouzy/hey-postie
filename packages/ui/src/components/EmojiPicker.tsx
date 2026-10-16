@@ -1,4 +1,4 @@
-import { type KeyboardEvent, useEffect, useRef, useState } from 'react';
+import { type KeyboardEvent, useCallback, useEffect, useRef, useState } from 'react';
 import { useText } from '../core/CoreProvider';
 import { EMOJI_CATEGORIES, EMOJIS, type EmojiCategory, searchEmojis } from '../data/emoji';
 import styles from './EmojiPicker.module.css';
@@ -42,6 +42,22 @@ export function EmojiPicker({ anchor, onPick, onClose }: EmojiPickerProps) {
   // The search field takes the focus: typing is the fastest way to an emoji.
   useEffect(() => search.current?.focus({ preventScroll: true }), []);
 
+  // The categories sit on one line that scrolls sideways; a fade on an edge says "more this way".
+  const strip = useRef<HTMLDivElement>(null);
+  const [fade, setFade] = useState<Fade>('none');
+  const measure = useCallback(() => setFade(edgeFade(strip.current)), []);
+  useEffect(() => {
+    measure();
+    window.addEventListener('resize', measure);
+    return () => window.removeEventListener('resize', measure);
+  }, [measure]);
+  useEffect(() => {
+    // Optional call: jsdom has no scrollIntoView.
+    strip.current
+      ?.querySelector<HTMLElement>(`[data-category="${category}"]`)
+      ?.scrollIntoView?.({ inline: 'nearest', block: 'nearest' });
+  }, [category]);
+
   function focusCell(index: number) {
     const bounded = Math.max(0, Math.min(index, shown.length - 1));
     setActive(bounded);
@@ -73,18 +89,21 @@ export function EmojiPicker({ anchor, onPick, onClose }: EmojiPickerProps) {
           }}
         />
         {!searching && (
-          <div className={styles.categories}>
-            {EMOJI_CATEGORIES.map((name) => (
-              <button
-                key={name}
-                type="button"
-                className={styles.category}
-                aria-pressed={name === category}
-                onClick={() => setCategory(name)}
-              >
-                {text(`emoji.category.${name}`)}
-              </button>
-            ))}
+          <div className={styles.strip} data-fade={fade}>
+            <div ref={strip} className={styles.categories} onScroll={measure}>
+              {EMOJI_CATEGORIES.map((name) => (
+                <button
+                  key={name}
+                  type="button"
+                  className={styles.category}
+                  data-category={name}
+                  aria-pressed={name === category}
+                  onClick={() => setCategory(name)}
+                >
+                  {text(`emoji.category.${name}`)}
+                </button>
+              ))}
+            </div>
           </div>
         )}
         <div ref={grid} className={styles.grid}>
@@ -108,4 +127,17 @@ export function EmojiPicker({ anchor, onPick, onClose }: EmojiPickerProps) {
       </div>
     </Popover>
   );
+}
+
+type Fade = 'none' | 'left' | 'right' | 'both';
+
+/** Which edges of a sideways scroller hide more content. Exported for the test. */
+export function edgeFade(element: HTMLElement | null): Fade {
+  if (!element) return 'none';
+  const left = element.scrollLeft > 0;
+  const right = element.scrollLeft + element.clientWidth < element.scrollWidth - 1;
+  if (left && right) return 'both';
+  if (left) return 'left';
+  if (right) return 'right';
+  return 'none';
 }
