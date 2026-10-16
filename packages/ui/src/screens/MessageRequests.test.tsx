@@ -140,7 +140,9 @@ describe('Letters from strangers', () => {
       deps.fakes.chat.receive({ chatId: 'grace@x.org', fromJid: 'grace@x.org', body: 'hi back' });
     });
     expect(await screen.findByRole('button', { name: /grace/ })).toHaveTextContent('hi back');
-    expect(screen.queryByRole('button', { name: /Message requests/ })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: /Letters from strangers/ }),
+    ).not.toBeInTheDocument();
   });
 
   it('shows the group only when someone is at the door', async () => {

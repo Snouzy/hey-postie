@@ -281,7 +281,7 @@ export const en = {
   'settings.website': 'Website',
   'settings.privacy.blocked': 'Blocked contacts',
   'settings.privacy.blockedExplain':
-    'The server drops everything a blocked address sends you: letters, parcels and requests. They are not told.',
+    'The server drops everything a blocked address sends: letters, parcels and requests. I do not hear from them, and they are not told.',
   'settings.privacy.blockedEmpty': 'Nobody is blocked.',
   'settings.privacy.unblock': 'Unblock',
   'licenses.title': 'Licenses',

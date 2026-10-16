@@ -293,7 +293,7 @@ export const fr: Record<MessageKey, string> = {
   'settings.website': 'Site web',
   'settings.privacy.blocked': 'Contacts bloqués',
   'settings.privacy.blockedExplain':
-    'Le serveur jette tout ce qu’une adresse bloquée vous envoie : lettres, colis et demandes. Elle n’en est pas avertie.',
+    'Le serveur jette tout ce qu’une adresse bloquée envoie : lettres, colis et demandes. Je n’en entends plus parler, et elle n’en est pas avertie.',
   'settings.privacy.blockedEmpty': 'Personne n’est bloqué.',
   'settings.privacy.unblock': 'Débloquer',
   'licenses.title': 'Licences',
