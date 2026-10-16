@@ -1,4 +1,4 @@
-import type { Account, Chat, Contact } from '@hey-postie/core';
+import type { Account, Chat, Contact, Room } from '@hey-postie/core';
 import { useEffect, useRef, useState } from 'react';
 import { AddContact } from '../components/AddContact';
 import type { SaveFile } from '../components/Attachments';
@@ -6,6 +6,7 @@ import { Conversation } from '../components/Conversation';
 import { DeleteAccountDialog } from '../components/DeleteAccountDialog';
 import { DetailsPane } from '../components/DetailsPane';
 import { JoinRoom } from '../components/JoinRoom';
+import { LeaveRoomDialog } from '../components/LeaveRoomDialog';
 import { Licenses } from '../components/Licenses';
 import { MyDevices } from '../components/MyDevices';
 import { NewChat } from '../components/NewChat';
@@ -50,6 +51,7 @@ export function Main({ account, onOpenLink, onSaveFile, onLeave }: MainProps) {
   const uploads = useUploads();
   const [selected, setSelected] = useState<Chat | null>(null);
   const [dialog, setDialog] = useState<OpenDialog>(null);
+  const [leavingRoom, setLeavingRoom] = useState<Room | null>(null); // from a room row's menu
   const [backFromLicenses, setBackFromLicenses] = useState(false);
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [encryptionFocus, setEncryptionFocus] = useState(0); // "Check their devices" requests
@@ -145,6 +147,7 @@ export function Main({ account, onOpenLink, onSaveFile, onLeave }: MainProps) {
         error={dialog ? null : error}
         onSelectChat={setSelected}
         onSelectContact={(c: Contact) => void openWith(c.jid)}
+        onLeaveRoom={setLeavingRoom}
         onNewChat={() => setDialog('newChat')}
         onJoinRoom={() => setDialog('joinRoom')}
         onAddContact={() => setDialog('addContact')}
@@ -184,6 +187,19 @@ export function Main({ account, onOpenLink, onSaveFile, onLeave }: MainProps) {
           onLeft={() => {
             setSelected(null);
             setDetailsOpen(false);
+          }}
+        />
+      )}
+      {leavingRoom && (
+        <LeaveRoomDialog
+          room={leavingRoom}
+          onClose={() => setLeavingRoom(null)}
+          onLeft={() => {
+            if (chatId === leavingRoom.jid) {
+              setSelected(null);
+              setDetailsOpen(false);
+            }
+            setLeavingRoom(null);
           }}
         />
       )}

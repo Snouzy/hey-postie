@@ -1,9 +1,10 @@
 import type { Chat, Room } from '@hey-postie/core';
 import { Users } from 'lucide-react';
-import type { KeyboardEvent } from 'react';
+import { type KeyboardEvent, useState } from 'react';
 import { useLocale, useText } from '../core/CoreProvider';
 import { formatRecent } from '../i18n/dates';
 import styles from './ChatList.module.css';
+import { RoomRowMenu } from './RoomRowMenu';
 
 interface ChatListProps {
   chats: Chat[];
@@ -11,51 +12,78 @@ interface ChatListProps {
   rooms?: Room[];
   selectedId: string | null;
   onSelect: (chat: Chat) => void;
+  /** "Leave the hall…" from a room row's menu; without it, rows have no menu. */
+  onLeaveRoom?: (room: Room) => void;
 }
 
-/** The sidebar list. Arrow keys move between rows; Enter or a click opens one. */
-export function ChatList({ chats, rooms = [], selectedId, onSelect }: ChatListProps) {
+/**
+ * The sidebar list. Arrow keys move between rows; Enter or a click opens one. A hall the app has
+ * a record of gets a "⋯" (hover or focus) and a right-click menu, both with "Leave the hall…".
+ */
+export function ChatList({ chats, rooms = [], selectedId, onSelect, onLeaveRoom }: ChatListProps) {
   const text = useText();
   const locale = useLocale();
-  const mentionsOf = (chat: Chat) => rooms.find((room) => room.jid === chat.id)?.mentionsCount ?? 0;
+  const [menuFor, setMenuFor] = useState<string | null>(null);
+  const roomOf = (chat: Chat) => rooms.find((room) => room.jid === chat.id);
 
   if (chats.length === 0) return <p className={styles.empty}>{text('chatList.empty')}</p>;
 
   return (
     <ul className={styles.list} onKeyDown={moveWithArrows}>
-      {chats.map((chat) => (
-        <li key={chat.id}>
-          <button
-            type="button"
-            className={styles.row}
-            aria-current={chat.id === selectedId ? 'true' : undefined}
-            onClick={() => onSelect(chat)}
-          >
-            <span className={styles.top}>
-              {chat.kind === 'room' && (
-                <>
-                  <Users size={14} className={styles.hall} aria-hidden />
-                  <span className={styles.srOnly}>{text('chatList.room')} </span>
-                </>
-              )}
-              <span className={styles.title}>{chat.title}</span>
-              {chat.lastMessage && (
-                <time className={styles.time} dateTime={chat.lastMessage.sentAt.toISOString()}>
-                  {formatRecent(locale, chat.lastMessage.sentAt)}
-                </time>
-              )}
-            </span>
-            <span className={styles.bottom}>
-              <span className={styles.preview}>
-                {chat.lastMessage?.encryption === 'undecryptable'
-                  ? text('chatList.undecryptablePreview')
-                  : (chat.lastMessage?.body ?? '')}
+      {chats.map((chat) => {
+        const room = onLeaveRoom && chat.kind === 'room' ? roomOf(chat) : undefined;
+        return (
+          <li key={chat.id} className={styles.item} data-menu={room ? '' : undefined}>
+            <button
+              type="button"
+              data-row=""
+              className={styles.row}
+              aria-current={chat.id === selectedId ? 'true' : undefined}
+              onClick={() => onSelect(chat)}
+              onContextMenu={
+                room
+                  ? (event) => {
+                      event.preventDefault();
+                      setMenuFor(chat.id);
+                    }
+                  : undefined
+              }
+            >
+              <span className={styles.top}>
+                {chat.kind === 'room' && (
+                  <>
+                    <Users size={14} className={styles.hall} aria-hidden />
+                    <span className={styles.srOnly}>{text('chatList.room')} </span>
+                  </>
+                )}
+                <span className={styles.title}>{chat.title}</span>
+                {chat.lastMessage && (
+                  <time className={styles.time} dateTime={chat.lastMessage.sentAt.toISOString()}>
+                    {formatRecent(locale, chat.lastMessage.sentAt)}
+                  </time>
+                )}
               </span>
-              <Badge mentions={mentionsOf(chat)} unread={chat.unreadCount} />
-            </span>
-          </button>
-        </li>
-      ))}
+              <span className={styles.bottom}>
+                <span className={styles.preview}>
+                  {chat.lastMessage?.encryption === 'undecryptable'
+                    ? text('chatList.undecryptablePreview')
+                    : (chat.lastMessage?.body ?? '')}
+                </span>
+                <Badge mentions={roomOf(chat)?.mentionsCount ?? 0} unread={chat.unreadCount} />
+              </span>
+            </button>
+            {room && onLeaveRoom && (
+              <RoomRowMenu
+                room={room}
+                open={menuFor === chat.id}
+                onOpen={() => setMenuFor(chat.id)}
+                onClose={() => setMenuFor(null)}
+                onLeave={onLeaveRoom}
+              />
+            )}
+          </li>
+        );
+      })}
     </ul>
   );
 }
@@ -84,7 +112,7 @@ function Badge({ mentions, unread }: { mentions: number; unread: number }) {
 
 function moveWithArrows(event: KeyboardEvent<HTMLUListElement>) {
   if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') return;
-  const rows = [...event.currentTarget.querySelectorAll<HTMLButtonElement>('button')];
+  const rows = [...event.currentTarget.querySelectorAll<HTMLButtonElement>('button[data-row]')];
   const active = document.activeElement;
   const index = active instanceof HTMLButtonElement ? rows.indexOf(active) : -1;
   if (index === -1) return;
