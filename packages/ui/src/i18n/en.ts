@@ -10,6 +10,9 @@ export const en = {
   'postie.alt.sealed': 'Postie holding a letter with a red wax seal',
   'postie.alt.oops': 'Postie, surprised, a letter fallen at his feet',
   'postie.alt.asleep': 'Postie asleep on his satchel',
+  'postie.alt.waving': 'Postie waving hello',
+  'postie.alt.searching': 'Postie looking around with a magnifying glass',
+  'postie.alt.writing': 'Postie, pen in hand, over a blank letter',
 
   'signIn.title': 'Sign in',
   'signIn.jid': 'Address',
@@ -88,12 +91,19 @@ export const en = {
   'banner.reconnecting': 'I am back on the bike to reach the server…',
   'banner.offline': 'I lost the line to the server.',
   'banner.signInAgain': 'Sign in again',
+  'main.emptyTitle': 'Pick a conversation',
+  'main.detailsEmpty': 'Nothing to show',
+  'main.detailsEmptyHint': 'I have no record of this hall any more.',
 
-  'chatList.empty': 'No chat yet. Press + to write a first letter.',
+  'chatList.empty': 'No letter yet',
+  'chatList.emptyHint': 'Your first conversation starts with one address.',
+  'chatList.startChat': 'Start a chat',
   'chatList.unread': 'unread',
   'chatList.undecryptablePreview': 'Sealed letter',
 
-  'contacts.empty': 'Nobody in the address book yet.',
+  'contacts.empty': 'An empty address book',
+  'contacts.emptyHint': 'Add someone and I will tell you when they are around.',
+  'contacts.addContact': 'Add a contact',
   'presence.online': 'Online',
   'presence.away': 'Away',
   'presence.dnd': 'Do not disturb',
@@ -114,6 +124,8 @@ export const en = {
   'details.confirmRemove': 'Remove this contact from the address book?',
   'details.confirm': 'Remove',
   'conversation.log': 'Messages',
+  'conversation.empty': 'A blank page',
+  'conversation.emptyHint': 'No letter here yet. I will carry the first one.',
 
   'message.undecryptable': 'This letter was sealed for another device. I cannot open it here.',
   'message.loadOlder': 'Load older',
@@ -149,6 +161,7 @@ export const en = {
   'joinRoom.noRooms': 'No hall listed on this server.',
   'joinRoom.membersCount': '{count} members',
   'joinRoom.badDomain': 'That does not look like a server name. Try rooms.server.',
+  'joinRoom.noRoomsTitle': 'No hall here',
 
   'room.topicEmpty': 'No topic yet.',
   'room.notJoined': 'I am not in this hall right now.',
@@ -273,6 +286,12 @@ export const en = {
 
   'date.today': 'Today',
   'date.yesterday': 'Yesterday',
+
+  'welcomeCard.title': 'Welcome aboard',
+  'welcomeCard.contact': 'Add a contact: press + and give me their address.',
+  'welcomeCard.room': 'Join a hall to talk with a few people at once.',
+  'welcomeCard.sealed': 'Your letters are sealed whenever the other side has a key.',
+  'welcomeCard.dismiss': 'Got it',
 } as const;
 
 export type MessageKey = keyof typeof en;

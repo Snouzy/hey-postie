@@ -14,6 +14,8 @@ export function useMessages(chat: Chat) {
   const core = useCore();
   const [messages, setMessages] = useState<Message[]>([]);
   const [hasOlder, setHasOlder] = useState(true);
+  // The first page has answered (or failed): only then is an empty list an empty chat.
+  const [loaded, setLoaded] = useState(false);
   const [error, setError] = useState<MessageKey | null>(null);
   // The latest version of each message the events brought: a page loaded from the server may be
   // older than an event that arrived while it was on its way, and the event wins.
@@ -29,7 +31,8 @@ export function useMessages(chat: Chat) {
           !cancelled &&
           setMessages((current) => mergeById(fresh(loaded, fromEvents.current), current)),
       )
-      .catch((caught: unknown) => !cancelled && setError(errorKey(caught)));
+      .catch((caught: unknown) => !cancelled && setError(errorKey(caught)))
+      .finally(() => !cancelled && setLoaded(true));
     return () => {
       cancelled = true;
     };
@@ -91,7 +94,7 @@ export function useMessages(chat: Chat) {
       .catch((caught: unknown) => setError(errorKey(caught)));
   }
 
-  return { messages, hasOlder, error, setError, add, loadOlder, send, retry, react };
+  return { messages, hasOlder, loaded, error, setError, add, loadOlder, send, retry, react };
 }
 
 /** The loaded page, with every message the events already brought in its newer version. */

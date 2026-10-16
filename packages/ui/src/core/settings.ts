@@ -15,6 +15,7 @@ export const LOCALE_CHOICES: readonly LocaleChoice[] = ['system', ...LOCALES];
 const THEME_KEY = 'hey-postie:theme';
 const LOCALE_KEY = 'hey-postie:locale';
 const NOTIFY_PREVIEW_KEY = 'hey-postie:notify-preview';
+const WELCOMED_KEY = 'hey-postie:welcomed';
 
 export function readTheme(): Theme {
   const stored = read(THEME_KEY);
@@ -41,6 +42,25 @@ export function readShowPreview(): boolean {
 
 export function writeShowPreview(value: boolean) {
   write(NOTIFY_PREVIEW_KEY, value ? null : 'off');
+}
+
+/** Whether this account has already seen the first-launch card. */
+export function readWelcomed(jid: string): boolean {
+  return welcomedAccounts().includes(jid);
+}
+
+export function writeWelcomed(jid: string) {
+  if (readWelcomed(jid)) return;
+  write(WELCOMED_KEY, JSON.stringify([...welcomedAccounts(), jid]));
+}
+
+function welcomedAccounts(): string[] {
+  try {
+    const parsed: unknown = JSON.parse(read(WELCOMED_KEY) ?? '[]');
+    return Array.isArray(parsed) ? parsed.filter((item) => typeof item === 'string') : [];
+  } catch {
+    return [];
+  }
 }
 
 function isLocale(value: string | null): value is Locale {

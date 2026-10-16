@@ -22,6 +22,8 @@ interface MessageListProps {
   onShowDevices?: (() => void) | undefined;
   /** Rendered after the last message, inside the scroller: the parcels on their way. */
   footer?: ReactNode;
+  /** Rendered in place of the messages while there is none. */
+  empty?: ReactNode;
 }
 
 interface Run {
@@ -58,6 +60,7 @@ export function MessageList({
   showSenders = false,
   onShowDevices,
   footer,
+  empty,
 }: MessageListProps) {
   const text = useText();
   const locale = useLocale();
@@ -118,6 +121,7 @@ export function MessageList({
           {text('message.loadOlder')}
         </Button>
       )}
+      {messages.length === 0 && empty}
       {groupByDay(messages).map((day) => (
         <section key={day.key} className={styles.day}>
           <h3 className={styles.separator}>{dayLabel(locale, day.date, text)}</h3>

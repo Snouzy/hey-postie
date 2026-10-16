@@ -120,9 +120,14 @@ export function Sidebar(props: SidebarProps) {
             selectedId={props.selectedChatId}
             onSelect={props.onSelectChat}
             onLeaveRoom={props.onLeaveRoom}
+            onStartChat={props.onNewChat}
           />
         ) : (
-          <ContactList contacts={contacts} onSelect={props.onSelectContact} />
+          <ContactList
+            contacts={contacts}
+            onSelect={props.onSelectContact}
+            onAddContact={props.onAddContact}
+          />
         )}
       </div>
     </nav>

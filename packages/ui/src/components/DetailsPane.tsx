@@ -1,5 +1,11 @@
 import type { Chat, Room } from '@hey-postie/core';
+import { X } from 'lucide-react';
+import { useText } from '../core/CoreProvider';
+import { Postie } from '../illustrations/Postie';
+import { Button } from './Button';
 import { Details } from './Details';
+import styles from './DetailsPane.module.css';
+import { EmptyState } from './EmptyState';
 import { RoomDetails } from './RoomDetails';
 
 interface DetailsPaneProps {
@@ -17,8 +23,8 @@ interface DetailsPaneProps {
 
 /**
  * The right pane for the open chat: the contact's details, or the hall's. Keyed by the chat so
- * that switching chats never shows the previous peer's devices. Nothing for a hall without a
- * record (left for good): there is no pane to show.
+ * that switching chats never shows the previous peer's devices. A hall without a record (left
+ * for good) has nothing to show: Postie says so, and the pane still closes.
  */
 export function DetailsPane({
   chat,
@@ -28,10 +34,24 @@ export function DetailsPane({
   onRoomsChanged,
   onLeft,
 }: DetailsPaneProps) {
+  const text = useText();
   if (chat.kind === 'direct') {
     return <Details key={chat.id} chat={chat} focusRequest={focusRequest} onClose={onClose} />;
   }
-  if (!room) return null;
+  if (!room) {
+    return (
+      <aside className={styles.pane} aria-label={text('main.details')}>
+        <Button variant="ghost" onClick={onClose} aria-label={text('main.closeDetails')}>
+          <X size={18} aria-hidden />
+        </Button>
+        <EmptyState
+          illustration={<Postie mood="searching" label={text('postie.alt.searching')} size={96} />}
+          title={text('main.detailsEmpty')}
+          sentence={text('main.detailsEmptyHint')}
+        />
+      </aside>
+    );
+  }
   return (
     <RoomDetails
       key={room.jid}

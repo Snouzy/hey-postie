@@ -4,7 +4,9 @@ import { type FormEvent, useState } from 'react';
 import { useCore, useText } from '../core/CoreProvider';
 import type { MessageKey } from '../i18n';
 import { errorKey } from '../i18n/errors';
+import { Postie } from '../illustrations/Postie';
 import { Button } from './Button';
+import { EmptyState } from './EmptyState';
 import { Field } from './Field';
 import styles from './RoomBrowser.module.css';
 
@@ -61,7 +63,13 @@ export function RoomBrowser({ domain, onDomainChange, onPick }: RoomBrowserProps
           {text('joinRoom.browsing')}
         </p>
       )}
-      {rooms && rooms.length === 0 && <p className={styles.status}>{text('joinRoom.noRooms')}</p>}
+      {rooms && rooms.length === 0 && (
+        <EmptyState
+          illustration={<Postie mood="searching" label={text('postie.alt.searching')} size={80} />}
+          title={text('joinRoom.noRoomsTitle')}
+          sentence={text('joinRoom.noRooms')}
+        />
+      )}
       {rooms && rooms.length > 0 && (
         <ul className={styles.list}>
           {rooms.map((room) => (

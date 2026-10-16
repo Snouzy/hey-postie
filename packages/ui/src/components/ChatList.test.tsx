@@ -1,5 +1,5 @@
-import { act, screen, within } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
+import { act, fireEvent, screen, within } from '@testing-library/react';
+import { describe, expect, it, vi } from 'vitest';
 import { useChats } from '../core/useChats';
 import { renderWithCore, setupCore } from '../test-utils';
 import { ChatList } from './ChatList';
@@ -11,10 +11,23 @@ function Harness() {
 }
 
 describe('ChatList', () => {
-  it('shows the empty sentence when there is no chat', () => {
+  it('shows the empty state when there is no chat, with Postie and no button', () => {
     const { core } = setupCore();
     renderWithCore(<Harness />, core);
-    expect(screen.getByText(/No chat yet/)).toBeInTheDocument();
+    expect(screen.getByText('No letter yet')).toBeInTheDocument();
+    expect(screen.getByRole('img', { name: /Postie/ })).toBeInTheDocument();
+    expect(screen.queryByRole('button')).not.toBeInTheDocument();
+  });
+
+  it('offers to start a chat from the empty state when the sidebar hands the action', () => {
+    const { core } = setupCore();
+    const onStartChat = vi.fn();
+    renderWithCore(
+      <ChatList chats={[]} selectedId={null} onSelect={() => {}} onStartChat={onStartChat} />,
+      core,
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Start a chat' }));
+    expect(onStartChat).toHaveBeenCalledOnce();
   });
 
   it('orders chats by last activity and moves a chat up when a message arrives', async () => {

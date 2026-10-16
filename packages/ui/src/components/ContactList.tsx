@@ -1,19 +1,32 @@
 import type { Contact, Presence } from '@hey-postie/core';
 import { useText } from '../core/CoreProvider';
+import { Postie } from '../illustrations/Postie';
 import styles from './ContactList.module.css';
+import { EmptyState } from './EmptyState';
 import { PresenceDot } from './PresenceDot';
 
 interface ContactListProps {
   contacts: Contact[];
   onSelect: (contact: Contact) => void;
+  /** "Add a contact" on the empty state; without it, the sentence alone. */
+  onAddContact?: () => void;
 }
 
 const PRESENCES: readonly Presence[] = ['online', 'away', 'dnd', 'offline'];
 
 /** The address book, grouped by presence. A click opens the chat with that contact. */
-export function ContactList({ contacts, onSelect }: ContactListProps) {
+export function ContactList({ contacts, onSelect, onAddContact }: ContactListProps) {
   const text = useText();
-  if (contacts.length === 0) return <p className={styles.empty}>{text('contacts.empty')}</p>;
+  if (contacts.length === 0) {
+    return (
+      <EmptyState
+        illustration={<Postie mood="searching" label={text('postie.alt.searching')} size={96} />}
+        title={text('contacts.empty')}
+        sentence={text('contacts.emptyHint')}
+        action={onAddContact && { label: text('contacts.addContact'), onClick: onAddContact }}
+      />
+    );
+  }
 
   return (
     <div className={styles.groups}>

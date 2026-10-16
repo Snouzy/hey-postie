@@ -1,0 +1,14 @@
+.pane {
+  width: 280px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: var(--space-4);
+  padding: var(--space-4);
+  border-left: 1px solid var(--line);
+  background: var(--paper);
+}
+
+.pane > :last-child {
+  align-self: stretch;
+}
