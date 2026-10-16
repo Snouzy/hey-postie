@@ -33,7 +33,7 @@ sentence).
 | Welcome | `screens/Welcome.tsx` | Postie `happy`, "Sign in", "Create an account". |
 | Sign in | `screens/SignIn.tsx` | JID, password, "Remember me"; an optional `prefill` (JID and sentence) when coming from account creation. On blur of a valid-looking JID, asks `accounts.rememberedPassword` and prefills. While `connecting`: Postie `delivering`, form disabled. |
 | Create account | `screens/CreateAccount.tsx`, `screens/RegistrationForm.tsx` | Two steps, see [Create account](#create-account) below. |
-| Main | `screens/Main.tsx` | Three columns: `Sidebar`, `Conversation` (keyed by chat id, so drafts and in-flight loads stay with their chat; or the `EmptyState` with Postie `waving`, "Pick a conversation"; or the [first-launch card](#first-launch)), optional `Details`. Owns the selected chat, the open dialog and the error sentence of background actions. Subscribes to `chat.requested` (notification click, `xmpp:` link) and opens the chat if it is not listed yet. |
+| Main | `screens/Main.tsx` | Three columns: `Sidebar`, `Conversation` (keyed by chat id, so drafts and in-flight loads stay with their chat; or the `EmptyState` with Postie `waving`, "Pick a chat"; or the [first-launch card](#first-launch)), optional `Details`. Owns the selected chat, the open dialog and the error sentence of background actions. Subscribes to `chat.requested` (notification click, `xmpp:` link) and opens the chat if it is not listed yet. |
 
 ## Create account
 
@@ -85,7 +85,7 @@ from there. A failed load is never an empty state (`RetryNotice`).
 | `ContactList`, no contact | `searching` | An empty address book | "Add a contact" → the Add contact dialog (`onAddContact`) |
 | `MessageList`, no letter in the open chat | `writing` | A blank page | none: the composer is right below |
 | `RoomBrowser`, nothing listed on the server | `searching` | No hall here | none |
-| `Main`, no chat selected | `waving` | Pick a conversation | none |
+| `Main`, no chat selected | `waving` | Pick a chat | none |
 | `DetailsPane`, a hall without a record | `searching` | Nothing to show | none; the pane keeps its close X (Esc works too) |
 
 `MessageList` takes the empty state as an `empty` prop and renders it only while the list is
@@ -98,7 +98,7 @@ letter yet shows the blank page, and browsing shows "No hall here".
 ### First launch
 
 After a sign-in (or a registration, which signs in) whose address book is empty, `Main` shows
-`WelcomeCard` in the conversation area instead of "Pick a conversation": Postie `waving`, three
+`WelcomeCard` in the conversation area instead of "Pick a chat": Postie `waving`, three
 lines (add a contact, join a hall, letters are sealed when the other side has a key) and "Got
 it". No tour, no wizard. `Main` asks `contacts.list()` once on mount, only when the account has not
 been welcomed yet; the card appears when the list comes back empty, so a full roster never flashes
@@ -266,7 +266,7 @@ a hall gets its title's initials), the `Conversation` header, `Details` (`contac
 from `Main` through `DetailsPane`) and the sender line of a hall's runs in `MessageList`. There is
 no avatar upload: the contract has none.
 
-## Message requests
+## Letters from strangers
 
 _Added 2026-10-16 (decision of the author, "Night of 2026-10-16": like Signal, accept / ignore /
 block; nothing of a stranger's is loaded or notified until accepted). Sources:
@@ -291,7 +291,7 @@ address book, or answered, is an ordinary chat with a composer.
   `useChats` also re-reads the list on `contact.updated`: whether a chat is a stranger's depends
   on the address book, and no `chat.updated` follows an accept.
 - **Sidebar**: `RequestList` above the chats (Chats tab only): a heading button
-  (`aria-expanded`, folded by default) "Message requests" with the count on stamp yellow, then
+  (`aria-expanded`, folded by default) "Letters from strangers" with the count on stamp yellow, then
   one row per stranger (name, time, their note or last letter as preview); arrows move between
   rows with `ChatList.moveWithArrows`. `ChatList` receives the chats **minus** the requests, so a
   stranger's letter never sits among the chats; the search filters both lists by name. No rows:
@@ -345,7 +345,7 @@ are bare and lowercase from the core, so rows and halls are matched as-is.
   joined or bookmarked; same request counter as `useChats`.
 - `useRoomMembers(jid)`: `rooms.members(jid)` on mount and on every `room.members` for that JID.
   An empty JID (a direct chat) asks nothing.
-- **Join a room** (`JoinRoom`, from the "+" menu): two tabs. *Address*: room JID, nick prefilled
+- **Join a hall** (`JoinRoom`, from the "+" menu): two tabs. *Address*: room JID, nick prefilled
   with the account's local part, and a password field that appears only once the service
   answers `RoomPasswordRequired`. *Browse* (`RoomBrowser`): a domain prefilled with what
   `rooms.roomService(accountDomain)` discovers, or `rooms.<account domain>` when it finds

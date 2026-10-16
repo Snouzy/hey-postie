@@ -20,7 +20,7 @@ describe('LeaveRoomDialog', () => {
     const { core } = setupCore();
     renderWithCore(<LeaveRoomDialog room={ROOM} onClose={() => {}} onLeft={() => {}} />, core);
     expect(screen.getByRole('dialog', { name: 'Leave the hall' })).toHaveTextContent(
-      'Leave Sorting office? I will forget its bookmark; the letters stay on the server.',
+      'Leave Sorting office? I will forget its bookmark. The letters stay on the server.',
     );
   });
 

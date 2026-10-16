@@ -27,7 +27,7 @@ describe('Empty states', () => {
 
   it('offers to add a contact when the address book is empty', async () => {
     await signedIn();
-    fireEvent.click(screen.getByRole('button', { name: 'Contacts' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Address book' }));
     expect(screen.getByText('An empty address book')).toBeInTheDocument();
     expect(screen.getByRole('img', { name: /looking around/ })).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Add a contact' }));
@@ -49,8 +49,8 @@ describe('Empty states', () => {
   it('says no hall is listed when browsing finds nothing', async () => {
     await signedIn((deps) => deps.fakes.room.publish('rooms.x.org', []));
     fireEvent.click(screen.getByRole('button', { name: 'Add' }));
-    fireEvent.click(screen.getByRole('menuitem', { name: 'Join a room' }));
-    const dialog = screen.getByRole('dialog', { name: 'Join a room' });
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Join a hall' }));
+    const dialog = screen.getByRole('dialog', { name: 'Join a hall' });
     fireEvent.click(within(dialog).getByRole('button', { name: 'Browse' }));
     fireEvent.click(within(dialog).getByRole('button', { name: 'Look up' }));
     expect(await within(dialog).findByText('No hall here')).toBeInTheDocument();

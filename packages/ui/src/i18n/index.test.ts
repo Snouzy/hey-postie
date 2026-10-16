@@ -31,3 +31,16 @@ describe('dictionaries', () => {
     expect(t('fr', 'welcome.signIn')).toBe('Se connecter');
   });
 });
+
+describe('French typography', () => {
+  it('puts a non-breaking space before ; : ! ? and inside « »', () => {
+    for (const [key, value] of Object.entries(fr)) {
+      expect(value, key).not.toMatch(/ [;:!?»]|« /);
+    }
+  });
+  it('uses typographic apostrophes', () => {
+    for (const [key, value] of Object.entries(fr)) {
+      expect(value, key).not.toContain("'");
+    }
+  });
+});

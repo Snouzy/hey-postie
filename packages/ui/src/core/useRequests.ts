@@ -3,7 +3,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useCore } from './CoreProvider';
 import { useCoreEvent } from './useCoreEvent';
 
-/** One row of the "Message requests" group: a pending request, a stranger's chat, or both. */
+/** One row of the "Letters from strangers" group: a pending request, a stranger's chat, or both. */
 export interface RequestRow {
   jid: string;
   name: string;

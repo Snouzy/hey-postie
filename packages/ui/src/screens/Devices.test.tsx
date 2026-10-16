@@ -77,7 +77,7 @@ describe('My devices', () => {
     vi.spyOn(deps.fakes.crypto, 'ownDevices').mockRejectedValueOnce(new Error('offline'));
     const dialog = await openMyDevices();
     expect(await within(dialog).findByRole('alert')).toHaveTextContent(/Something went wrong/);
-    expect(within(dialog).queryByText('No key of mine yet.')).not.toBeInTheDocument();
+    expect(within(dialog).queryByText('No key on this side yet.')).not.toBeInTheDocument();
     fireEvent.click(within(dialog).getByRole('button', { name: 'Retry' }));
     expect(await within(dialog).findByText(FORMATTED)).toBeInTheDocument();
   });
