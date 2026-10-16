@@ -408,6 +408,9 @@ export const fr: Record<MessageKey, string> = {
   'sidebar.hallsAdd': 'Salons : créer ou rejoindre',
   'sidebar.hallsEmpty': 'Tu n’es dans aucun salon pour l’instant.',
   'sidebar.lettersEmpty': 'Pas encore de lettre avec quelqu’un.',
+  'sidebar.hallsFirst': 'Crée ton premier salon',
+  'sidebar.lettersFirst': 'Écris à quelqu’un',
+  'sidebar.unreadChats': 'discussions avec des lettres non lues',
 
   'createRoom.title': 'Créer un salon',
   'createRoom.intro':

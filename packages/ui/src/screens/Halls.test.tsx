@@ -344,3 +344,38 @@ describe('A hall destroyed', () => {
     expect(screen.getByText('Pick a chat')).toBeInTheDocument();
   });
 });
+
+describe('The sidebar at a glance', () => {
+  it('keeps unread chats visible on a folded group, on stamp yellow when mentioned', async () => {
+    await signedIn((deps) => hallAndLetter(deps, { mentionsCount: 1 }));
+    await screen.findByRole('button', { name: /^bob/ });
+    const heading = within(group('Messages')).getByRole('button', { expanded: true });
+    expect(heading).not.toHaveTextContent('1');
+    fireEvent.click(heading);
+    expect(within(group('Messages')).getByRole('button', { expanded: false })).toHaveTextContent(
+      '1 chats with unread letters',
+    );
+  });
+
+  it('writes an unread chat in bold, and a read one plainly', async () => {
+    await signedIn(hallAndLetter);
+    const bob = await screen.findByRole('button', { name: /^bob/ });
+    expect(within(bob).getByText('bob')).toHaveClass('font-bold');
+  });
+
+  it('offers the first step in an empty group', async () => {
+    await signedIn((deps) =>
+      deps.fakes.chat.receive({ chatId: 'bob@x.org', fromJid: 'bob@x.org', body: 'hi' }),
+    );
+    fireEvent.click(
+      await within(group('Halls')).findByRole('button', { name: 'Create your first hall' }),
+    );
+    expect(await screen.findByRole('dialog', { name: 'Create a hall' })).toBeInTheDocument();
+  });
+
+  it('shows a contact’s presence on the avatar and says it after the name', async () => {
+    await signedIn(hallAndLetter);
+    const bob = await screen.findByRole('button', { name: /^bob/ });
+    expect(bob).toHaveAccessibleName(expect.stringMatching(/^bob, Online/));
+  });
+});

@@ -394,6 +394,9 @@ export const en = {
   'sidebar.hallsAdd': 'Halls: create or join',
   'sidebar.hallsEmpty': 'You are in no hall yet.',
   'sidebar.lettersEmpty': 'No letter with anyone yet.',
+  'sidebar.hallsFirst': 'Create your first hall',
+  'sidebar.lettersFirst': 'Write to someone',
+  'sidebar.unreadChats': 'chats with unread letters',
 
   'createRoom.title': 'Create a hall',
   'createRoom.intro':

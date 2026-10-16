@@ -3,6 +3,7 @@ import {
   DoorOpen,
   LayoutList,
   MessageSquarePlus,
+  Plus,
   Search,
   SquarePlus,
   UserPlus,
@@ -41,7 +42,9 @@ const SEARCH_INPUT =
 const HALLS_ADD =
   'opacity-0 group-focus-within/heading:opacity-100 group-hover/heading:opacity-100 aria-expanded:opacity-100';
 /** One muted line in an empty group (not while searching: the search empties groups on purpose). */
-const GROUP_EMPTY = 'm-0 px-5 py-1 text-[13px] text-ink-muted';
+const GROUP_EMPTY = 'm-0 text-[13px] text-ink-muted';
+const EMPTY_ACTION =
+  'flex cursor-pointer items-center gap-1 rounded-sm border-none bg-transparent p-0 text-[13px] font-semibold text-navy hover:underline focus-visible:underline';
 const BANNER =
   "mx-3 my-0 flex flex-wrap items-center justify-between gap-2 rounded-sm bg-kraft-soft px-3 py-2 font-heading text-[14px] [font-variation-settings:'SOFT'_100] data-[tone=error]:text-red";
 
@@ -233,6 +236,7 @@ export function Sidebar(props: SidebarProps) {
                 <SidebarGroup
                   id="halls"
                   title={text('sidebar.halls')}
+                  folded={{ ...waiting(halls, props.rooms), label: text('sidebar.unreadChats') }}
                   action={
                     <AddMenu
                       label={text('sidebar.hallsAdd')}
@@ -251,10 +255,20 @@ export function Sidebar(props: SidebarProps) {
                       onLeaveRoom={props.onLeaveRoom}
                     />
                   ) : (
-                    !needle && <p className={GROUP_EMPTY}>{text('sidebar.hallsEmpty')}</p>
+                    !needle && (
+                      <EmptyGroup
+                        sentence={text('sidebar.hallsEmpty')}
+                        action={text('sidebar.hallsFirst')}
+                        onAction={props.onCreateRoom}
+                      />
+                    )
                   )}
                 </SidebarGroup>
-                <SidebarGroup id="letters" title={text('sidebar.letters')}>
+                <SidebarGroup
+                  id="letters"
+                  title={text('sidebar.letters')}
+                  folded={{ ...waiting(letters, []), label: text('sidebar.unreadChats') }}
+                >
                   {letters.length > 0 ? (
                     <ChatList
                       chats={letters}
@@ -263,7 +277,13 @@ export function Sidebar(props: SidebarProps) {
                       onSelect={props.onSelectChat}
                     />
                   ) : (
-                    !needle && <p className={GROUP_EMPTY}>{text('sidebar.lettersEmpty')}</p>
+                    !needle && (
+                      <EmptyGroup
+                        sentence={text('sidebar.lettersEmpty')}
+                        action={text('sidebar.lettersFirst')}
+                        onAction={props.onNewChat}
+                      />
+                    )
                   )}
                 </SidebarGroup>
               </>
@@ -279,4 +299,34 @@ export function Sidebar(props: SidebarProps) {
       </div>
     </nav>
   );
+}
+
+/** An empty group says so in one muted line, with the one thing to do about it. */
+function EmptyGroup({
+  sentence,
+  action,
+  onAction,
+}: {
+  sentence: string;
+  action: string;
+  onAction: () => void;
+}) {
+  return (
+    <div className="flex flex-col items-start gap-1 px-5 py-1">
+      <p className={GROUP_EMPTY}>{sentence}</p>
+      <button type="button" className={EMPTY_ACTION} onClick={onAction}>
+        <Plus size={14} aria-hidden />
+        {action}
+      </button>
+    </div>
+  );
+}
+
+/** What waits in a group, for its folded heading: chats with unread letters, and any mention. */
+function waiting(chats: Chat[], rooms: Room[]): { unread: number; mentions: number } {
+  const unread = chats.filter((chat) => chat.unreadCount > 0).length;
+  const mentions = rooms
+    .filter((room) => chats.some((chat) => chat.id === room.jid))
+    .reduce((sum, room) => sum + room.mentionsCount, 0);
+  return { unread, mentions };
 }

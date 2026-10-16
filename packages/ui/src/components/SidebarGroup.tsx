@@ -1,6 +1,7 @@
 import { ChevronDown, ChevronRight } from 'lucide-react';
 import { type ReactNode, useId, useState } from 'react';
 import { readFoldedGroups, writeFoldedGroup } from '../core/settings';
+import { cn } from '../lib/cn';
 
 /** The uppercase heading of the address book, as a button that folds its group. */
 export const GROUP_HEADING =
@@ -20,6 +21,11 @@ interface SidebarGroupProps {
   count?: { value: number; label: string };
   /** A control beside the heading (the "+" of the halls), shown on hover or focus. */
   action?: ReactNode;
+  /**
+   * What waits inside, shown only while the group is folded, so that nothing is missed: the chats
+   * with unread letters as a muted count, on stamp yellow when someone mentioned the user.
+   */
+  folded?: { unread: number; mentions: number; label: string };
   children: ReactNode;
 }
 
@@ -28,7 +34,7 @@ interface SidebarGroupProps {
  * chevron, the count), an optional action beside it, then its rows. Open by default; whether the
  * viewer folded it is kept per window (`core/settings.ts`).
  */
-export function SidebarGroup({ id, title, count, action, children }: SidebarGroupProps) {
+export function SidebarGroup({ id, title, count, action, folded, children }: SidebarGroupProps) {
   const headingId = useId();
   const [open, setOpen] = useState(() => !readFoldedGroups().includes(id));
   const Chevron = open ? ChevronDown : ChevronRight;
@@ -48,6 +54,12 @@ export function SidebarGroup({ id, title, count, action, children }: SidebarGrou
             <span id={headingId} className="flex-1 truncate">
               {title}
             </span>
+            {!open && folded && folded.unread > 0 && (
+              <span className={cn(GROUP_BADGE, folded.mentions === 0 && 'bg-line text-ink')}>
+                {folded.unread}
+                <span className="sr-only"> {folded.label}</span>
+              </span>
+            )}
             {count && count.value > 0 && (
               <span className={GROUP_BADGE}>
                 {count.value}

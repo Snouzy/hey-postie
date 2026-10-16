@@ -7,6 +7,7 @@ import { Postie } from '../illustrations/Postie';
 import { cn } from '../lib/cn';
 import { Avatar } from './Avatar';
 import { EmptyState } from './EmptyState';
+import { PresenceDot } from './PresenceDot';
 import { RoomRowMenu } from './RoomRowMenu';
 
 const ROW =
@@ -47,6 +48,10 @@ export function ChatList({
   const locale = useLocale();
   const [menuFor, setMenuFor] = useState<string | null>(null);
   const roomOf = (chat: Chat) => rooms.find((room) => room.jid === chat.id);
+  const presenceOf = (chat: Chat) =>
+    chat.kind === 'direct'
+      ? contacts.find((contact) => contact.jid === chat.peerJid)?.presence
+      : undefined;
   const avatarOf = (chat: Chat) =>
     chat.kind === 'direct'
       ? contacts.find((contact) => contact.jid === chat.peerJid)?.avatarUrl
@@ -88,7 +93,18 @@ export function ChatList({
                   : undefined
               }
             >
-              <Avatar name={chat.title} jid={chat.peerJid} avatarUrl={avatarOf(chat)} size={36} />
+              <span className="relative shrink-0">
+                <Avatar name={chat.title} jid={chat.peerJid} avatarUrl={avatarOf(chat)} size={36} />
+                {presenceOf(chat) && (
+                  // The contact's presence on the avatar's corner, ringed with the paper behind it.
+                  <span
+                    className="absolute -right-[1px] -bottom-[1px] flex rounded-[50%] border-2 border-paper"
+                    aria-hidden="true"
+                  >
+                    <PresenceDot presence={presenceOf(chat) ?? 'offline'} />
+                  </span>
+                )}
+              </span>
               <span className="flex min-w-0 flex-1 flex-col gap-[2px]">
                 <span className={LINE}>
                   {chat.kind === 'room' && (
@@ -103,7 +119,19 @@ export function ChatList({
                       <span className="sr-only">{text('chatList.private')} </span>
                     </>
                   )}
-                  <span className="min-w-0 flex-1 truncate font-semibold">{chat.title}</span>
+                  <span
+                    className={cn(
+                      'min-w-0 flex-1 truncate font-medium',
+                      chat.unreadCount > 0 && 'font-bold',
+                    )}
+                  >
+                    {chat.title}
+                    {presenceOf(chat) && (
+                      <span className="sr-only">
+                        , {text(`presence.${presenceOf(chat) ?? 'offline'}`)}
+                      </span>
+                    )}
+                  </span>
                   {muted && (
                     <>
                       <BellOff size={12} className="shrink-0 text-ink-muted" aria-hidden />
@@ -124,7 +152,12 @@ export function ChatList({
                   )}
                 </span>
                 <span className={LINE}>
-                  <span className="min-w-0 flex-1 truncate text-[13px] text-ink-muted">
+                  <span
+                    className={cn(
+                      'min-w-0 flex-1 truncate text-[13px] text-ink-muted',
+                      chat.unreadCount > 0 && 'text-ink',
+                    )}
+                  >
                     {chat.lastMessage?.encryption === 'undecryptable'
                       ? text('chatList.undecryptablePreview')
                       : (chat.lastMessage?.body ?? '')}

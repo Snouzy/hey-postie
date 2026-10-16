@@ -81,6 +81,8 @@ describe('Leave a hall from its row', () => {
 
   it('confirms with the hall name, leaves through the service and drops the selection', async () => {
     const { deps, row } = await withHall();
+    const halls = () => screen.getByRole('region', { name: 'Halls' });
+    expect(within(halls()).getAllByRole('listitem')).toHaveLength(1);
     fireEvent.click(row);
     await screen.findByRole('heading', { name: 'hall' });
     const menu = openMenu();
@@ -90,7 +92,11 @@ describe('Leave a hall from its row', () => {
     fireEvent.click(within(dialog).getByRole('button', { name: 'Leave' }));
     await waitFor(() => expect(deps.fakes.room.left).toEqual([HALL]));
     expect(await screen.findByText(/No letter open/)).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /hall/ })).not.toBeInTheDocument();
+    // The hall's row is gone; the empty group offers to create one instead.
+    expect(within(halls()).queryAllByRole('listitem')).toHaveLength(0);
+    expect(
+      within(halls()).getByRole('button', { name: 'Create your first hall' }),
+    ).toBeInTheDocument();
   });
 
   it('Esc on the confirmation leaves nothing and puts the focus back on "More"', async () => {
