@@ -209,8 +209,10 @@ export interface ConverseApi {
     add(attributes: { jid: string; name?: string }): Promise<ContactModel>;
     remove(jid: string, unsubscribe?: boolean): Promise<void>;
   };
-  /** XEP-0191 (`plugins/blocklist/api.js`): both wait for `blocklistInitialized`, which never comes without server support. */
+  /** XEP-0191 (`plugins/blocklist/api.js`): all wait for `blocklistInitialized`, which never comes without server support. */
   blocklist: {
+    /** `_converse.state.blocklist`, one model per blocked JID (`plugins/blocklist/collection.js`). */
+    get(): Promise<CollectionLike<ModelLike>>;
     add(jid: string): Promise<unknown>;
     remove(jid: string): Promise<unknown>;
   };

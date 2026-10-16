@@ -26,8 +26,10 @@ const contacts: Contact[] = [];
 const requests: ContactRequest[] = [];
 const received: Message[] = [];
 const states: Array<[string, string, ChatState]> = [];
+const blocklists: string[][] = [];
 repositories.roster.onChange((contact) => contacts.push(contact));
 repositories.roster.onRequest((request) => requests.push(request));
+repositories.roster.onBlockedChange((jids) => blocklists.push(jids));
 repositories.chat.onMessage((message) => received.push(message));
 repositories.chat.onChatState((chatId, fromJid, state) => states.push([chatId, fromJid, state]));
 
@@ -149,12 +151,15 @@ describe.skipIf(!SERVER)('Requests, blocklist, presence and chat states against 
   );
 
   it(
-    '4. alice blocks bob: his message does not arrive; unblocked, it does',
+    '4. alice blocks bob: he is on the list, his message does not arrive; unblocked, it does',
     async () => {
+      const before = blocklists.length;
       await repositories.roster.block(BOB);
       expect((await repositories.roster.list()).find((c) => c.jid === BOB)).toMatchObject({
         subscription: 'both',
       });
+      expect(await repositories.roster.blocked()).toContain(BOB);
+      await until(() => blocklists.slice(before).some((l) => l.includes(BOB)), 'onBlockedChange');
       bob.send(
         `<message to="${ALICE}" type="chat" id="${RUN}-blocked"><body>blocked ${RUN}</body></message>`,
       );
@@ -169,6 +174,11 @@ describe.skipIf(!SERVER)('Requests, blocklist, presence and chat states against 
       expect(received.some((m) => m.body === `blocked ${RUN}`)).toBe(false);
 
       await repositories.roster.unblock(BOB);
+      expect(await repositories.roster.blocked()).not.toContain(BOB);
+      await until(
+        () => blocklists.length > before && !blocklists.at(-1)?.includes(BOB),
+        'onBlockedChange after unblock',
+      );
       bob.send(
         `<message to="${ALICE}" type="chat" id="${RUN}-after"><body>after ${RUN}</body></message>`,
       );
