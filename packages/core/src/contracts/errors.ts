@@ -17,6 +17,7 @@ export type ErrorCode =
   | 'NickTaken'
   | 'DeviceNotFound'
   | 'EncryptionUnavailable'
+  | 'StatusTooLong'
   | 'Unknown';
 
 /**

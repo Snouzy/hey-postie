@@ -1,9 +1,11 @@
 import type { EventBus } from './events';
 import type {
   Account,
+  AccountPresence,
   Attachment,
   Chat,
   Contact,
+  ContactRequest,
   Device,
   Message,
   RegistrationForm,
@@ -32,13 +34,29 @@ export interface AccountsService {
   }): Promise<Account>;
   /** Deletes the signed-in account on the server, wipes its local data, signs out. */
   deleteAccount(): Promise<void>;
+  /**
+   * Trims the status sentence, refuses one longer than `MAX_STATUS_LENGTH` (`StatusTooLong`),
+   * drops an empty one. Needs an online account. Sent again after a reconnection.
+   */
+  setPresence(presence: AccountPresence): Promise<Account>;
 }
 
+/**
+ * Message requests (decision of 2026-10-16): a stranger's subscription request waits in
+ * `requests()`; their chats carry `Chat.fromStranger` and never raise a notification. Accepting
+ * puts them in the roster; ignoring declines the request (they may ask again); blocking removes
+ * them from the roster and the server drops everything they send (XEP-0191).
+ */
 export interface ContactsService {
   list(): Promise<Contact[]>;
   /** Validates the JID, sends the subscription request. */
   add(input: { jid: string; name?: string }): Promise<Contact>;
   remove(jid: string): Promise<void>;
+  requests(): Promise<ContactRequest[]>;
+  accept(jid: string): Promise<Contact>;
+  ignore(jid: string): Promise<void>;
+  block(jid: string): Promise<void>;
+  unblock(jid: string): Promise<void>;
 }
 
 export interface ChatsService {
@@ -53,6 +71,12 @@ export interface ChatsService {
   /** Toggles one emoji of this account on a message. */
   toggleReaction(chatId: string, messageId: string, emoji: string): Promise<void>;
   markRead(chatId: string): Promise<void>;
+  /**
+   * Call with `true` on every keystroke, `false` when the draft is cleared. The service sends
+   * `composing` at most once per `COMPOSING_REPEAT_MS`, `paused` after `PAUSED_AFTER_MS` of
+   * silence, and nothing extra when the message is sent (the message itself says `active`).
+   */
+  setComposing(chatId: string, composing: boolean): void;
 }
 
 export interface RoomsService {

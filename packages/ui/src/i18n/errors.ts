@@ -21,6 +21,7 @@ const SENTENCES: Record<ErrorCode, MessageKey> = {
   DeviceNotFound: 'error.DeviceNotFound',
   RegistrationRejected: 'error.RegistrationRejected',
   AccountCreatedSignInFailed: 'error.AccountCreatedSignInFailed',
+  StatusTooLong: 'error.StatusTooLong',
   Unknown: 'error.Unknown',
 };
 

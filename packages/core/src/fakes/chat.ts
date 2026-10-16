@@ -1,8 +1,9 @@
 import type { ChatRepository } from '../contracts/repositories';
-import type { Chat, Message } from '../contracts/types';
+import type { Chat, ChatState, Message } from '../contracts/types';
 
 type MessageHandler = (message: Message) => void;
 type ChatHandler = (chat: Chat) => void;
+type StateHandler = (chatId: string, fromJid: string, state: ChatState) => void;
 
 /**
  * In-memory chats. `receive()` simulates an incoming message, `history()` seeds older pages
@@ -15,7 +16,10 @@ export class FakeChat implements ChatRepository {
   private readonly messageHandlers = new Set<MessageHandler>();
   private readonly updateHandlers = new Set<MessageHandler>();
   private readonly chatHandlers = new Set<ChatHandler>();
+  private readonly stateHandlers = new Set<StateHandler>();
   private counter = 0;
+  /** Our chat states (XEP-0085) as sent, in order. */
+  readonly states: Array<{ chatId: string; composing: boolean }> = [];
   /** The chat the user is looking at: like the real one, it does not count unread messages. */
   private openId: string | null = null;
   readonly sent: Message[] = [];
@@ -170,6 +174,20 @@ export class FakeChat implements ChatRepository {
   onChatChange(handler: ChatHandler): () => void {
     this.chatHandlers.add(handler);
     return () => this.chatHandlers.delete(handler);
+  }
+
+  async setComposing(chatId: string, composing: boolean): Promise<void> {
+    this.states.push({ chatId, composing });
+  }
+
+  onChatState(handler: StateHandler): () => void {
+    this.stateHandlers.add(handler);
+    return () => this.stateHandlers.delete(handler);
+  }
+
+  /** A peer's chat state coming from the server. */
+  receiveChatState(chatId: string, fromJid: string, state: ChatState): void {
+    for (const handler of this.stateHandlers) handler(chatId, fromJid, state);
   }
 
   private ensureChat(id: string, peerJid: string, kind: Chat['kind'] = 'direct'): Chat {

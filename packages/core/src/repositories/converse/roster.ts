@@ -1,6 +1,6 @@
 import { DomainError } from '../../contracts/errors';
 import type { RosterRepository } from '../../contracts/repositories';
-import type { Contact } from '../../contracts/types';
+import type { Contact, ContactRequest } from '../../contracts/types';
 import type { ConverseEngine } from './engine';
 import { toContact } from './mappers';
 import type { CollectionLike, ContactModel } from './models';
@@ -50,6 +50,32 @@ export class ConverseRosterRepository implements RosterRepository {
     return () => this.handlers.delete(handler);
   }
 
+  // Message requests and the blocklist (XEP-0191) are not implemented yet: see
+  // wiki/development/converse.md "To implement". Reads are empty, writes refuse, nothing fires.
+  async requests(): Promise<ContactRequest[]> {
+    return [];
+  }
+
+  async accept(): Promise<Contact> {
+    throw NOT_IMPLEMENTED();
+  }
+
+  async decline(): Promise<void> {
+    throw NOT_IMPLEMENTED();
+  }
+
+  async block(): Promise<void> {
+    throw NOT_IMPLEMENTED();
+  }
+
+  async unblock(): Promise<void> {
+    throw NOT_IMPLEMENTED();
+  }
+
+  onRequest(): () => void {
+    return () => undefined;
+  }
+
   private bindCollection(): void {
     this.engine.ready().then(({ state }) => {
       const roster = state.roster;
@@ -67,4 +93,8 @@ export class ConverseRosterRepository implements RosterRepository {
     const mapped = { ...toContact(contact), ...patch };
     for (const handler of this.handlers) handler(mapped);
   }
+}
+
+function NOT_IMPLEMENTED(): DomainError {
+  return new DomainError('Unknown', 'Unknown: not implemented yet in the Converse repository');
 }

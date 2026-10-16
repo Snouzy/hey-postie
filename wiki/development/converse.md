@@ -767,3 +767,25 @@ Observed on 2026-10-16:
   (`http_default_cors_enabled`) and `mod_http_file_share` declares its own.
 - jsdom's `XMLHttpRequest` enforces CORS (preflight for the cross-origin PUT) and reports upload
   progress; Converse's XHR path runs unchanged under Vitest.
+
+## 17. To implement: message requests, presence, avatars, chat states
+
+Contracts merged first on 2026-10-16 (branch `feat/b-contracts`, decisions of the night of
+2026-10-16). The services, fakes and tests are done; the Converse classes carry **stubs**: reads
+return nothing, writes throw `DomainError('Unknown', 'Unknown: not implemented yet ...')`, listeners
+never fire. The repository lane replaces them. Stubs: `roster.ts`, `chat.ts`, `xmpp.ts`.
+
+| Contract method | What to map | Headless | Spec |
+|---|---|---|---|
+| `RosterRepository.requests()` / `onRequest()` | contacts with `requesting: true` (§3, `contactRequest` event); `name` from the nickname (XEP-0172) or the local part; `message` from the presence `<status>` | `plugins/roster` | RFC 6121 |
+| `RosterRepository.accept(jid)` | `contact.authorize()` then subscribe back (`api.contacts.add` or `contact.subscribe()`) | `plugins/roster/contact.js` | RFC 6121 |
+| `RosterRepository.decline(jid)` | `contact.unauthorize()` and drop the unsaved contact | same | RFC 6121 |
+| `RosterRepository.block(jid)` / `unblock(jid)` | `<iq type='set'><block xmlns='urn:xmpp:blocking'><item jid/></block></iq>` and `<unblock>`; headless has no blocking plugin as of 14 (check) | our own IQ | XEP-0191 |
+| `XmppRepository.setPresence({ show, status })` | `api.user.presence.send(show === 'online' ? undefined : show, status)`; the service re-sends after `reconnected` | `plugins/status` | RFC 6121 |
+| `XmppRepository.onAvatarChange(handler)` | the own profile's `image`/`image_type` (vCard, `plugins/vcard`) or XEP-0084 PEP; hand out a data URL | `plugins/vcard`, `plugins/profile` | XEP-0084, XEP-0153 |
+| `ChatRepository.setComposing(chatId, composing)` | `chat.sendChatState()` with `composing` / `paused`; `sendMessage` already sends `active` | `plugins/chat/model.js` | XEP-0085 |
+| `ChatRepository.onChatState(handler)` | the `chat_state` attribute of the chat (or occupant in a room) on `change:chat_state` | same | XEP-0085 |
+
+Rules already enforced by the services (do not duplicate): strangers never raise a notification,
+`Chat.fromStranger` is computed from the roster, `composing` is sent at most once per 10 s and
+`paused` after 5 s of silence, the status sentence is bounded to 140 characters.

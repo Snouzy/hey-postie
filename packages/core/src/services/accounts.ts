@@ -3,7 +3,7 @@ import { DomainError } from '../contracts/errors';
 import type { EventBus } from '../contracts/events';
 import type { KeychainRepository } from '../contracts/repositories';
 import type { AccountsService } from '../contracts/services';
-import type { Account, RegistrationForm } from '../contracts/types';
+import type { Account, AccountPresence, RegistrationForm } from '../contracts/types';
 import { domainOf, normalizeJid } from './jid';
 
 export function createAccountsService(
@@ -18,7 +18,19 @@ export function createAccountsService(
     events.emit('account.changed', current);
   };
 
-  deps.xmpp.onStateChange((state, error) => update(error ? { state, error } : { state }));
+  deps.xmpp.onStateChange((state, error) => {
+    update(error ? { state, error } : { state });
+    // A reconnection comes up with the server's default presence: send the chosen one again.
+    const presence = current?.presence;
+    if (state === 'online' && presence) void deps.xmpp.setPresence(presence).catch(() => undefined);
+  });
+  deps.xmpp.onAvatarChange((avatarUrl) => {
+    if (!current) return;
+    const { avatarUrl: previous, ...rest } = current;
+    if (previous === avatarUrl) return;
+    current = avatarUrl ? { ...rest, avatarUrl } : rest;
+    events.emit('account.changed', current);
+  });
 
   return {
     current: () => current,
@@ -92,8 +104,25 @@ export function createAccountsService(
       await deps.keychain.delete(account.jid).catch(() => undefined);
       await deps.registration.wipeLocal(account.jid).catch(() => undefined);
     },
+
+    async setPresence({ show, status }) {
+      if (current?.state !== 'online') {
+        throw new DomainError('Unknown', 'Unknown: no account signed in');
+      }
+      const sentence = status?.trim() ?? '';
+      if (sentence.length > MAX_STATUS_LENGTH) {
+        throw new DomainError('StatusTooLong', `StatusTooLong: limit ${MAX_STATUS_LENGTH}`);
+      }
+      const presence: AccountPresence = sentence ? { show, status: sentence } : { show };
+      await deps.xmpp.setPresence(presence);
+      update({ presence });
+      return current;
+    },
   };
 }
+
+/** The longest status sentence the app sends. The UI shows the same rule. */
+export const MAX_STATUS_LENGTH = 140;
 
 // KeychainUnavailable is not a reason to refuse sign-in: the password just is not kept.
 async function rememberQuietly(

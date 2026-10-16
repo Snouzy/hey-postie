@@ -6,15 +6,40 @@ export interface Account {
   displayName: string;
   state: AccountState;
   error?: DomainError;
+  /**
+   * The presence the user chose through `AccountsService.setPresence`; absent until then (the
+   * server's default: online, no sentence). Kept across reconnections and sent again.
+   */
+  presence?: AccountPresence;
+  /** The account's own avatar (XEP-0084 or vCard), when the server has one. */
+  avatarUrl?: string;
 }
 
 export type Presence = 'online' | 'away' | 'dnd' | 'offline';
+/** What the user chooses to show; `offline` is not a choice, it is the result of signing out. */
+export type PresenceShow = Exclude<Presence, 'offline'>;
+export interface AccountPresence {
+  show: PresenceShow;
+  /** The status sentence, trimmed and bounded by the service; absent when empty. */
+  status?: string;
+}
 export interface Contact {
   jid: string;
   name: string;
   avatarUrl?: string;
   presence: Presence;
   subscription: 'both' | 'to' | 'from' | 'none';
+}
+
+/**
+ * A stranger asking to see our presence (an incoming subscription request, RFC 6121). Held until
+ * the user accepts, ignores or blocks it: the repository lists it here, never in the roster.
+ */
+export interface ContactRequest {
+  jid: string;
+  name: string;
+  /** The sentence the stranger attached to the request, sanitized by the service. */
+  message?: string;
 }
 
 /** When a room's messages raise a system notification. Default: on mentions only. */
@@ -56,7 +81,15 @@ export interface Chat {
   lastMessage?: Message;
   unreadCount: number;
   encrypted: boolean;
+  /**
+   * True when the peer of a direct chat is not in the roster: a message request (decision of
+   * 2026-10-16). Set by `ChatsService` on every chat it returns or emits; rooms never have it.
+   */
+  fromStranger?: boolean;
 }
+
+/** XEP-0085: what the peer is doing in a chat, as far as the UI cares. */
+export type ChatState = 'composing' | 'paused' | 'active';
 
 export type MessageStatus = 'pending' | 'sent' | 'delivered' | 'read' | 'failed';
 export type Encryption = 'none' | 'omemo' | 'undecryptable';

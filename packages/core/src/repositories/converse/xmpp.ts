@@ -51,6 +51,16 @@ export class ConverseXmppRepository implements XmppRepository {
     return () => this.handlers.delete(handler);
   }
 
+  // Presence and the own avatar are not implemented yet: see wiki/development/converse.md
+  // "To implement". Sending refuses, nothing fires.
+  async setPresence(): Promise<void> {
+    throw new DomainError('Unknown', 'Unknown: not implemented yet in the Converse repository');
+  }
+
+  onAvatarChange(): () => void {
+    return () => undefined;
+  }
+
   private serialize<T>(task: () => Promise<T>): Promise<T> {
     const run = this.queue.then(task, task);
     this.queue = run.catch(() => undefined);

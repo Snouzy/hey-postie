@@ -83,6 +83,13 @@ describe('Settings: notifications', () => {
     fireEvent.click(toggle);
     expect(toggle).not.toBeChecked();
     expect(window.localStorage.getItem('hey-postie:notify-preview')).toBe('off');
+    // Bob is a contact: a stranger's letter never notifies (message requests).
+    deps.fakes.roster.seed({
+      jid: 'bob@x.org',
+      name: 'Bob',
+      presence: 'online',
+      subscription: 'both',
+    });
     fireEvent.blur(window);
     act(() => {
       deps.fakes.chat.receive({ chatId: 'bob@x.org', fromJid: 'bob@x.org', body: 'secret' });
@@ -94,6 +101,12 @@ describe('Settings: notifications', () => {
   it('applies the stored choice before a letter can arrive', async () => {
     window.localStorage.setItem('hey-postie:notify-preview', 'off');
     const { deps, core } = setupCore();
+    deps.fakes.roster.seed({
+      jid: 'bob@x.org',
+      name: 'Bob',
+      presence: 'online',
+      subscription: 'both',
+    });
     render(<App core={core} locale="en" />);
     expect(core.notifications.getShowPreview()).toBe(false);
     // Right after render, before any effect-driven work: the body is already hidden.

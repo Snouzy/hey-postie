@@ -1,8 +1,9 @@
-import { beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createCore } from '../container';
-import type { Message } from '../contracts/types';
+import type { Chat, Message } from '../contracts/types';
 import { createFakeDependencies } from '../fakes';
 import { sanitizeReactions } from './chats';
+import { COMPOSING_REPEAT_MS, PAUSED_AFTER_MS } from './typing';
 
 let deps: ReturnType<typeof createFakeDependencies>;
 let core: ReturnType<typeof createCore>;
@@ -10,6 +11,116 @@ let core: ReturnType<typeof createCore>;
 beforeEach(() => {
   deps = createFakeDependencies();
   core = createCore(deps);
+});
+
+/** `chat.updated` asks the roster first: one turn of the microtask queue. */
+const tick = () => new Promise((resolve) => setTimeout(resolve, 0));
+
+const bob = (): void =>
+  deps.fakes.roster.seed({
+    jid: 'bob@example.org',
+    name: 'Bob',
+    presence: 'online',
+    subscription: 'both',
+  });
+
+describe('message requests', () => {
+  it('flags a direct chat with someone outside the roster, in list and open', async () => {
+    bob();
+    deps.fakes.chat.receive({ chatId: 'bob@example.org', fromJid: 'bob@example.org', body: 'a' });
+    deps.fakes.chat.receive({ chatId: 'eve@example.org', fromJid: 'eve@example.org', body: 'b' });
+    const chats = await core.chats.list();
+    expect(chats.map((c) => [c.id, c.fromStranger])).toEqual([
+      ['eve@example.org', true],
+      ['bob@example.org', false],
+    ]);
+    expect((await core.chats.open('eve@example.org')).fromStranger).toBe(true);
+    expect((await core.chats.open('bob@example.org')).fromStranger).toBe(false);
+  });
+
+  it('never flags a room', async () => {
+    deps.fakes.chat.receive({
+      chatId: 'hall@rooms.example.org',
+      fromJid: 'hall@rooms.example.org/eve',
+      body: 'a',
+      kind: 'room',
+    });
+    const [room] = await core.chats.list();
+    expect(room?.fromStranger).toBeUndefined();
+  });
+
+  it('carries the flag on chat.updated and drops it once accepted', async () => {
+    const seen: Chat[] = [];
+    core.events.on('chat.updated', (chat) => seen.push(chat));
+    deps.fakes.chat.receive({ chatId: 'eve@example.org', fromJid: 'eve@example.org', body: 'a' });
+    await tick();
+    deps.fakes.roster.request({ jid: 'eve@example.org', name: 'Eve' });
+    await core.contacts.accept('eve@example.org');
+    deps.fakes.chat.receive({ chatId: 'eve@example.org', fromJid: 'eve@example.org', body: 'b' });
+    await tick();
+    expect(seen.map((c) => c.fromStranger)).toEqual([true, false]);
+  });
+});
+
+describe('typing', () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+  const states = () => deps.fakes.chat.states.map((s) => (s.composing ? 'composing' : 'paused'));
+
+  it('sends composing once per window while the user keeps typing', () => {
+    // A keystroke every second: the pause never fires, composing repeats once per window.
+    for (let elapsed = 0; elapsed < COMPOSING_REPEAT_MS; elapsed += 1000) {
+      core.chats.setComposing('c', true);
+      vi.advanceTimersByTime(1000);
+    }
+    expect(states()).toEqual(['composing']);
+    core.chats.setComposing('c', true);
+    expect(states()).toEqual(['composing', 'composing']);
+  });
+
+  it('sends paused after the silence, then composing again on the next keystroke', () => {
+    core.chats.setComposing('c', true);
+    vi.advanceTimersByTime(PAUSED_AFTER_MS - 1);
+    expect(states()).toEqual(['composing']);
+    vi.advanceTimersByTime(1);
+    expect(states()).toEqual(['composing', 'paused']);
+    core.chats.setComposing('c', true);
+    expect(states()).toEqual(['composing', 'paused', 'composing']);
+  });
+
+  it('sends paused at once when the draft is cleared, and only once', () => {
+    core.chats.setComposing('c', true);
+    core.chats.setComposing('c', false);
+    core.chats.setComposing('c', false);
+    vi.advanceTimersByTime(PAUSED_AFTER_MS);
+    expect(states()).toEqual(['composing', 'paused']);
+  });
+
+  it('sends nothing extra when the message goes out', async () => {
+    core.chats.setComposing('c', true);
+    await core.chats.send('c', 'hello');
+    vi.advanceTimersByTime(PAUSED_AFTER_MS);
+    expect(states()).toEqual(['composing']);
+  });
+
+  it('keeps one state per chat', () => {
+    core.chats.setComposing('a', true);
+    core.chats.setComposing('b', true);
+    expect(deps.fakes.chat.states.map((s) => s.chatId)).toEqual(['a', 'b']);
+  });
+
+  it('turns a peer chat state into chat.typing', () => {
+    const seen: boolean[] = [];
+    core.events.on('chat.typing', (e) => seen.push(e.typing));
+    deps.fakes.chat.receiveChatState('c', 'bob@example.org', 'composing');
+    deps.fakes.chat.receiveChatState('c', 'bob@example.org', 'paused');
+    deps.fakes.chat.receiveChatState('c', 'bob@example.org', 'active');
+    expect(seen).toEqual([true, false, false]);
+  });
 });
 
 describe('chats.send', () => {
@@ -51,6 +162,7 @@ describe('incoming messages', () => {
     core.events.on('chat.updated', (chat) => unread.push(chat.unreadCount));
     deps.fakes.chat.receive({ chatId: 'c', fromJid: 'bob@example.org', body: 'a' });
     deps.fakes.chat.receive({ chatId: 'c', fromJid: 'bob@example.org', body: 'b' });
+    await tick();
     expect(unread).toEqual([1, 2]);
   });
 });
@@ -103,6 +215,7 @@ describe('chats.markRead', () => {
     const unread: number[] = [];
     core.events.on('chat.updated', (c) => unread.push(c.unreadCount));
     await core.chats.markRead(chat.id);
+    await tick();
     expect(deps.fakes.chat.markedRead).toEqual([chat.id]);
     expect(unread.at(-1)).toBe(0);
   });

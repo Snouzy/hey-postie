@@ -73,6 +73,7 @@ export const en = {
   'error.AccountCreatedSignInFailed':
     'Your account exists now, but I could not sign you in. Try signing in.',
   'error.DeviceNotFound': 'I do not know this device any more.',
+  'error.StatusTooLong': 'That status is too long for my satchel: 140 characters at most.',
   'error.Unknown': 'Something went wrong on my round. Let us try again.',
 
   'main.tabs.chats': 'Chats',

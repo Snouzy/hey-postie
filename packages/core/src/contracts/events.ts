@@ -1,4 +1,13 @@
-import type { Account, Chat, Contact, Device, Message, Room, RoomMember } from './types';
+import type {
+  Account,
+  Chat,
+  Contact,
+  ContactRequest,
+  Device,
+  Message,
+  Room,
+  RoomMember,
+} from './types';
 
 export interface CoreEvents {
   'account.changed': Account;
@@ -6,6 +15,10 @@ export interface CoreEvents {
   'message.updated': Message;
   'chat.updated': Chat;
   'contact.updated': Contact;
+  /** A stranger asks to be a contact; the request stays in `contacts.requests()` until answered. */
+  'contact.requested': ContactRequest;
+  /** The peer of a direct chat started or stopped typing (XEP-0085). */
+  'chat.typing': { chatId: string; fromJid: string; typing: boolean };
   'room.updated': Room;
   'room.members': { jid: string; members: RoomMember[] };
   'devices.changed': { jid: string; devices: Device[] };

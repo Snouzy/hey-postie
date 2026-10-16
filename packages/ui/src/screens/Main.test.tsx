@@ -21,6 +21,13 @@ describe('Main', () => {
 
   it('marks a chat read and tells notifications which chat is open when it is selected', async () => {
     const { deps } = await signedIn();
+    // Bob is a contact: a stranger's letter never notifies (message requests).
+    deps.fakes.roster.seed({
+      jid: 'bob@x.org',
+      name: 'Bob',
+      presence: 'online',
+      subscription: 'both',
+    });
     act(() => {
       deps.fakes.chat.receive({ chatId: 'bob@x.org', fromJid: 'bob@x.org', body: 'hello' });
     });
@@ -41,6 +48,12 @@ describe('Main', () => {
 
   it('notifies when the window is blurred', async () => {
     const { deps } = await signedIn();
+    deps.fakes.roster.seed({
+      jid: 'bob@x.org',
+      name: 'Bob',
+      presence: 'online',
+      subscription: 'both',
+    });
     fireEvent.blur(window);
     act(() => {
       deps.fakes.chat.receive({ chatId: 'bob@x.org', fromJid: 'bob@x.org', body: 'psst' });

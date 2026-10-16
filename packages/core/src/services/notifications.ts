@@ -2,18 +2,20 @@ import type { CoreDependencies } from '../container';
 import type { EventBus } from '../contracts/events';
 import type { NotificationsService } from '../contracts/services';
 import type { Message, Room } from '../contracts/types';
+import { isStranger } from './contacts';
 
 /**
  * Shows a system notification for an incoming message unless the user is already looking at it:
- * window focused and that chat open. In a room, the room's rule decides: every message, mentions
- * only (the default), or never. With the preview off, the body is `HIDDEN_PREVIEW`: the text of a
- * letter never reaches the notification center.
+ * window focused and that chat open. A stranger (a message request, decision of 2026-10-16) never
+ * raises one. In a room, the room's rule decides: every message, mentions only (the default), or
+ * never. With the preview off, the body is `HIDDEN_PREVIEW`: the text of a letter never reaches
+ * the notification center.
  */
 /** The body when the user does not want the text of a letter in the notification center. */
 export const HIDDEN_PREVIEW = 'New letter';
 
 export function createNotificationsService(
-  deps: Pick<CoreDependencies, 'notifier' | 'chat' | 'room'>,
+  deps: Pick<CoreDependencies, 'notifier' | 'chat' | 'room' | 'roster'>,
   events: EventBus,
 ): NotificationsService {
   let focused = true;
@@ -27,10 +29,15 @@ export function createNotificationsService(
   });
 
   async function notify(message: Message) {
-    const [chats, rooms] = await Promise.all([deps.chat.list(), deps.room.list()]);
+    const [chats, rooms, contacts] = await Promise.all([
+      deps.chat.list(),
+      deps.room.list(),
+      deps.roster.list(),
+    ]);
     const chat = chats.find((c) => c.id === message.chatId);
     const room = rooms.find((r) => r.jid === message.chatId);
     if (room && !roomWants(room, message)) return;
+    if (!room && chat && isStranger(contacts, chat)) return;
     const title = room
       ? `${message.fromNick ?? ''} · ${room.name}`.replace(/^ · /, '')
       : (chat?.title ?? message.fromJid.split('@')[0] ?? message.fromJid);

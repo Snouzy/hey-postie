@@ -234,3 +234,88 @@ describe('accounts.deleteAccount when the local wipe fails', () => {
     expect(core.accounts.current()).toBeNull();
   });
 });
+
+describe('accounts.setPresence', () => {
+  const online = async () => {
+    const core = createCore(deps);
+    await core.accounts.signIn({ jid: 'a@b.org', password: 'pw', remember: false });
+    return core;
+  };
+
+  it('needs a signed-in account', async () => {
+    const core = createCore(deps);
+    await expect(core.accounts.setPresence({ show: 'away' })).rejects.toThrow(/Unknown/);
+    expect(deps.fakes.xmpp.presences).toEqual([]);
+  });
+
+  it('sends the show and the trimmed sentence, and keeps it on the account', async () => {
+    const core = await online();
+    const seen: string[] = [];
+    core.events.on('account.changed', (a) => seen.push(a.presence?.status ?? ''));
+    const account = await core.accounts.setPresence({ show: 'dnd', status: '  on my round  ' });
+    expect(deps.fakes.xmpp.presences).toEqual([{ show: 'dnd', status: 'on my round' }]);
+    expect(account.presence).toEqual({ show: 'dnd', status: 'on my round' });
+    expect(seen).toEqual(['on my round']);
+  });
+
+  it('drops an empty sentence', async () => {
+    const core = await online();
+    const account = await core.accounts.setPresence({ show: 'away', status: '   ' });
+    expect(account.presence).toEqual({ show: 'away' });
+    expect(deps.fakes.xmpp.presences).toEqual([{ show: 'away' }]);
+  });
+
+  it('refuses a sentence over 140 characters without sending', async () => {
+    const core = await online();
+    await expect(
+      core.accounts.setPresence({ show: 'online', status: 'x'.repeat(141) }),
+    ).rejects.toThrow(/StatusTooLong/);
+    expect(deps.fakes.xmpp.presences).toEqual([]);
+    expect(core.accounts.current()?.presence).toBeUndefined();
+  });
+
+  it('sends the chosen presence again after a reconnection', async () => {
+    const core = await online();
+    await core.accounts.setPresence({ show: 'away', status: 'lunch' });
+    deps.fakes.xmpp.setState('connecting');
+    deps.fakes.xmpp.setState('online');
+    expect(deps.fakes.xmpp.presences).toEqual([
+      { show: 'away', status: 'lunch' },
+      { show: 'away', status: 'lunch' },
+    ]);
+  });
+
+  it('sends nothing on reconnection when none was chosen', async () => {
+    await online();
+    deps.fakes.xmpp.setState('online');
+    expect(deps.fakes.xmpp.presences).toEqual([]);
+  });
+
+  it('forgets the presence at sign-out', async () => {
+    const core = await online();
+    await core.accounts.setPresence({ show: 'away' });
+    await core.accounts.signOut();
+    await core.accounts.signIn({ jid: 'a@b.org', password: 'pw', remember: false });
+    expect(core.accounts.current()?.presence).toBeUndefined();
+  });
+});
+
+describe('own avatar', () => {
+  it('follows the server and emits account.changed, once per change', async () => {
+    const core = createCore(deps);
+    await core.accounts.signIn({ jid: 'a@b.org', password: 'pw', remember: false });
+    const seen: Array<string | undefined> = [];
+    core.events.on('account.changed', (a) => seen.push(a.avatarUrl));
+    deps.fakes.xmpp.setAvatar('https://x.org/me.png');
+    deps.fakes.xmpp.setAvatar('https://x.org/me.png');
+    deps.fakes.xmpp.setAvatar(undefined);
+    expect(seen).toEqual(['https://x.org/me.png', undefined]);
+    expect('avatarUrl' in (core.accounts.current() ?? {})).toBe(false);
+  });
+
+  it('is ignored while nobody is signed in', () => {
+    const core = createCore(deps);
+    deps.fakes.xmpp.setAvatar('https://x.org/me.png');
+    expect(core.accounts.current()).toBeNull();
+  });
+});

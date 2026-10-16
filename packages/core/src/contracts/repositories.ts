@@ -1,9 +1,12 @@
 import type { DomainError } from './errors';
 import type {
+  AccountPresence,
   AccountState,
   Attachment,
   Chat,
+  ChatState,
   Contact,
+  ContactRequest,
   Device,
   Message,
   RegistrationForm,
@@ -29,14 +32,31 @@ export interface XmppRepository {
   connect(input: { jid: string; password: string; websocketUrl: string }): Promise<void>;
   disconnect(): Promise<void>;
   onStateChange(handler: (state: AccountState, error?: DomainError) => void): () => void;
+  /** Sends this account's presence: `<show>` from `show` (none for online), `<status>` from `status`. */
+  setPresence(presence: AccountPresence): Promise<void>;
+  /** The account's own avatar changed (XEP-0084 or vCard); `undefined` when it was removed. */
+  onAvatarChange(handler: (avatarUrl: string | undefined) => void): () => void;
 }
 
+/**
+ * The roster (RFC 6121) and the blocklist (XEP-0191). `list()` holds the contacts the user added
+ * or accepted; a stranger's pending subscription request is in `requests()` only.
+ */
 export interface RosterRepository {
   list(): Promise<Contact[]>;
   add(jid: string, name?: string): Promise<Contact>;
   remove(jid: string): Promise<void>;
   /** Fires for presence, name or subscription changes, and for additions and removals. */
   onChange(handler: (contact: Contact) => void): () => void;
+  requests(): Promise<ContactRequest[]>;
+  /** Approves the request (`subscribed`), adds the JID to the roster and subscribes back. */
+  accept(jid: string): Promise<Contact>;
+  /** Refuses the request (`unsubscribed`); the peer may ask again later. */
+  decline(jid: string): Promise<void>;
+  /** Adds the JID to the blocklist (XEP-0191) and drops its pending request, if any. */
+  block(jid: string): Promise<void>;
+  unblock(jid: string): Promise<void>;
+  onRequest(handler: (request: ContactRequest) => void): () => void;
 }
 
 export interface ChatRepository {
@@ -61,9 +81,13 @@ export interface ChatRepository {
   /** Sets this account's reactions on a message (XEP-0444); an empty list removes them all. */
   react(chatId: string, messageId: string, emojis: string[]): Promise<void>;
   markRead(chatId: string): Promise<void>;
+  /** Sends our chat state (XEP-0085): `composing` when true, `paused` when false. */
+  setComposing(chatId: string, composing: boolean): Promise<void>;
   onMessage(handler: (message: Message) => void): () => void;
   onMessageUpdate(handler: (message: Message) => void): () => void;
   onChatChange(handler: (chat: Chat) => void): () => void;
+  /** A peer's chat state (XEP-0085); `fromJid` is a bare JID, or `room@service/nick` in a room. */
+  onChatState(handler: (chatId: string, fromJid: string, state: ChatState) => void): () => void;
 }
 
 /**

@@ -203,6 +203,16 @@ export class ConverseChatRepository implements ChatRepository {
     return () => this.chatHandlers.delete(handler);
   }
 
+  // Chat states (XEP-0085) are not implemented yet: see wiki/development/converse.md
+  // "To implement". Sending refuses (the service swallows it), nothing fires.
+  async setComposing(): Promise<void> {
+    throw new DomainError('Unknown', 'Unknown: not implemented yet in the Converse repository');
+  }
+
+  onChatState(): () => void {
+    return () => undefined;
+  }
+
   /** A bookmarked room, or any JID on a domain already discovered as a conference service. */
   private async isRoomJid(jid: string): Promise<boolean> {
     const { api, state } = await this.engine.ready();

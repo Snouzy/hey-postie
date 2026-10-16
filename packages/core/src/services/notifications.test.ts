@@ -9,9 +9,34 @@ let core: ReturnType<typeof createCore>;
 beforeEach(() => {
   deps = createFakeDependencies();
   core = createCore(deps);
+  // Bob is a contact; anyone else writing in is a stranger and stays silent.
+  deps.fakes.roster.seed({
+    jid: 'bob@x.org',
+    name: 'Bob',
+    presence: 'online',
+    subscription: 'both',
+  });
 });
 
 const tick = () => new Promise((resolve) => setTimeout(resolve, 0));
+
+describe('message requests', () => {
+  it('never notifies for a stranger, even unfocused', async () => {
+    core.notifications.setWindowFocused(false);
+    deps.fakes.chat.receive({ chatId: 'eve@x.org', fromJid: 'eve@x.org', body: 'hello' });
+    await tick();
+    expect(deps.fakes.notifier.shown).toHaveLength(0);
+  });
+
+  it('notifies once the request is accepted', async () => {
+    core.notifications.setWindowFocused(false);
+    deps.fakes.roster.request({ jid: 'eve@x.org', name: 'Eve' });
+    await core.contacts.accept('eve@x.org');
+    deps.fakes.chat.receive({ chatId: 'eve@x.org', fromJid: 'eve@x.org', body: 'hello' });
+    await tick();
+    expect(deps.fakes.notifier.shown).toHaveLength(1);
+  });
+});
 
 describe('notifications', () => {
   it('notifies when the window is not focused', async () => {

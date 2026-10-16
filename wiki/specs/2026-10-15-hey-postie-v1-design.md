@@ -99,10 +99,15 @@ Tauri 2 stable is used (`tauri = "2"`, `@tauri-apps/cli` 2.x). Tauri 3 was alpha
 ### 3.1 Types (in `contracts/`)
 
 ```ts
-Account    { jid, displayName, state: 'offline' | 'connecting' | 'online' | 'error', error?: DomainError }
+Account    { jid, displayName, state: 'offline' | 'connecting' | 'online' | 'error', error?: DomainError,
+             presence?: AccountPresence, avatarUrl? }
+AccountPresence { show: 'online' | 'away' | 'dnd', status? }   // the sentence: trimmed, 140 characters at most
 Contact    { jid, name, avatarUrl?, presence: 'online' | 'away' | 'dnd' | 'offline', subscription: 'both' | 'to' | 'from' | 'none' }
+ContactRequest { jid, name, message? }                         // a stranger's subscription request, held until answered
 Room       { jid, name, nick, joined: boolean, unreadCount, mentionsCount }
-Chat       { id, kind: 'direct' | 'room', peerJid, title, lastMessage?, unreadCount, encrypted: boolean }
+Chat       { id, kind: 'direct' | 'room', peerJid, title, lastMessage?, unreadCount, encrypted: boolean,
+             fromStranger? }                                   // true: a message request (peer not in the roster)
+ChatState  'composing' | 'paused' | 'active'                   // XEP-0085, what a peer is doing in a chat
 Message    { id, chatId, fromJid, fromNick?, body, sentAt, direction: 'in' | 'out',
              status: 'pending' | 'sent' | 'delivered' | 'read' | 'failed',
              encryption: 'none' | 'omemo' | 'undecryptable', attachments: Attachment[], reactions: Reaction[],

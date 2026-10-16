@@ -78,6 +78,7 @@ export const fr: Record<MessageKey, string> = {
   'error.AccountCreatedSignInFailed':
     'Votre compte existe désormais, mais je n’ai pas pu vous connecter. Essayez de vous connecter.',
   'error.DeviceNotFound': 'Je ne connais plus cet appareil.',
+  'error.StatusTooLong': 'Ce statut ne rentre pas dans ma sacoche : 140 caractères au plus.',
   'error.Unknown': 'Quelque chose a cloché pendant ma tournée. Réessayons.',
 
   'main.tabs.chats': 'Discussions',
