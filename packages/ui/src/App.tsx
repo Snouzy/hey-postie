@@ -2,7 +2,6 @@ import type { Core } from '@hey-postie/core';
 import { useEffect, useRef, useState } from 'react';
 import type { SaveFile } from './components/Attachments';
 import { DevRibbon } from './components/DevRibbon';
-import { SendApproval } from './components/SendApproval';
 import { CoreProvider } from './core/CoreProvider';
 import { downloadBlob } from './core/download';
 import { SettingsProvider } from './core/SettingsProvider';
@@ -88,7 +87,6 @@ export function App({ core, locale, onOpenLink, version, onSaveFile, devLabel }:
           onOpenLink={onOpenLink ?? openInNewWindow}
           onSaveFile={onSaveFile ?? downloadBlob}
         />
-        <SendApproval />
         {devLabel && <DevRibbon label={devLabel} />}
       </SettingsProvider>
     </CoreProvider>

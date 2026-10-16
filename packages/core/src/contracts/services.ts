@@ -143,8 +143,8 @@ export interface NotificationsService {
   getShowPreview(): boolean;
 }
 
-/** Claude (MCP) access: off, read only, or read and send with the user's approval. */
-export type AssistantMode = 'off' | 'read' | 'readAndSend';
+/** Claude (MCP) access: off, read only, or read and prepare drafts the user sends themselves. */
+export type AssistantMode = 'off' | 'read' | 'readAndDraft';
 
 export interface AssistantSettings {
   mode: AssistantMode;
@@ -154,9 +154,8 @@ export interface AssistantSettings {
   port: number;
 }
 
-/** A message Claude wants to send, as the user sees it before saying yes or no. */
-export interface SendRequest {
-  id: string;
+/** A letter Claude prepared: it lands in the chat's composer, the user edits and sends it. */
+export interface Draft {
   chatId: string;
   title: string;
   body: string;
@@ -164,7 +163,7 @@ export interface SendRequest {
 
 /**
  * The rules of Claude's access (spec 2026-10-16-mcp-design). Off by default; what Claude reads
- * leaves the device. The MCP adapter asks this service before every read and every send.
+ * leaves the device. Claude never sends: it prepares drafts the user reviews, edits and sends.
  */
 export interface AssistantService {
   getSettings(): AssistantSettings;
@@ -177,13 +176,10 @@ export interface AssistantService {
   /** Whether Claude may see this chat at all (mode not off; sealed chats only when included). */
   canRead(chat: Chat): boolean;
   /**
-   * Asks the user through `assistant.sendRequested`. Resolves true when approved, false when
-   * declined or after `SEND_APPROVAL_TIMEOUT_MS`. Refuses with `AssistantNotAllowed` unless the
-   * mode is `readAndSend`.
+   * Hands a draft to the interface (`assistant.draft`, then `chat.requested` to show the chat).
+   * Refuses with `AssistantNotAllowed` unless the mode is `readAndDraft`. Nothing is sent.
    */
-  requestSend(request: Omit<SendRequest, 'id'>): Promise<boolean>;
-  /** The user's answer to a pending request; an unknown or settled id is ignored. */
-  answerSend(id: string, approved: boolean): void;
+  draft(draft: Draft): void;
 }
 
 export interface Core {

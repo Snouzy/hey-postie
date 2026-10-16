@@ -13,8 +13,8 @@ use std::time::Duration;
 use tauri::Emitter;
 use tokio::sync::oneshot;
 
-/// Longer than the two minutes a send waits for the user's approval, so the approval decides.
-const REPLY_TIMEOUT: Duration = Duration::from_secs(150);
+/// Every tool answers at once (none waits for the user): a reply this late means the webview is gone.
+const REPLY_TIMEOUT: Duration = Duration::from_secs(30);
 
 /// The headers the MCP server needs (spec 2026-07-28 checks the last three against the body).
 const FORWARDED_HEADERS: [&str; 5] = [

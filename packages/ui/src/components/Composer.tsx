@@ -1,5 +1,5 @@
 import { Paperclip, Send, Smile } from 'lucide-react';
-import { type ClipboardEvent, type KeyboardEvent, useRef, useState } from 'react';
+import { type ClipboardEvent, type KeyboardEvent, useEffect, useRef, useState } from 'react';
 import { useText } from '../core/CoreProvider';
 import type { MessageKey } from '../i18n';
 import { errorKey } from '../i18n/errors';
@@ -26,6 +26,9 @@ interface ComposerProps {
   sealed?: boolean;
   /** True on every keystroke with text, false once the draft is empty or sent (XEP-0085). */
   onComposing?: (composing: boolean) => void;
+  /** A letter Claude prepared: added to the text (below what is there), then `onDraftTaken`. */
+  draft?: string | undefined;
+  onDraftTaken?: (() => void) | undefined;
 }
 
 /**
@@ -40,6 +43,8 @@ export function Composer({
   disabled = false,
   sealed = false,
   onComposing,
+  draft,
+  onDraftTaken,
 }: ComposerProps) {
   const text = useText();
   const placeholder = text(sealed ? 'composer.placeholderSealed' : 'composer.placeholder');
@@ -51,6 +56,18 @@ export function Composer({
   const fileInput = useRef<HTMLInputElement>(null);
   const emojiButton = useRef<HTMLButtonElement>(null);
   const canSend = body.trim().length > 0 && !sending && !disabled;
+
+  // Claude's draft joins what the user already wrote, never replaces it; the user sends it.
+  useEffect(() => {
+    if (draft === undefined) return;
+    onDraftTaken?.();
+    setBody((current) => (current.trim() ? `${current}\n${draft}` : draft));
+    requestAnimationFrame(() => {
+      if (!area.current) return;
+      area.current.focus({ preventScroll: true });
+      grow(area.current);
+    });
+  }, [draft, onDraftTaken]);
 
   async function send() {
     if (!canSend) return;

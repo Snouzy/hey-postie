@@ -143,7 +143,7 @@ changes and stops it (`mcp_stop`) when it goes back to `off`, following `assista
 - **The webview runs MCP.** An accepted request goes to the webview as the `mcp-request` event
   (`content-type`, `accept`, `mcp-protocol-version`, `mcp-method`, `mcp-name` and the body);
   `app/assistant.ts` runs it through `createMcpFetch` (`packages/mcp`) and answers with
-  `mcp_reply`. No answer within 150 s (longer than the 2 minutes a send waits for the user) → 503.
+  `mcp_reply`. No answer within 30 s (every tool answers at once) → 503.
 - **Restarts**: on the port already served, `mcp_start` only swaps the token (a new token or a
   settings change never rebinds, which raced with the closing socket and left nothing listening,
   seen 2026-10-16); on another port it stops the old listener and binds, retrying for up to 1 s.

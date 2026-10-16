@@ -28,6 +28,6 @@ describe('answerForwarded', () => {
     });
     expect(reply.status).toBe(200);
     expect(reply.content_type).toContain('application/json');
-    expect(reply.body).toContain('send_message');
+    expect(reply.body).toContain('draft_message');
   });
 });

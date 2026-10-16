@@ -6,7 +6,7 @@ import { errorKey } from '../../i18n/errors';
 import { Button } from '../Button';
 import { sectionStyles as styles } from './sectionStyles';
 
-const MODES: readonly AssistantMode[] = ['off', 'read', 'readAndSend'];
+const MODES: readonly AssistantMode[] = ['off', 'read', 'readAndDraft'];
 
 /** What the user pastes in a terminal to connect Claude Code (spec 2026-10-16-mcp-design). */
 export function claudeCodeCommand(port: number, token: string): string {
@@ -14,7 +14,7 @@ export function claudeCodeCommand(port: number, token: string): string {
 }
 
 /**
- * Claude's access: off, read only, or read and send with approval; sealed chats left out unless
+ * Claude's access: off, read only, or read and prepare drafts; sealed chats left out unless
  * included; the port; and the command that connects Claude Code. The token is never shown, only
  * copied. The rule lives in the core (`core.assistant`); this window remembers the choice.
  */

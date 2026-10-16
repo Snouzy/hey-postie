@@ -1,4 +1,4 @@
-import type { AssistantSettings, SendRequest } from './services';
+import type { AssistantSettings, Draft } from './services';
 import type {
   Account,
   Chat,
@@ -32,10 +32,8 @@ export interface CoreEvents {
    * restarts its listener.
    */
   'assistant.changed': AssistantSettings;
-  /** Claude wants to send a message: the UI asks the user (`assistant.answerSend`). */
-  'assistant.sendRequested': SendRequest;
-  /** A send request is over (answered or timed out): the UI closes its dialog. */
-  'assistant.sendSettled': { id: string };
+  /** Claude prepared a letter: the interface puts it in that chat's composer. */
+  'assistant.draft': Draft;
 }
 
 export interface EventBus {

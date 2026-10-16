@@ -274,7 +274,7 @@ export const en = {
   'assistant.access': 'Access',
   'assistant.mode.off': 'Off',
   'assistant.mode.read': 'Read my chats',
-  'assistant.mode.readAndSend': 'Read my chats and send letters, each one with my yes',
+  'assistant.mode.readAndDraft': 'Read my chats and prepare letters that I send myself',
   'assistant.privacy':
     'What Claude reads leaves this computer for Anthropic, outside the seal of end-to-end encryption.',
   'assistant.sealedHeading': 'Sealed chats',
@@ -288,11 +288,6 @@ export const en = {
     'Paste the command in a terminal. A new token cuts every connected Claude off: copy the command again.',
   'assistant.copied': 'Copied. Paste it in a terminal.',
   'assistant.tokenReplaced': 'New token made. Copy the command again.',
-  'assistant.approval.title': 'Claude wants to send a letter',
-  'assistant.approval.to': 'To {name}',
-  'assistant.approval.hint': 'Nothing leaves without your yes. Two minutes of silence count as no.',
-  'assistant.approval.decline': 'Don’t send',
-  'assistant.approval.send': 'Send',
   'settings.account.identity': 'Who you are',
   'settings.account.password': 'Password',
   'settings.account.remembered':

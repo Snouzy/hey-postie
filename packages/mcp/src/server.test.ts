@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import { setup, userAnswers } from './testing';
+import { setup } from './testing';
 
 let t: Awaited<ReturnType<typeof setup>>;
 
@@ -29,16 +29,13 @@ describe('the tool list', () => {
         'mark_chat_read',
         'react_to_message',
         'read_messages',
-        'send_message',
+        'draft_message',
         'set_presence',
       ].sort(),
     );
     for (const name of ['list_chats', 'get_chat', 'read_messages', 'find_contacts']) {
       expect(byName.get(name), name).toMatchObject({ annotations: { readOnlyHint: true } });
     }
-    expect(byName.get('send_message')).toMatchObject({
-      _meta: { 'anthropic/requiresUserInteraction': true },
-    });
   });
 });
 
@@ -86,27 +83,27 @@ describe('reading', () => {
   });
 });
 
-describe('sending', () => {
-  it('is refused while the mode is read only, nothing sent', async () => {
-    const answer = await t.call('send_message', { chat: 'bob@x.org', text: 'On my way' });
+describe('drafting', () => {
+  it('is refused while the mode is read only', async () => {
+    const answer = await t.call('draft_message', { chat: 'bob@x.org', text: 'On my way' });
     expect(answer).toMatchObject({ isError: true });
-    expect(answer.text).toMatch(/Sending is off/);
-    expect(t.deps.fakes.chat.sent).toHaveLength(0);
+    expect(answer.text).toMatch(/Drafts are off/);
   });
 
-  it('sends once the user approves', async () => {
-    t.core.assistant.setSettings({ mode: 'readAndSend' });
-    userAnswers(t.core, true);
-    const answer = await t.call('send_message', { chat: 'bob@x.org', text: 'On my way' });
+  it('puts the text in the chat’s composer and sends nothing', async () => {
+    t.core.assistant.setSettings({ mode: 'readAndDraft' });
+    const drafts: unknown[] = [];
+    t.core.events.on('assistant.draft', (draft) => drafts.push(draft));
+    const answer = await t.call('draft_message', { chat: 'Bob', text: 'On my way' });
     expect(answer.isError).toBe(false);
-    expect(t.deps.fakes.chat.sent.map((m) => m.body)).toEqual(['On my way']);
+    expect(answer.text).toMatch(/not sent yet/);
+    expect(drafts).toEqual([{ chatId: 'bob@x.org', title: 'bob', body: 'On my way' }]);
+    expect(t.deps.fakes.chat.sent).toHaveLength(0);
   });
 
-  it('sends nothing when the user says no', async () => {
-    t.core.assistant.setSettings({ mode: 'readAndSend' });
-    userAnswers(t.core, false);
-    const answer = await t.call('send_message', { chat: 'bob@x.org', text: 'On my way' });
+  it('never drafts into a sealed chat the user left out', async () => {
+    t.core.assistant.setSettings({ mode: 'readAndDraft' });
+    const answer = await t.call('draft_message', { chat: 'alice@x.org', text: 'Hi' });
     expect(answer).toMatchObject({ isError: true });
-    expect(t.deps.fakes.chat.sent).toHaveLength(0);
   });
 });

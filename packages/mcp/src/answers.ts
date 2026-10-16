@@ -18,7 +18,7 @@ export function refusal(sentence: string): Answer {
 /** What to do next, per domain error. Never a message body: only codes and identifiers. */
 const NEXT: Partial<Record<string, string>> = {
   AssistantNotAllowed:
-    'Sending is off for Claude in Hey Postie. Tell the user they can allow it in Settings › Advanced.',
+    'Drafts are off for Claude in Hey Postie. Tell the user they can allow them in Settings › Claude.',
   EmptyMessage: 'The message is empty. Write some text.',
   StatusTooLong: 'The status is too long: 140 characters at most.',
   InvalidJid: 'That address is not a valid JID (name@server).',

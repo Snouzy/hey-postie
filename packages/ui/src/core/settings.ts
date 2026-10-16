@@ -90,13 +90,20 @@ export function readAssistantSettings(): AssistantSettings {
   }
   const port = stored.port;
   return {
-    mode: stored.mode === 'read' || stored.mode === 'readAndSend' ? stored.mode : 'off',
+    mode: assistantMode(stored.mode),
     includeSealed: stored.includeSealed === true,
     port:
       typeof port === 'number' && Number.isInteger(port) && port >= 1024 && port <= 65535
         ? port
         : ASSISTANT_DEFAULT_PORT,
   };
+}
+
+/** `readAndSend` was the mode's name before drafts replaced sending (2026-10-16). */
+function assistantMode(value: unknown): AssistantSettings['mode'] {
+  if (value === 'read') return 'read';
+  if (value === 'readAndDraft' || value === 'readAndSend') return 'readAndDraft';
+  return 'off';
 }
 
 export function writeAssistantSettings(settings: AssistantSettings) {

@@ -1,5 +1,5 @@
-import type { Account, Chat, Contact, Room } from '@hey-postie/core';
-import { type CSSProperties, useEffect, useRef, useState } from 'react';
+import type { Account, Chat, Contact, Draft, Room } from '@hey-postie/core';
+import { type CSSProperties, useCallback, useEffect, useRef, useState } from 'react';
 import { flushSync } from 'react-dom';
 import { AddContact } from '../components/AddContact';
 import type { SaveFile } from '../components/Attachments';
@@ -76,6 +76,8 @@ export function Main({ account, onOpenLink, onSaveFile, onLeave }: MainProps) {
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [encryptionFocus, setEncryptionFocus] = useState(0); // "Check their devices" requests
   const [error, setError] = useState<MessageKey | null>(null);
+  // A letter Claude prepared; `chat.requested` (emitted right after) opens its chat.
+  const [draft, setDraft] = useState<Draft | null>(null);
   // The first-launch card: once per account, and only for an empty address book.
   const [welcoming, setWelcoming] = useState(false);
   const searchRef = useRef<HTMLInputElement>(null);
@@ -147,6 +149,9 @@ export function Main({ account, onOpenLink, onSaveFile, onLeave }: MainProps) {
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
   }, [dialog, sidebarCollapsed, panes.update]);
+
+  useCoreEvent('assistant.draft', setDraft);
+  const takeDraft = useCallback(() => setDraft(null), []);
 
   // A notification click or an `xmpp:` link asks for a chat, by id (the bare JID for a direct chat).
   useCoreEvent('chat.requested', ({ chatId: requested }) => {
@@ -296,6 +301,8 @@ export function Main({ account, onOpenLink, onSaveFile, onLeave }: MainProps) {
             onOpenLink={onOpenLink}
             onSaveFile={onSaveFile}
             uploads={uploads.forChat(chat.id)}
+            draft={draft?.chatId === chat.id ? draft.body : undefined}
+            onDraftTaken={takeDraft}
           />
         ) : welcoming ? (
           <section className={EMPTY}>

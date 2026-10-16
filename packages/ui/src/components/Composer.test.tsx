@@ -1,6 +1,7 @@
 import { DomainError } from '@hey-postie/core';
 import { fireEvent, screen, waitFor } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
+import { CoreProvider } from '../core/CoreProvider';
 import { renderWithCore, setupCore } from '../test-utils';
 import { Composer } from './Composer';
 
@@ -85,5 +86,24 @@ describe('Composer', () => {
     expect(input).toHaveAttribute('tabindex', '-1');
     expect(button).toHaveAttribute('type', 'button');
     expect(button).not.toHaveAttribute('tabindex');
+  });
+});
+
+describe('Composer drafts', () => {
+  it('puts Claude’s draft below what the user wrote, and sends nothing on its own', async () => {
+    const { core } = setupCore();
+    const onSend = vi.fn(async () => {});
+    const onDraftTaken = vi.fn();
+    const { rerender } = renderWithCore(<Composer onSend={onSend} />, core);
+    const area = screen.getByRole('textbox');
+    fireEvent.change(area, { target: { value: 'Hi Bob,' } });
+    rerender(
+      <CoreProvider core={core} locale="en">
+        <Composer onSend={onSend} draft="On my way" onDraftTaken={onDraftTaken} />
+      </CoreProvider>,
+    );
+    expect(area).toHaveValue('Hi Bob,\nOn my way');
+    expect(onDraftTaken).toHaveBeenCalledTimes(1);
+    expect(onSend).not.toHaveBeenCalled();
   });
 });

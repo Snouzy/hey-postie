@@ -60,8 +60,8 @@ export async function serveAssistant(core: Core, version: string): Promise<void>
       console.warn('[mcp] cannot apply the settings', error),
     );
   core.events.on('assistant.changed', follow);
-  // The approval dialog is in the window: bring it up, even from the tray.
-  core.events.on('assistant.sendRequested', () => {
+  // A draft lands in the window's composer: bring the window up, even from the tray.
+  core.events.on('assistant.draft', () => {
     focusMainWindow().catch((error: unknown) =>
       console.warn('[mcp] cannot show the window', error),
     );

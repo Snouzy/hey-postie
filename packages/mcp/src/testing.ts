@@ -1,4 +1,4 @@
-import { type Core, createCore, createFakeDependencies } from '@hey-postie/core';
+import { createCore, createFakeDependencies } from '@hey-postie/core';
 import {
   CLIENT_CAPABILITIES_META_KEY,
   CLIENT_INFO_META_KEY,
@@ -53,9 +53,4 @@ export async function setup() {
   }
 
   return { deps, core, rpc, call };
-}
-
-/** Answers every send request the way the user would, through the core's events. */
-export function userAnswers(core: Core, approved: boolean) {
-  core.events.on('assistant.sendRequested', ({ id }) => core.assistant.answerSend(id, approved));
 }

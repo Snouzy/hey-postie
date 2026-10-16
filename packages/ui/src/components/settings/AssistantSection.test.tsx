@@ -20,9 +20,9 @@ describe('AssistantSection', () => {
     expect(
       screen.getByRole('checkbox', { name: 'Let Claude read sealed chats too' }),
     ).toBeDisabled();
-    fireEvent.click(screen.getByRole('radio', { name: /send letters/ }));
-    expect(core.assistant.getSettings().mode).toBe('readAndSend');
-    expect(readAssistantSettings().mode).toBe('readAndSend');
+    fireEvent.click(screen.getByRole('radio', { name: /prepare letters/ }));
+    expect(core.assistant.getSettings().mode).toBe('readAndDraft');
+    expect(readAssistantSettings().mode).toBe('readAndDraft');
   });
 
   it('refuses a port out of range with Postie’s sentence', () => {

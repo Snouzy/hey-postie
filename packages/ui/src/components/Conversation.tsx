@@ -36,6 +36,9 @@ interface ConversationProps {
   onSaveFile: SaveFile;
   /** This chat's parcels on their way, held by `Main` so a chat switch loses none. */
   uploads: ChatUploads;
+  /** A letter Claude prepared for this chat, waiting to land in the composer. */
+  draft?: string | undefined;
+  onDraftTaken?: (() => void) | undefined;
 }
 
 /** The center column: header, messages, composer. Owns the messages of the open chat. */
@@ -49,6 +52,8 @@ export function Conversation({
   onOpenLink,
   onSaveFile,
   uploads,
+  draft,
+  onDraftTaken,
 }: ConversationProps) {
   const core = useCore();
   const text = useText();
@@ -201,6 +206,8 @@ export function Conversation({
         disabled={outside}
         sealed={seal.encrypted}
         onComposing={(composing) => core.chats.setComposing(chat.id, composing)}
+        draft={draft}
+        onDraftTaken={onDraftTaken}
       />
     </section>
   );

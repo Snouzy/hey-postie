@@ -284,8 +284,8 @@ export const fr: Record<MessageKey, string> = {
   'assistant.access': 'Accès',
   'assistant.mode.off': 'Désactivé',
   'assistant.mode.read': 'Lire mes discussions',
-  'assistant.mode.readAndSend':
-    'Lire mes discussions et envoyer des lettres, chacune avec mon accord',
+  'assistant.mode.readAndDraft':
+    'Lire mes discussions et préparer des lettres que j’envoie moi-même',
   'assistant.privacy':
     'Ce que Claude lit quitte cet ordinateur pour Anthropic, hors du sceau du chiffrement de bout en bout.',
   'assistant.sealedHeading': 'Discussions scellées',
@@ -300,11 +300,6 @@ export const fr: Record<MessageKey, string> = {
     'Colle la commande dans un terminal. Un nouveau jeton coupe tous les Claude branchés : recopie la commande.',
   'assistant.copied': 'Copié. Colle-la dans un terminal.',
   'assistant.tokenReplaced': 'Nouveau jeton créé. Recopie la commande.',
-  'assistant.approval.title': 'Claude veut envoyer une lettre',
-  'assistant.approval.to': 'À {name}',
-  'assistant.approval.hint': 'Rien ne part sans ton accord. Deux minutes de silence valent un non.',
-  'assistant.approval.decline': 'Ne pas envoyer',
-  'assistant.approval.send': 'Envoyer',
   'settings.account.identity': 'Qui tu es',
   'settings.account.password': 'Mot de passe',
   'settings.account.remembered':

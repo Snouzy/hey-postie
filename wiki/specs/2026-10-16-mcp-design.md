@@ -7,8 +7,8 @@ Hey Postie". Not built yet._
 ## 1. Goal
 
 While Hey Postie is open and signed in, an MCP client (Claude Code, and Claude Desktop through a
-bridge) can list the chats, read messages, find contacts, send a message with the user's approval,
-react, mark a chat read and set the presence, through the user's own session: no second XMPP
+bridge) can list the chats, read messages, find contacts, prepare a message in a chat's composer
+(the user edits and sends it), react, mark a chat read and set the presence, through the user's own session: no second XMPP
 connection, no new OMEMO device.
 
 Out of this version: editing and deleting messages (they come with
@@ -74,17 +74,18 @@ one Claude Code rule (`mcp__hey-postie__read_*` and so on) while writes keep ask
 | `get_chat` | One chat or hall: title, JID, sealed, members and roles (hall), topic, peer presence. | `chats`, `rooms.members`, `contacts.list` | ✓ | | ✓ |
 | `read_messages` | Messages of one chat, newest page first (default 30, max 100), `before` cursor; never marks as read. | `chats.messages`, `chats.loadOlder` | ✓ | | ✓ |
 | `find_contacts` | Contacts matching a name or JID, with presence. | `contacts.list` | ✓ | | ✓ |
-| `send_message` | Send text to an existing chat or a contact's JID; waits for the user's approval in the app. | `chats.send` | | | |
+| `draft_message` | Put text in the composer of an existing chat or a contact's chat; the user edits and sends it. Nothing is sent. | `assistant.draft` | | | |
 | `react_to_message` | Add or remove one emoji on a message. | `chats.toggleReaction` | | | ✓ |
 | `mark_chat_read` | Mark a chat read. | `chats.markRead` | | | ✓ |
 | `set_presence` | Available / away / do not disturb, with an optional status. | `accounts.setPresence` | | | ✓ |
 
-All tools: `openWorldHint: false` except `send_message` and `react_to_message` (they reach other
-people). `send_message` also carries `_meta["anthropic/requiresUserInteraction"]: true`.
+All tools: `openWorldHint: false` except `react_to_message` and `set_presence` (other people see
+them). Claude never sends a message: since 2026-10-16 (decision of the author after trying the
+approval dialog), `draft_message` replaces `send_message` and the approval dialog, so the user can
+edit what Claude wrote before sending it.
 
 Later, each in its own pull request and keeping under 15: `search_messages` (needs a search
-service), `edit_message` and `retract_message` (with their spec), `draft_message` (text into the
-composer), `get_attachment`.
+service), `edit_message` and `retract_message` (with their spec), `get_attachment`.
 
 ### Answers
 
@@ -103,19 +104,18 @@ composer), `get_attachment`.
 
 - `Not signed in. Ask the user to open Hey Postie and sign in.`
 - `"bob" matches 2 contacts: bob@a.org (Bob Martin), bob@b.org (Bob Lee). Pass the JID.`
-- `The user declined to send this message.` / `No answer from the user within 2 minutes.`
-- `Claude may not send in this chat (setting in Hey Postie).`
+- `Drafts are off for Claude in Hey Postie. Tell the user they can allow them in Settings › Claude.`
 - Domain errors of the services (`EmptyMessage`, `NotOnline`…) mapped to one sentence each.
 
 ## 5. Safety
 
-- **Off by default.** Settings › Advanced › "Claude (MCP)": Off / Read only / Read and send with
-  approval. The sentence next to it says plainly: what Claude reads leaves this device for
+- **Off by default.** Settings › Claude: Off / Read my chats / Read my chats and prepare letters
+  that I send myself. The sentence next to it says plainly: what Claude reads leaves this device for
   Anthropic, outside end-to-end encryption.
 - **Sealed chats excluded by default**: a second switch, "Include sealed chats", off. Excluded chats
   do not appear in any tool's answer.
-- **Every send asks in the app**: a `Dialog` with the recipient, the exact text and "Send" /
-  "Don't send", whatever the client supports. No answer within 2 minutes is a refusal.
+- **Claude never sends.** A draft lands in the chat's composer, below what the user already wrote;
+  the user reads, edits and sends it, or deletes it. The window comes to the front.
 - **Token**: 32 random bytes, in the keychain, never in `localStorage`, files or logs. Settings
   shows "Copy the Claude Code command" and "New token" (the old one stops working at once).
 - **Rust checks every request**: `Authorization: Bearer` (constant-time compare), `Host` is
@@ -132,7 +132,7 @@ composer), `get_attachment`.
 `AssistantService` (`packages/core/src/contracts/services.ts`, `services/assistant.ts`), reached
 as `core.assistant`:
 
-- `getSettings()` / `setSettings(change)`: `{ mode: 'off' | 'read' | 'readAndSend', includeSealed,
+- `getSettings()` / `setSettings(change)`: `{ mode: 'off' | 'read' | 'readAndDraft', includeSealed,
   port }`, off, sealed excluded and port 7413 by default; a port outside 1024–65535 is refused
   (`InvalidPort`). Like the notification preview, the rule lives in the core and the UI remembers
   the user's choice and tells the core at startup.
@@ -140,12 +140,11 @@ as `core.assistant`:
   `KeychainRepository` under the reserved key `hey-postie:assistant-token` (not a JID, so it never
   meets an account's password). No new repository: the keychain already is the place for secrets.
 - `canRead(chat)`: false while off; a sealed chat only when `includeSealed`.
-- `requestSend({ chatId, title, body })`: refused with `AssistantNotAllowed` unless `readAndSend`;
-  emits `assistant.sendRequested` with an id and resolves `true` on the user's yes, `false` on no
-  or after `SEND_APPROVAL_TIMEOUT_MS` (2 minutes); `assistant.sendSettled` closes the dialog either
-  way. `answerSend(id, approved)` is the UI's answer; a second answer is ignored.
-- Events `assistant.changed` (the desktop app starts, stops or moves its listener),
-  `assistant.sendRequested`, `assistant.sendSettled`. Error codes `AssistantNotAllowed`,
+- `draft({ chatId, title, body })`: refused with `AssistantNotAllowed` unless `readAndDraft`;
+  emits `assistant.draft`, then `chat.requested` so the interface opens the chat. Nothing is sent.
+  (Replaced `requestSend` / `answerSend` and the approval dialog on 2026-10-16.)
+- Events `assistant.changed` (the desktop app starts, stops, moves or restarts its listener) and
+  `assistant.draft`. Error codes `AssistantNotAllowed`,
   `InvalidPort`.
 
 ## 7. Dependencies (one session adds them)
@@ -167,7 +166,9 @@ an MCPB bundle on the site later. Neither ships in the App Store build.
 3. Rust listener and bridge, `mcp_reply` command, entitlement
    `com.apple.security.network.server` (the relay needs it too): done (technical-guide, "The MCP
    endpoint").
-4. Settings section and the approval `Dialog`; texts in `en.ts` and `fr.ts`: done (ui.md, "Claude").
+4. Settings section; texts in `en.ts` and `fr.ts`: done (ui.md, "Claude"). The approval dialog
+   was tried end to end on 2026-10-16 (a test letter sent after the author's yes), then replaced by
+   drafts in the composer.
 5. Try it in this repository's Claude Code against a `pnpm desktop:dev` window; then docs
    (technical-guide, ui.md, dependencies, release.md: entitlement and privacy).
 
@@ -188,7 +189,7 @@ an MCPB bundle on the site later. Neither ships in the App Store build.
   `structuredContent` yet.
 - Tests (`server.test.ts`) call the handler with real 2026-07-28 requests on a signed-in core over
   fakes: the tool list and annotations, sealed chats hidden, fenced bodies, contacts, signed out,
-  and send refused, approved and declined.
+  and drafts refused, delivered (nothing sent) and kept out of sealed chats.
 
 ## Points to check
 
