@@ -18,6 +18,8 @@ export type ErrorCode =
   | 'DeviceNotFound'
   | 'EncryptionUnavailable'
   | 'StatusTooLong'
+  | 'AssistantNotAllowed'
+  | 'InvalidPort'
   | 'Unknown';
 
 /**

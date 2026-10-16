@@ -22,6 +22,8 @@ const SENTENCES: Record<ErrorCode, MessageKey> = {
   RegistrationRejected: 'error.RegistrationRejected',
   AccountCreatedSignInFailed: 'error.AccountCreatedSignInFailed',
   StatusTooLong: 'error.StatusTooLong',
+  AssistantNotAllowed: 'error.AssistantNotAllowed',
+  InvalidPort: 'error.InvalidPort',
   Unknown: 'error.Unknown',
 };
 

@@ -89,6 +89,8 @@ export const en = {
     'Your account exists now, but I could not sign you in. Try signing in.',
   'error.DeviceNotFound': 'I do not know this device any more. Close this and look again.',
   'error.StatusTooLong': 'That status is too long for my satchel. Keep it to 140 characters.',
+  'error.AssistantNotAllowed': 'Claude may not send letters for you. You can allow it in Settings.',
+  'error.InvalidPort': 'Pick a port between 1024 and 65535.',
   'error.Unknown': 'Something went wrong on my round. Try again.',
 
   'main.tabs.chats': 'Chats',

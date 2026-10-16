@@ -127,27 +127,26 @@ composer), `get_attachment`.
 - **Background**: the main window gets `backgroundThrottling: "disabled"` (Tauri ≥ 2.3, macOS 14+);
   the XMPP engine already depends on the webview staying alive when the window is hidden.
 
-## 6. Contracts (their own pull request, merged first)
+## 6. Contracts (built 2026-10-16)
 
-```ts
-// contracts/repositories.ts
-interface AssistantAccessRepository {
-  token(): Promise<string | null>;          // from the keychain
-  saveToken(token: string): Promise<void>;
-}
+`AssistantService` (`packages/core/src/contracts/services.ts`, `services/assistant.ts`), reached
+as `core.assistant`:
 
-// contracts/services.ts
-type AssistantMode = 'off' | 'read' | 'readAndSend';
-interface AssistantService {
-  settings(): { mode: AssistantMode; includeSealed: boolean; port: number };
-  update(settings: Partial<{ mode: AssistantMode; includeSealed: boolean; port: number }>): void;
-  newToken(): Promise<string>;
-  /** The UI answers it; resolves false on refusal or after 2 minutes. */
-  requestSendApproval(request: { chatId: string; title: string; body: string }): Promise<boolean>;
-  visibleChat(chat: Chat): boolean;          // applies includeSealed
-}
-// events: 'assistant.sendRequested' (for the approval dialog), 'assistant.changed'
-```
+- `getSettings()` / `setSettings(change)`: `{ mode: 'off' | 'read' | 'readAndSend', includeSealed,
+  port }`, off, sealed excluded and port 7413 by default; a port outside 1024–65535 is refused
+  (`InvalidPort`). Like the notification preview, the rule lives in the core and the UI remembers
+  the user's choice and tells the core at startup.
+- `token()` / `newToken()`: 32 random bytes, base64url, kept through the existing
+  `KeychainRepository` under the reserved key `hey-postie:assistant-token` (not a JID, so it never
+  meets an account's password). No new repository: the keychain already is the place for secrets.
+- `canRead(chat)`: false while off; a sealed chat only when `includeSealed`.
+- `requestSend({ chatId, title, body })`: refused with `AssistantNotAllowed` unless `readAndSend`;
+  emits `assistant.sendRequested` with an id and resolves `true` on the user's yes, `false` on no
+  or after `SEND_APPROVAL_TIMEOUT_MS` (2 minutes); `assistant.sendSettled` closes the dialog either
+  way. `answerSend(id, approved)` is the UI's answer; a second answer is ignored.
+- Events `assistant.changed` (the desktop app starts, stops or moves its listener),
+  `assistant.sendRequested`, `assistant.sendSettled`. Error codes `AssistantNotAllowed`,
+  `InvalidPort`.
 
 ## 7. Dependencies (one session adds them)
 
@@ -163,13 +162,12 @@ an MCPB bundle on the site later. Neither ships in the App Store build.
 
 ## 8. Plan
 
-1. Contracts PR (section 6), with fakes.
-2. `AssistantService` and its tests.
-3. `packages/mcp`: server, the 8 tools, instructions, tests on fakes.
-4. Rust listener and bridge, `mcp_reply` command, capability, entitlement
+1. Contract and `AssistantService` with its tests (section 6): done.
+2. `packages/mcp`: server, the 8 tools, instructions, tests on fakes.
+3. Rust listener and bridge, `mcp_reply` command, capability, entitlement
    `com.apple.security.network.server` (the relay needs it too).
-5. Settings section and the approval `Dialog`; texts in `en.ts` and `fr.ts`.
-6. Try it in this repository's Claude Code against a `pnpm desktop:dev` window; then docs
+4. Settings section and the approval `Dialog`; texts in `en.ts` and `fr.ts`.
+5. Try it in this repository's Claude Code against a `pnpm desktop:dev` window; then docs
    (technical-guide, ui.md, dependencies, release.md: entitlement and privacy).
 
 ## Points to check

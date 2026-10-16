@@ -1,3 +1,4 @@
+import type { AssistantSettings, SendRequest } from './services';
 import type {
   Account,
   Chat,
@@ -26,6 +27,12 @@ export interface CoreEvents {
   'devices.changed': { jid: string; devices: Device[] };
   /** The UI asks to show a chat (a click on a notification, an `xmpp:` link). */
   'chat.requested': { chatId: string };
+  /** The Claude (MCP) settings changed; the desktop app starts, stops or moves its listener. */
+  'assistant.changed': AssistantSettings;
+  /** Claude wants to send a message: the UI asks the user (`assistant.answerSend`). */
+  'assistant.sendRequested': SendRequest;
+  /** A send request is over (answered or timed out): the UI closes its dialog. */
+  'assistant.sendSettled': { id: string };
 }
 
 export interface EventBus {

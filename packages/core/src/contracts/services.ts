@@ -143,6 +143,49 @@ export interface NotificationsService {
   getShowPreview(): boolean;
 }
 
+/** Claude (MCP) access: off, read only, or read and send with the user's approval. */
+export type AssistantMode = 'off' | 'read' | 'readAndSend';
+
+export interface AssistantSettings {
+  mode: AssistantMode;
+  /** Sealed (OMEMO) chats stay out of every answer unless this is on. Off by default. */
+  includeSealed: boolean;
+  /** The loopback port of the MCP listener; client configs hold it, so it is fixed. */
+  port: number;
+}
+
+/** A message Claude wants to send, as the user sees it before saying yes or no. */
+export interface SendRequest {
+  id: string;
+  chatId: string;
+  title: string;
+  body: string;
+}
+
+/**
+ * The rules of Claude's access (spec 2026-10-16-mcp-design). Off by default; what Claude reads
+ * leaves the device. The MCP adapter asks this service before every read and every send.
+ */
+export interface AssistantService {
+  getSettings(): AssistantSettings;
+  /** Applies at once and emits `assistant.changed`. Refuses a port outside 1024–65535 (`InvalidPort`). */
+  setSettings(change: Partial<AssistantSettings>): AssistantSettings;
+  /** The bearer token clients send, made and kept in the keychain the first time. */
+  token(): Promise<string>;
+  /** Replaces the token: the old one stops working. */
+  newToken(): Promise<string>;
+  /** Whether Claude may see this chat at all (mode not off; sealed chats only when included). */
+  canRead(chat: Chat): boolean;
+  /**
+   * Asks the user through `assistant.sendRequested`. Resolves true when approved, false when
+   * declined or after `SEND_APPROVAL_TIMEOUT_MS`. Refuses with `AssistantNotAllowed` unless the
+   * mode is `readAndSend`.
+   */
+  requestSend(request: Omit<SendRequest, 'id'>): Promise<boolean>;
+  /** The user's answer to a pending request; an unknown or settled id is ignored. */
+  answerSend(id: string, approved: boolean): void;
+}
+
 export interface Core {
   accounts: AccountsService;
   contacts: ContactsService;
@@ -151,5 +194,6 @@ export interface Core {
   crypto: CryptoService;
   files: FilesService;
   notifications: NotificationsService;
+  assistant: AssistantService;
   events: EventBus;
 }

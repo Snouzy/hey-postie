@@ -12,6 +12,7 @@ import type {
 } from './contracts/repositories';
 import type { Core } from './contracts/services';
 import { createAccountsService } from './services/accounts';
+import { createAssistantService } from './services/assistant';
 import { createChatsService } from './services/chats';
 import { createContactsService } from './services/contacts';
 import { createCryptoService } from './services/crypto';
@@ -43,5 +44,6 @@ export function createCore(deps: CoreDependencies): Core {
   const crypto = createCryptoService(deps, events);
   const files = createFilesService(deps);
   const notifications = createNotificationsService(deps, events);
-  return { accounts, contacts, chats, rooms, crypto, files, notifications, events };
+  const assistant = createAssistantService(deps, events);
+  return { accounts, contacts, chats, rooms, crypto, files, notifications, assistant, events };
 }

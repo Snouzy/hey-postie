@@ -96,6 +96,9 @@ export const fr: Record<MessageKey, string> = {
     'Ton compte existe désormais, mais je n’ai pas pu te connecter. Essaie de te connecter.',
   'error.DeviceNotFound': 'Je ne connais plus cet appareil. Ferme ceci et regarde à nouveau.',
   'error.StatusTooLong': 'Ce statut ne rentre pas dans ma sacoche. Reste sous les 140 caractères.',
+  'error.AssistantNotAllowed':
+    'Claude ne peut pas envoyer de lettres pour toi. Tu peux l’autoriser dans les Réglages.',
+  'error.InvalidPort': 'Choisis un port entre 1024 et 65535.',
   'error.Unknown': 'Quelque chose a cloché pendant ma tournée. Réessaie.',
 
   'main.tabs.chats': 'Discussions',
