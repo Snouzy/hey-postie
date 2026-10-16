@@ -46,6 +46,9 @@
 
 /* Who speaks, in a hall: above the run, in the sender's column. */
 .sender {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
   align-self: flex-start;
   padding: 0 var(--space-3);
   font-size: 12px;

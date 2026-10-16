@@ -1,5 +1,6 @@
 import type { Contact, Presence } from '@hey-postie/core';
 import { useText } from '../core/CoreProvider';
+import { Avatar } from './Avatar';
 import styles from './ContactList.module.css';
 import { PresenceDot } from './PresenceDot';
 
@@ -27,6 +28,12 @@ export function ContactList({ contacts, onSelect }: ContactListProps) {
               {group.map((contact) => (
                 <li key={contact.jid}>
                   <button type="button" className={styles.row} onClick={() => onSelect(contact)}>
+                    <Avatar
+                      name={contact.name}
+                      jid={contact.jid}
+                      avatarUrl={contact.avatarUrl}
+                      size={28}
+                    />
                     <PresenceDot presence={contact.presence} />
                     <span className={styles.name}>{contact.name}</span>
                   </button>

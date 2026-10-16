@@ -162,4 +162,23 @@ describe('Main', () => {
     fireEvent.click(screen.getByRole('menuitem', { name: 'Sign out' }));
     expect(await screen.findByRole('button', { name: 'Create an account' })).toBeInTheDocument();
   });
+
+  it('says who is typing above the composer, and stops once they pause', async () => {
+    const { deps } = await signedIn();
+    deps.fakes.roster.seed({
+      jid: 'bob@x.org',
+      name: 'Bob',
+      presence: 'online',
+      subscription: 'both',
+    });
+    act(() => {
+      deps.fakes.chat.receive({ chatId: 'bob@x.org', fromJid: 'bob@x.org', body: 'hello' });
+    });
+    fireEvent.click(await screen.findByRole('button', { name: /bob/ }));
+    await screen.findByRole('region', { name: 'bob' });
+    act(() => deps.fakes.chat.receiveChatState('bob@x.org', 'bob@x.org', 'composing'));
+    expect(await screen.findByText('bob is typing…')).toBeInTheDocument();
+    act(() => deps.fakes.chat.receiveChatState('bob@x.org', 'bob@x.org', 'paused'));
+    await waitFor(() => expect(screen.queryByText(/is typing/)).not.toBeInTheDocument());
+  });
 });

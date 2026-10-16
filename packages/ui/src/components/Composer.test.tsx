@@ -6,9 +6,10 @@ import { Composer } from './Composer';
 
 function renderComposer(onSend = vi.fn(async () => {})) {
   const { core } = setupCore();
-  renderWithCore(<Composer onSend={onSend} />, core);
+  const onComposing = vi.fn();
+  renderWithCore(<Composer onSend={onSend} onComposing={onComposing} />, core);
   const area = screen.getByRole('textbox');
-  return { onSend, area };
+  return { onSend, onComposing, area };
 }
 
 describe('Composer', () => {
@@ -50,5 +51,18 @@ describe('Composer', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Send' }));
     expect(await screen.findByRole('alert')).toHaveTextContent('Something went wrong on my round.');
     expect(area).toHaveValue('hello');
+  });
+
+  it('says it is composing on input, and not any more once the draft is empty or sent', async () => {
+    const { onComposing, area } = renderComposer();
+    fireEvent.change(area, { target: { value: 'hel' } });
+    expect(onComposing).toHaveBeenLastCalledWith(true);
+    fireEvent.change(area, { target: { value: '' } });
+    expect(onComposing).toHaveBeenLastCalledWith(false);
+    fireEvent.change(area, { target: { value: 'hello' } });
+    expect(onComposing).toHaveBeenLastCalledWith(true);
+    fireEvent.keyDown(area, { key: 'Enter' });
+    await waitFor(() => expect(area).toHaveValue(''));
+    expect(onComposing).toHaveBeenLastCalledWith(false);
   });
 });

@@ -24,8 +24,8 @@
 .row {
   width: 100%;
   display: flex;
-  flex-direction: column;
-  gap: 2px;
+  align-items: center;
+  gap: var(--space-2);
   padding: var(--space-2) var(--space-3);
   border: none;
   border-radius: var(--radius-sm);
@@ -43,6 +43,15 @@
 .row[aria-current='true'] {
   background: var(--paper-raised);
   box-shadow: inset 3px 0 0 var(--navy);
+}
+
+/* The two lines beside the avatar. */
+.lines {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
 }
 
 .top,

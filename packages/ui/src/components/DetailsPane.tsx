@@ -1,9 +1,11 @@
-import type { Chat, Room } from '@hey-postie/core';
+import type { Chat, Contact, Room } from '@hey-postie/core';
 import { Details } from './Details';
 import { RoomDetails } from './RoomDetails';
 
 interface DetailsPaneProps {
   chat: Chat;
+  /** The contact behind a direct chat, when it is in the address book. */
+  contact: Contact | undefined;
   /** The hall behind the chat, when the app has a record of it. */
   room: Room | undefined;
   /** Counts the "Check their devices" requests; each new one focuses the Encryption section. */
@@ -22,6 +24,7 @@ interface DetailsPaneProps {
  */
 export function DetailsPane({
   chat,
+  contact,
   room,
   focusRequest,
   onClose,
@@ -29,7 +32,15 @@ export function DetailsPane({
   onLeft,
 }: DetailsPaneProps) {
   if (chat.kind === 'direct') {
-    return <Details key={chat.id} chat={chat} focusRequest={focusRequest} onClose={onClose} />;
+    return (
+      <Details
+        key={chat.id}
+        chat={chat}
+        contact={contact}
+        focusRequest={focusRequest}
+        onClose={onClose}
+      />
+    );
   }
   if (!room) return null;
   return (

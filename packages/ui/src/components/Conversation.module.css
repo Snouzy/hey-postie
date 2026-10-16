@@ -58,6 +58,19 @@
   color: var(--red);
 }
 
+/* Who is writing, just above the composer; keeps its line so the layout never jumps. */
+.typing {
+  min-height: 18px;
+  margin: 0;
+  padding: 0 var(--space-4);
+  font-size: 13px;
+  font-style: italic;
+  color: var(--ink-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 /* Postie at the door of a hall the user is not in. */
 .outside {
   display: flex;

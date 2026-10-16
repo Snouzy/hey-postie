@@ -50,6 +50,10 @@ export const fr: Record<MessageKey, string> = {
   'accountMenu.devices': 'Mes appareils…',
   'accountMenu.settings': 'Réglages…',
   'accountMenu.delete': 'Supprimer mon compte…',
+  'accountMenu.presence': 'Me montrer',
+  'accountMenu.available': 'Disponible',
+  'accountMenu.status': 'Statut',
+  'accountMenu.statusPlaceholder': 'Un mot sur la porte…',
   'deleteAccount.title': 'Supprimer mon compte',
   'deleteAccount.explain':
     'Ceci ferme votre compte sur le serveur, pour de bon. Votre adresse, vos contacts et votre historique là-bas disparaissent, et je ne peux pas les ramener.',
@@ -203,6 +207,8 @@ export const fr: Record<MessageKey, string> = {
   'message.undecryptableHelp': 'Demandez-leur de la renvoyer, ou vérifiez leurs appareils.',
   'message.checkDevices': 'Vérifier leurs appareils',
   'composer.placeholderSealed': 'Écrire une lettre scellée…',
+  'typing.one': '{name} écrit…',
+  'typing.many': '{names} écrivent…',
 
   'settings.title': 'Réglages',
   'settings.theme': 'Thème',

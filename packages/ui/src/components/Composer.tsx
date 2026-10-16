@@ -18,6 +18,8 @@ interface ComposerProps {
   disabled?: boolean;
   /** The letters of this chat leave sealed: the hint says so. */
   sealed?: boolean;
+  /** True on every keystroke with text, false once the draft is empty or sent (XEP-0085). */
+  onComposing?: (composing: boolean) => void;
 }
 
 /**
@@ -31,6 +33,7 @@ export function Composer({
   nicks = [],
   disabled = false,
   sealed = false,
+  onComposing,
 }: ComposerProps) {
   const text = useText();
   const placeholder = text(sealed ? 'composer.placeholderSealed' : 'composer.placeholder');
@@ -50,6 +53,7 @@ export function Composer({
     try {
       await onSend(body.trim());
       setBody('');
+      onComposing?.(false);
       if (area.current) area.current.style.height = 'auto';
     } catch (caught) {
       setError(errorKey(caught));
@@ -161,6 +165,7 @@ export function Composer({
           aria-label={placeholder}
           onChange={(event) => {
             setBody(event.target.value);
+            onComposing?.(event.target.value.length > 0);
             grow(event.target);
           }}
           onKeyDown={onKeyDown}

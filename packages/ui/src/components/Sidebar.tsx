@@ -117,6 +117,7 @@ export function Sidebar(props: SidebarProps) {
           <ChatList
             chats={chats}
             rooms={props.rooms}
+            contacts={props.contacts}
             selectedId={props.selectedChatId}
             onSelect={props.onSelectChat}
             onLeaveRoom={props.onLeaveRoom}
