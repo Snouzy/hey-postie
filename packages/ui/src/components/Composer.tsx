@@ -50,6 +50,8 @@ interface ComposerProps {
   /** The letter being answered: a banner above the field; X or Esc cancels. */
   replying?: { id: string; name: string; self: boolean; excerpt: string } | undefined;
   onCancelReply?: (() => void) | undefined;
+  /** Counts the requests to put the focus in the field (the search bar closed). */
+  focusRequest?: number;
 }
 
 /**
@@ -74,6 +76,7 @@ export function Composer({
   onEditLast,
   replying,
   onCancelReply,
+  focusRequest = 0,
 }: ComposerProps) {
   const text = useText();
   const placeholder = text(sealed ? 'composer.placeholderSealed' : 'composer.placeholder');
@@ -115,6 +118,10 @@ export function Composer({
   useEffect(() => {
     if (replyingId !== undefined) area.current?.focus({ preventScroll: true });
   }, [replyingId]);
+
+  useEffect(() => {
+    if (focusRequest > 0) area.current?.focus({ preventScroll: true });
+  }, [focusRequest]);
 
   /** Back to the draft that was there before the correction. */
   function cancelEdit() {

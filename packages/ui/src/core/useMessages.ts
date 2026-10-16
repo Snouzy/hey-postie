@@ -21,6 +21,9 @@ export function useMessages(chat: Chat) {
   // The latest version of each message the events brought: a page loaded from the server may be
   // older than an event that arrived while it was on its way, and the event wins.
   const fromEvents = useRef(new Map<string, Message>());
+  // The list as last rendered, for `loadUntil`, which runs across several renders.
+  const shown = useRef(messages);
+  shown.current = messages;
 
   useEffect(() => {
     let cancelled = false;
@@ -70,16 +73,35 @@ export function useMessages(chat: Chat) {
     setMessages((current) => mergeById(current, [message]));
   }
 
-  async function loadOlder(): Promise<boolean> {
+  /** The page before the oldest loaded, prepended; empty when there is none (or it failed). */
+  async function fetchOlder(): Promise<Message[]> {
     try {
       const older = await core.chats.loadOlder(chat.id);
       if (older.length === 0) setHasOlder(false);
       else setMessages((current) => mergeById(fresh(older, fromEvents.current), current));
-      return older.length > 0;
+      return older;
     } catch (caught) {
       setError(errorKey(caught));
-      return false;
+      return [];
     }
+  }
+
+  async function loadOlder(): Promise<boolean> {
+    return (await fetchOlder()).length > 0;
+  }
+
+  /**
+   * Older pages until the letter `id` is loaded, at most `pages` of them (a search hit or a parcel
+   * from the archive, shown in the chat): whether it is in the list now.
+   */
+  async function loadUntil(id: string, pages: number): Promise<boolean> {
+    if (shown.current.some((message) => message.id === id)) return true;
+    for (let page = 0; page < pages; page++) {
+      const older = await fetchOlder();
+      if (older.length === 0) return false;
+      if (older.some((message) => message.id === id)) return true;
+    }
+    return false;
   }
 
   /** `replyTo`: the id of the letter this one answers. */
@@ -102,7 +124,19 @@ export function useMessages(chat: Chat) {
       .catch((caught: unknown) => setError(errorKey(caught)));
   }
 
-  return { messages, hasOlder, loaded, error, setError, add, loadOlder, send, retry, react };
+  return {
+    messages,
+    hasOlder,
+    loaded,
+    error,
+    setError,
+    add,
+    loadOlder,
+    loadUntil,
+    send,
+    retry,
+    react,
+  };
 }
 
 /** The loaded page, with every message the events already brought in its newer version. */

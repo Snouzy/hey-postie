@@ -2,7 +2,7 @@ import type { Message } from '@hey-postie/core';
 import { useState } from 'react';
 import { useText } from '../core/CoreProvider';
 import { readReply, writeReply } from '../core/drafts';
-import { replyAuthor, replyExcerpt } from './replies';
+import { messageAuthor, replyExcerpt } from './replies';
 
 /**
  * The letter the chat's draft answers (spec 2026-10-17, Lot B item 9): kept with the draft when
@@ -21,14 +21,9 @@ export function useReply(chatId: string, messages: Message[], peerName: string) 
   const current = replying && (messages.find((m) => m.id === replying.id) ?? replying);
   const banner = current && {
     id: current.id,
-    name: replyAuthor(authorOf(current), peerName, text('reply.you')),
+    name: messageAuthor(current, peerName, text('reply.you')),
     self: current.direction === 'out',
     excerpt: replyExcerpt(current),
   };
   return { replying: current, replyTo, banner };
-}
-
-function authorOf(message: Message) {
-  const author = { fromJid: message.fromJid, mine: message.direction === 'out' };
-  return message.fromNick ? { ...author, fromNick: message.fromNick } : author;
 }

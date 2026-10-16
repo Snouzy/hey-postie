@@ -8,6 +8,7 @@ import { useRoomPeople } from '../core/useRoomPeople';
 import { useRoomSettings } from '../core/useRoomSettings';
 import type { MessageKey } from '../i18n';
 import { errorKey } from '../i18n/errors';
+import { ArchiveRow } from './ArchiveRow';
 import { Button } from './Button';
 import { HallActions } from './HallActions';
 import { HallFacts } from './HallFacts';
@@ -29,6 +30,8 @@ interface RoomDetailsProps {
   peopleFocus?: number;
   /** Opens the invite dialog on this hall. */
   onInvite?: (() => void) | undefined;
+  /** "Media, links and documents": the pane shows the archive instead. */
+  onOpenArchive: () => void;
 }
 
 const RULES: readonly RoomNotify[] = ['all', 'mentions', 'none'];
@@ -46,6 +49,7 @@ export function RoomDetails({
   focusRequest = 0,
   peopleFocus = 0,
   onInvite,
+  onOpenArchive,
 }: RoomDetailsProps) {
   const core = useCore();
   const text = useText();
@@ -91,6 +95,8 @@ export function RoomDetails({
         visibility={settings?.visibility ?? room.visibility}
         membersCount={standing.length > 0 ? standing.length : undefined}
       />
+
+      <ArchiveRow onOpen={onOpenArchive} />
 
       <HallPeople
         room={room}

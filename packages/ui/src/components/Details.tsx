@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useCore, useText } from '../core/CoreProvider';
 import type { MessageKey } from '../i18n';
 import { errorKey } from '../i18n/errors';
+import { ArchiveRow } from './ArchiveRow';
 import { Avatar } from './Avatar';
 import { Button } from './Button';
 import { Dialog } from './Dialog';
@@ -16,10 +17,12 @@ interface DetailsProps {
   onClose: () => void;
   /** Counts the "Check their devices" requests; each new one focuses the Encryption section. */
   focusRequest?: number;
+  /** "Media, links and documents": the pane shows the archive instead. */
+  onOpenArchive: () => void;
 }
 
 /** The right pane: who the peer is, their devices, and the one destructive action. */
-export function Details({ chat, contact, onClose, focusRequest = 0 }: DetailsProps) {
+export function Details({ chat, contact, onClose, focusRequest = 0, onOpenArchive }: DetailsProps) {
   const core = useCore();
   const text = useText();
   const [confirming, setConfirming] = useState(false);
@@ -51,6 +54,7 @@ export function Details({ chat, contact, onClose, focusRequest = 0 }: DetailsPro
         <dt className="text-[12px] font-semibold text-ink-muted">{text('details.jid')}</dt>
         <dd className="m-0 font-mono text-[13px] wrap-anywhere">{chat.peerJid}</dd>
       </dl>
+      <ArchiveRow onOpen={onOpenArchive} />
       <EncryptionSection jid={chat.peerJid} focusRequest={focusRequest} />
       <Button variant="danger" onClick={() => setConfirming(true)}>
         {text('details.removeContact')}

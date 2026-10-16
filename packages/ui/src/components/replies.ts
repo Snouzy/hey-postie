@@ -12,6 +12,16 @@ export function replyAuthor(
   return nick || peerName;
 }
 
+/** Who wrote a letter, as the conversation calls them: "You", the nick in a hall, the peer. */
+export function messageAuthor(message: Message, peerName: string, you: string): string {
+  const author = { fromJid: message.fromJid, mine: message.direction === 'out' };
+  return replyAuthor(
+    message.fromNick ? { ...author, fromNick: message.fromNick } : author,
+    peerName,
+    you,
+  );
+}
+
 /** A line of a letter for a quote: its text, else the name of its parcel. */
 export function replyExcerpt(message: Message): string {
   if (message.retracted || message.encryption === 'undecryptable') return '';

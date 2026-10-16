@@ -70,6 +70,12 @@ interface MessageListProps {
   footer?: ReactNode;
   /** Rendered in place of the messages while there is none. */
   empty?: ReactNode;
+  /**
+   * A letter to bring into view and flash (a search hit, an item of the archive); `seq` changes
+   * on every request, so asking for the same letter twice moves the view again. `keepFocus`: the
+   * reader stays where they are (the search field), instead of landing on the letter.
+   */
+  jump?: { id: string; seq: number; keepFocus?: boolean } | undefined;
 }
 
 interface Run {
@@ -109,6 +115,7 @@ export function MessageList({
   onShowDevices,
   footer,
   empty,
+  jump,
 }: MessageListProps) {
   const text = useText();
   const locale = useLocale();
@@ -130,8 +137,14 @@ export function MessageList({
     return () => clearTimeout(timer);
   }, [highlighted]);
 
-  /** From a reply's quote: the original, centred, highlighted, and the reader on it. */
-  function jumpTo(id: string) {
+  // After the scroll rules have placed the list (layout effects run first): the letter is loaded.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: a new request, not a new list, moves the view
+  useEffect(() => {
+    if (jump) jumpTo(jump.id, !jump.keepFocus);
+  }, [jump]);
+
+  /** From a reply's quote, or a `jump`: the letter, centred, highlighted, and the reader on it. */
+  function jumpTo(id: string, takeFocus = true) {
     const scroller = scroll.scroller.current;
     const bubble = scroller?.querySelector<HTMLElement>(`[data-message-id="${CSS.escape(id)}"]`);
     if (!scroller || !bubble) return;
@@ -139,7 +152,7 @@ export function MessageList({
     // The list alone moves (no `scrollIntoView`, which may scroll the screen: see "What scrolls").
     const top = bubble.getBoundingClientRect().top - scroller.getBoundingClientRect().top;
     scroller.scrollTop += top - (scroller.clientHeight - bubble.offsetHeight) / 2;
-    requestAnimationFrame(() => bubble.focus({ preventScroll: true }));
+    if (takeFocus) requestAnimationFrame(() => bubble.focus({ preventScroll: true }));
   }
 
   const loaded = new Set(messages.map((message) => message.id));

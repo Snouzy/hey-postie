@@ -856,6 +856,73 @@ letters, contacts in the roster; a hall's occupant whose real JID is hidden neve
 through `files.fetch` like a parcel (never a raw URL in an `<img>`), a skeleton meanwhile, nothing
 at all if it fails. Elsewhere there is no picture and no "Load image" either.
 
+### Search in a conversation
+
+_Added 2026-10-16, [spec](../specs/2026-10-16-read-sync-and-search-design.md) section 2 (WhatsApp's
+search, Slack's bar). Sources: `components/ConversationSearch.tsx`, `HitPreview.tsx`,
+`highlight.ts`, `useSearchBar.ts`, `useLetterJump.ts`, `MessageList.tsx` (`jump`),
+`core/useMessages.ts` (`loadUntil`), `ConversationHeader.tsx`; tests in
+`ConversationSearch.test.tsx`, `highlight.test.ts`._
+
+- **Opening.** Cmd/Ctrl+F (heard in `useSearchBar` while a conversation is open, not under a
+  dialog) or the magnifier in the conversation's header opens a bar between the header and the
+  letters, the focus in its field (`type="search"`, "Search in this conversation"). Esc in the
+  field or the X closes it and puts the focus back in the composer (`Composer`'s `focusRequest`);
+  Esc stops there, the details pane stays.
+- **Searching.** The query goes to `archive.search` 250 ms after the last keystroke
+  (`SEARCH_DEBOUNCE_MS`); a newer query outdates the answers still on their way. The service
+  looks at up to 200 letters per call, newest first (see
+  [the spec](../specs/2026-10-16-read-sync-and-search-design.md)). The bar says "3 of 12",
+  "Searching…", "No match", or "No match in the latest messages" while older letters remain, in
+  an `aria-live="polite"` line.
+- **Walking.** The newest hit is shown at once. Enter or ↓ goes to the next, older, hit; ⇧Enter or
+  ↑ to the previous; the chevrons do the same. At the last hit, while the service returned a
+  cursor (`next`), "Search older messages" (and Enter) asks for the next batch with it and goes to
+  the first new hit.
+- **Showing a hit** (`useLetterJump`). If the letter is not in the list, older pages load
+  (`chats.loadOlder` through `useMessages.loadUntil`) until it is, 20 pages at most
+  (`JUMP_PAGES`); then `MessageList` gets a `jump` and scrolls the letter to the middle with the
+  reply-quote highlight (3px `--yellow` ring for 1.6 s). From the search the focus stays in the
+  field (`keepFocus`); from the archive it lands on the letter. Requests run one after the other,
+  and only the latest moves the view. A letter that cannot be reached says "I could not bring
+  this message into view."
+- **The current hit**, under the bar (`HitPreview`): who (`messageAuthor`: "You", the nick in a
+  hall, the peer), when ("Yesterday, 14:02", `formatWhen`), and one truncated line around the
+  first match with each match in a `<mark>` on `--yellow`. `highlight.ts` cuts the body into
+  text segments from the service's ranges: React text nodes only, never HTML. A hit found by a
+  file name shows "Files: cat.png". Clicking it shows the letter again.
+
+### Media, links and documents
+
+_Added 2026-10-16, [spec](../specs/2026-10-16-read-sync-and-search-design.md) section 3. Sources:
+`components/ArchiveRow.tsx`, `ArchivePanel.tsx`, `ArchiveList.tsx`, `MediaTile.tsx`,
+`MediaThumb.tsx`, `LinkRow.tsx`, `DocumentRow.tsx`, `ArchiveMeta.tsx`, `ShowInChatButton.tsx`,
+`useSaveFile.ts`, `fileIcon.ts`, `core/useArchive.ts`, `DetailsPane.tsx`, `Lightbox.tsx`,
+`screens/Main.tsx` (`showRequest`); tests in `ArchivePanel.test.tsx`, `screens/Archive.test.tsx`._
+
+- **Where.** A row "Media, links and documents" in the contact's details (under the address) and
+  in the hall panel (under the facts). It replaces the pane's content, WhatsApp's way
+  (`DetailsPane` keeps which chat's archive is shown, so another chat opens on its details): a
+  back arrow ("Back to the details"), the title, the X, and three pressed-button tabs (Media,
+  Links, Documents; same look and same reason as the sidebar's, see [Keyboard](#keyboard)).
+- **Batches.** Each tab asks `archive.collect(chatId, kind)` (`useArchive`), then "Load older"
+  with the cursor while there is one. Nothing found: "No links yet.", or "Nothing in the latest
+  messages." while older letters remain. A failure says so with "Try again" (the first batch
+  again, or the older one).
+- **Media**: a three-column grid of squares. A picture (`files.isInlineImage`) is fetched through
+  `files.fetch` (decrypted when sealed, an object URL, never the raw URL) only where the letter's
+  pictures load by themselves (`files.autoLoad`, `useAutoLoad`); anywhere else it is a kraft
+  square "Load cat.png" that fetches it on click. A click on a picture opens the `Lightbox`, which
+  offers "Show in chat" next to "Save" when opened from here. A video (or a picture too large to
+  show) is a kraft square with its icon and name; a click downloads it.
+- **Links**: the preview's site and title when the hall attached one (never fetched by us), else
+  the address, as a link through `onOpenLink`; the address under a title; who and when.
+- **Documents**: icon, name, "3 MB · Bob · Yesterday, 14:02"; a click downloads through
+  `files.fetch` and `onSaveFile` (`useSaveFile`, shared with `ParcelCard`).
+- **Show in chat.** Every item has a "Show in chat" button (on a media square, shown on hover or
+  focus). `Main` keeps a `showRequest` (`{ id, seq }`) that the open `Conversation` turns into the
+  same jump as the search; a request made while another chat was open is ignored by the next one.
+
 ## Emoji
 
 _Added 2026-10-15. Sources: `scripts/trim-emoji.mjs`, `data/emoji.json`, `data/emoji.ts`,
@@ -957,7 +1024,8 @@ follows the chat). Tests: `PaneResizer.test.tsx`, `screens/Panes.test.tsx`, `lay
 Cmd/Ctrl+K opens "Go to…" (`QuickSwitcher`, the Slack way, 2026-10-16): a combobox that filters
 the chats and halls (unread first, then by last activity) and the contacts without a chat; arrows
 move, Enter opens, Esc closes. Cmd/Ctrl+N opens "New chat". Both are heard in `Main` and wait
-while another dialog is open. The sidebar's search field stays for filtering the list in place.
+while another dialog is open. Cmd/Ctrl+F opens the search bar of the open conversation (see
+[Search in a conversation](#search-in-a-conversation)). The sidebar's search field stays for filtering the list in place.
 Cmd/Ctrl+B folds and unfolds the sidebar (see [Panes](#panes)), except in the composer, where
 Cmd/Ctrl+B, I and E style the selection (see [Text styling](#text-styling-xep-0393)). `App` writes the effective locale on
 `<html lang>`, so a screen reader changes voice with the dictionary. The "+" of the sidebar opens a menu

@@ -1,5 +1,5 @@
 import type { Chat, Contact, Message, Room } from '@hey-postie/core';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useCore, useText } from '../core/CoreProvider';
 import { useSettings } from '../core/SettingsProvider';
 import { useAccount } from '../core/useAccount';
@@ -17,6 +17,7 @@ import type { SaveFile } from './Attachments';
 import { Button } from './Button';
 import { Composer } from './Composer';
 import { ConversationHeader } from './ConversationHeader';
+import { ConversationSearch } from './ConversationSearch';
 import { DeleteMessageDialog } from './DeleteMessageDialog';
 import { DropOverlay } from './DropOverlay';
 import { EmptyState } from './EmptyState';
@@ -24,7 +25,9 @@ import { actionsFor, type MessageAction } from './MessageActions';
 import { MessageList } from './MessageList';
 import { PendingParcel } from './PendingParcel';
 import { RoomIntro } from './RoomIntro';
+import { useLetterJump } from './useLetterJump';
 import { useReply } from './useReply';
+import { useSearchBar } from './useSearchBar';
 
 interface ConversationProps {
   chat: Chat;
@@ -48,6 +51,8 @@ interface ConversationProps {
   onDraftTaken?: (() => void) | undefined;
   /** "Invite people" from a new hall's intro. */
   onInvite?: (() => void) | undefined;
+  /** A letter to show, asked from outside (the archive in the details pane); `seq` per request. */
+  showRequest?: { id: string; seq: number } | undefined;
 }
 
 /** The center column: header, messages, composer. Owns the messages of the open chat. */
@@ -65,6 +70,7 @@ export function Conversation({
   draft,
   onDraftTaken,
   onInvite,
+  showRequest,
 }: ConversationProps) {
   const core = useCore();
   const text = useText();
@@ -91,6 +97,8 @@ export function Conversation({
   // The first unread letter as it was when the chat opened: `Main` marks it read right after.
   const [newFrom] = useState(chat.firstUnreadId);
   const reply = useReply(chat.id, letters.messages, peerName);
+  const search = useSearchBar();
+  const letterJump = useLetterJump(letters.loadUntil);
   // A hall the user is not in: left elsewhere, kicked, or bookmarked and not joined yet.
   const outside = chat.kind === 'room' && !room?.joined;
   // The details pane exists for a direct chat, or for a hall the app has a record of.
@@ -142,6 +150,15 @@ export function Conversation({
     } else setConfirming({ message, kind: action });
   }
 
+  // A request made while another chat was open is not this chat's: only the new ones count.
+  const shownSeq = useRef(showRequest?.seq);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: each new request (its `seq`) shows the letter once
+  useEffect(() => {
+    if (!showRequest || showRequest.seq === shownSeq.current) return;
+    shownSeq.current = showRequest.seq;
+    void letterJump.show(showRequest.id);
+  }, [showRequest]);
+
   // A parcel that landed: its message joins the list and the pending bubble goes.
   useEffect(() => {
     for (const upload of uploads.list) {
@@ -182,7 +199,16 @@ export function Conversation({
         hasDetails={hasDetails}
         detailsOpen={detailsOpen}
         onToggleDetails={onToggleDetails}
+        onSearch={search.show}
       />
+      {search.open && (
+        <ConversationSearch
+          chatId={chat.id}
+          peerName={peerName}
+          onShow={(id) => letterJump.show(id, true)}
+          onClose={search.close}
+        />
+      )}
       {headerError && (
         <p
           className="m-0 px-4 py-2 font-heading [font-variation-settings:'SOFT'_100] text-[14px] text-red"
@@ -220,6 +246,7 @@ export function Conversation({
         density={density}
         ownName={account?.displayName ?? ''}
         onShowDevices={hasDetails ? onOpenEncryption : undefined}
+        jump={letterJump.jump}
         empty={
           letters.loaded &&
           (room ? (
@@ -276,6 +303,7 @@ export function Conversation({
         onDraftTaken={onDraftTaken}
         replying={reply.banner}
         onCancelReply={() => reply.replyTo(undefined)}
+        focusRequest={search.composerFocus}
       />
       {confirming && (
         <DeleteMessageDialog

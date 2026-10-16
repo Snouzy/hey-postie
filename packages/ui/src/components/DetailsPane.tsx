@@ -1,7 +1,10 @@
 import type { Chat, Contact, Room } from '@hey-postie/core';
 import { X } from 'lucide-react';
+import { useState } from 'react';
 import { useText } from '../core/CoreProvider';
 import { Postie } from '../illustrations/Postie';
+import { ArchivePanel } from './ArchivePanel';
+import type { SaveFile } from './Attachments';
 import { Button } from './Button';
 import { Details } from './Details';
 import { EmptyState } from './EmptyState';
@@ -24,6 +27,10 @@ interface DetailsPaneProps {
   onLeft: () => void;
   /** "Invite people" from a hall's pane. */
   onInvite?: (() => void) | undefined;
+  onOpenLink: (url: string) => void;
+  onSaveFile: SaveFile;
+  /** From the archive: the letter an item came with, shown in the conversation. */
+  onShowInChat: (messageId: string) => void;
 }
 
 /**
@@ -41,8 +48,27 @@ export function DetailsPane({
   onRoomsChanged,
   onLeft,
   onInvite,
+  onOpenLink,
+  onSaveFile,
+  onShowInChat,
 }: DetailsPaneProps) {
   const text = useText();
+  // The chat whose archive is shown: another chat opens on its details again.
+  const [archiveOf, setArchiveOf] = useState<string | null>(null);
+  const openArchive = () => setArchiveOf(chat.id);
+  if (archiveOf === chat.id) {
+    return (
+      <ArchivePanel
+        key={chat.id}
+        chat={chat}
+        onBack={() => setArchiveOf(null)}
+        onClose={onClose}
+        onOpenLink={onOpenLink}
+        onSaveFile={onSaveFile}
+        onShowInChat={onShowInChat}
+      />
+    );
+  }
   if (chat.kind === 'direct') {
     return (
       <Details
@@ -51,6 +77,7 @@ export function DetailsPane({
         contact={contact}
         focusRequest={focusRequest}
         onClose={onClose}
+        onOpenArchive={openArchive}
       />
     );
   }
@@ -81,6 +108,7 @@ export function DetailsPane({
       onClose={onClose}
       onLeft={onLeft}
       onInvite={onInvite}
+      onOpenArchive={openArchive}
     />
   );
 }

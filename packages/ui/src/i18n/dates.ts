@@ -29,6 +29,16 @@ export function formatTime(locale: Locale, date: Date): string {
   return new Intl.DateTimeFormat(locale, { timeStyle: 'short' }).format(date);
 }
 
+/** The day and the time ("Yesterday, 14:02"): when a letter was sent, in a search or a list. */
+export function formatWhen(
+  locale: Locale,
+  date: Date,
+  text: (key: MessageKey) => string,
+  now = new Date(),
+): string {
+  return `${dayLabel(locale, date, text, now)}, ${formatTime(locale, date)}`;
+}
+
 /** Time for a message of today, otherwise a short date: what a chat list row shows. */
 export function formatRecent(locale: Locale, date: Date, now = new Date()): string {
   if (daysBetween(date, now) === 0) return formatTime(locale, date);

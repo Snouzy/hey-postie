@@ -1,5 +1,6 @@
 import type { Chat, Contact, Room } from '@hey-postie/core';
 import type { RefObject } from 'react';
+import type { SaveFile } from '../components/Attachments';
 import { DetailsPane } from '../components/DetailsPane';
 import { PaneResizer } from '../components/PaneResizer';
 import { useText } from '../core/CoreProvider';
@@ -19,6 +20,9 @@ interface DetailsColumnProps {
   onRoomsChanged: () => Promise<void>;
   onLeft: () => void;
   onInvite: (() => void) | undefined;
+  onOpenLink: (url: string) => void;
+  onSaveFile: SaveFile;
+  onShowInChat: (messageId: string) => void;
 }
 
 /** The right column: its resizer, then the details of the open chat. */
@@ -35,6 +39,9 @@ export function DetailsColumn({
   onRoomsChanged,
   onLeft,
   onInvite,
+  onOpenLink,
+  onSaveFile,
+  onShowInChat,
 }: DetailsColumnProps) {
   const text = useText();
   return (
@@ -65,6 +72,9 @@ export function DetailsColumn({
           onRoomsChanged={onRoomsChanged}
           onLeft={onLeft}
           onInvite={onInvite}
+          onOpenLink={onOpenLink}
+          onSaveFile={onSaveFile}
+          onShowInChat={onShowInChat}
         />
       </div>
     </>

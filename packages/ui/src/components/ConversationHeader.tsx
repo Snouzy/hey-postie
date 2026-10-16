@@ -1,5 +1,5 @@
 import type { Chat, Contact, Room } from '@hey-postie/core';
-import { Ellipsis, Info, Users } from 'lucide-react';
+import { Ellipsis, Info, Search, Users } from 'lucide-react';
 import { useText } from '../core/CoreProvider';
 import type { MessageKey } from '../i18n';
 import { Avatar } from './Avatar';
@@ -26,6 +26,8 @@ interface ConversationHeaderProps {
   hasDetails: boolean;
   detailsOpen: boolean;
   onToggleDetails: () => void;
+  /** Opens the search bar over the letters (also Cmd/Ctrl+F). */
+  onSearch: () => void;
 }
 
 /** The conversation's top bar: who, the hall's topic, the seal, the people and the details. */
@@ -41,6 +43,7 @@ export function ConversationHeader({
   hasDetails,
   detailsOpen,
   onToggleDetails,
+  onSearch,
 }: ConversationHeaderProps) {
   const text = useText();
   const peopleLabel = text('room.peopleButton').replace('{count}', String(peopleCount));
@@ -58,6 +61,14 @@ export function ConversationHeader({
           pending={seal.pending}
           onToggle={() => void seal.toggle()}
         />
+        <Button
+          variant="ghost"
+          onClick={onSearch}
+          aria-label={text('search.open')}
+          title={text('search.open')}
+        >
+          <Search size={18} aria-hidden />
+        </Button>
         {room && onOpenPeople && (
           <button
             type="button"

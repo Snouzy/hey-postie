@@ -63,6 +63,8 @@ export function Main({ account, onOpenLink, onSaveFile, onLeave }: MainProps) {
   const [error, setError] = useState<MessageKey | null>(null);
   // A letter Claude prepared; `chat.requested` (emitted right after) opens its chat.
   const [draft, setDraft] = useState<Draft | null>(null);
+  // "Show in chat" from the archive: the open conversation brings that letter into view.
+  const [showRequest, setShowRequest] = useState<{ id: string; seq: number } | undefined>();
   const { welcoming, dismissWelcome } = useWelcome(account.jid);
   const mainRef = useRef<HTMLDivElement>(null);
   const panes = usePaneSizes();
@@ -239,6 +241,7 @@ export function Main({ account, onOpenLink, onSaveFile, onLeave }: MainProps) {
             draft={draft?.chatId === chat.id ? draft.body : undefined}
             onDraftTaken={takeDraft}
             onInvite={room ? () => setInviteTo(room) : undefined}
+            showRequest={showRequest}
           />
         ) : welcoming ? (
           <section className={EMPTY}>
@@ -272,6 +275,9 @@ export function Main({ account, onOpenLink, onSaveFile, onLeave }: MainProps) {
             details.close();
           }}
           onInvite={room ? () => setInviteTo(room) : undefined}
+          onOpenLink={onOpenLink}
+          onSaveFile={onSaveFile}
+          onShowInChat={(id) => setShowRequest((last) => ({ id, seq: (last?.seq ?? 0) + 1 }))}
         />
       )}
       {leavingRoom && (

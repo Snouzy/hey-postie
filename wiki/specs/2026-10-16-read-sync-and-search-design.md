@@ -43,6 +43,9 @@ read, the other sees its unread count drop.
 
 ## 2. Search in a conversation
 
+_Built on 2026-10-16 (UI): the bar, its keys and the jump to a hit, described in
+[ui.md, "Search in a conversation"](../development/ui.md#search-in-a-conversation)._
+
 **What WhatsApp does**: "Search" in the chat's menu opens a field over the conversation; matches
 are listed newest first with their date and a snippet, the up/down arrows walk them, choosing one
 scrolls to the letter and flashes it.
@@ -64,6 +67,9 @@ Retracted letters and those hidden "for me" never match.
 reached. Choosing a hit loads the pages up to it, scrolls to it and flashes it.
 
 ## 3. Media, links and documents
+
+_Built on 2026-10-16 (UI): the archive view of the details and hall panes, described in
+[ui.md, "Media, links and documents"](../development/ui.md#media-links-and-documents)._
 
 **What WhatsApp does**: in the contact's (or group's) info, "Media, links and docs" with a count,
 opening three tabs: a grid of pictures and videos, a list of links with their preview, a list of
