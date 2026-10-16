@@ -127,13 +127,15 @@ describe.skipIf(!SERVER)('Converse OMEMO repository against the XMPP test server
   }, TIMEOUT);
 
   afterAll(async () => {
+    // Alice signs out before bob drops her: online, Converse answers his `unsubscribed` with a
+    // roster remove it never awaits, which races any other alice client (converse.md §11).
+    await repositories.xmpp.disconnect().catch(() => undefined);
     for (const node of [DEVICELIST_NODE, bundleNode(FIRST.id), bundleNode(SECOND.id)]) {
       await bobDeletesNode(node).catch(() => undefined);
     }
     await bobRemovesAlice().catch(() => undefined);
     // jsdom's WebSocket sometimes never fires `close` (the Event mismatch of realSocket.ts).
     await Promise.race([bob.close(), new Promise((resolve) => setTimeout(resolve, 2_000))]);
-    await repositories.xmpp.disconnect().catch(() => undefined);
   }, TIMEOUT * 2);
 
   it(

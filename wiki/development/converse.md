@@ -207,6 +207,18 @@ for explicitly (`engine.ts`). Strophe's own level follows (`shared/connection/ut
   console error; under Vitest libomemo's glue turns the unhandled rejection into exit code 7. The
   registration contract test waits for `api.waitUntil('OMEMOInitialized')` before deleting
   (found on 2026-10-15).
+- An `unsubscribed` presence makes Converse remove the contact from the roster without awaiting
+  the IQ (`RosterContact.ackUnsubscribe`, `plugins/roster/contact.js:115-119`). Every online client
+  of the account does the same; the second remove to reach Prosody gets `item-not-found` (type
+  `modify`, `mod_roster.lua`), an unhandled rejection, so exit code 7. `omemo.contract.test.ts`
+  crashed this way in its `afterAll` about one run in three, with all five tests passed, whenever
+  another alice client was signed in (the author's `desktop:dev:alice` window). Bob dropping alice
+  from his roster sends her that presence, so `omemo.contract.test.ts` and `contract.test.ts` sign
+  alice out before `bobRemovesAlice` in `afterAll`. Verified on 2026-10-16 by logging the socket's
+  frames: 6 crashes in 20 runs before, 0 in 20 after, with that window open both times. In the app
+  it is only a console error. `hall.contract.test.ts` has the same teardown but keeps it for now:
+  its presence test already fails on a stale `away` presence from the previous run with either
+  order (see Points to check).
 
 ## 12. What the repository actually does
 
@@ -722,6 +734,12 @@ and `contract-rooms.test.ts` (Prosody, `rooms.localhost`), both green on 2026-10
   worktree; case 4 times out, the worker sometimes exits with code 7). The rooms suite passes.
   Likely server-side accumulation across runs (every run publishes a new OMEMO device to PEP);
   not investigated further here.
+- `hall.contract.test.ts` case 2 often fails when it runs right after a passing run: bob receives
+  the previous run's `away` presence (`lunch <previous RUN id>`) instead of the new one, with
+  either `afterAll` order (checked on 2026-10-16, 2 failures in 3 runs with the order unchanged).
+  The cause is assumed, not verified: a previous alice session that Prosody kept after a socket
+  that never closed (jsdom, see `realSocket.ts`).
+
 ## 15. OMEMO: what the repository does
 
 _Implementation of 2026-10-15, reviewed and hardened on 2026-10-16: `crypto.ts` (the repository),

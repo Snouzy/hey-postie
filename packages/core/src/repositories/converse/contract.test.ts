@@ -62,9 +62,11 @@ describe.skipIf(!SERVER)('Converse repositories against the XMPP test server', (
   }, TIMEOUT);
 
   afterAll(async () => {
+    // Alice signs out before bob drops her: online, Converse answers his `unsubscribed` with a
+    // roster remove it never awaits, which races any other alice client (converse.md §11).
+    await repositories.xmpp.disconnect().catch(() => undefined);
     await bobRemovesAlice().catch(() => undefined);
     await bob.close();
-    await repositories.xmpp.disconnect().catch(() => undefined);
   }, TIMEOUT);
 
   it(
