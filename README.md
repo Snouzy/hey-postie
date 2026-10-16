@@ -6,7 +6,7 @@
 
 **A modern desktop chat app for XMPP: your server, your rules, a friendly app.**
 
-macOS · Windows · Linux · OMEMO end-to-end encryption · AI agents over MCP, off by default · Free software (AGPL)
+macOS · Windows · Linux · OMEMO end-to-end encryption · AI agents over MCP and CLI, off by default · Free software (AGPL)
 
 https://github.com/user-attachments/assets/9db9c88e-9c1c-4163-825b-9db26ada2a22
 
@@ -36,7 +36,7 @@ and Hey Postie, which keeps your server and gives your team a modern desktop app
 | 💬 **Conversations and rooms** | One-to-one chats and group rooms ("halls"): replies, reactions, mentions, edit and delete, files and images. |
 | 🔒 **Private by design** | OMEMO end-to-end encryption that phone apps can read; secrets in the OS keychain; no ads, no analytics. |
 | 🔎 **Find things** | Search in a conversation; its media, links and documents in one place; read state synced across your devices. |
-| 🤖 **AI agents, on your terms** | A local MCP server for AI agents (Claude and any MCP client), off by default, with separate read, draft and send levels. Direct sending needs the highest level and your confirmation in the agent. |
+| 🤖 **AI agents, on your terms** | A local MCP server and the `postie` command line, for Claude and any other agent, off by default, with separate read, draft and send levels. Direct sending needs the highest level, which you choose in the app. |
 | 🌐 **Open network** | Works with your current XMPP server (Prosody, ejabberd, Openfire…) and with everyone on other servers. |
 
 ## How it compares
@@ -56,7 +56,7 @@ release; sources and caveats in [the report](wiki/reports/2026-10-17-xmpp-client
 | Create · delete your account from the app | ✅ · ✅ | ✅ · ✅ | ✅ · ❌ | ✅ · ✅ | ❌ · ❌ | ✅ · ❌ | partial · ✅ |
 | Link previews | rooms, from the server | ✅ | ❌ | ❌ | ✅ | rooms | ✅ |
 | Search | in a conversation | ✅ | ✅ | log viewer | ✅ | ❌ | ✅ |
-| AI agents (over MCP) | ✅ 12 tools, sending only with your approval | ❌ | ❌ | ❌ | ✅ 3 tools | ❌ | ❌ |
+| AI agents | ✅ MCP (12 tools) and CLI, sending only at the level you allow | ❌ | ❌ | ❌ | ✅ 3 tools | ❌ | ❌ |
 | Latest release | none yet | 2.6.0 (Aug 2026) | 0.5.1 (Nov 2025) | 2.14.14 (Jan 2025) | 0.17.4 (Sep 2026) | 14.0.0 (Jun 2026) | 6.4.23 (Oct 2026) |
 | License | AGPL-3.0 | GPL-3.0 | GPL-3.0 | GPL-2.0 | AGPL-3.0 | MPL-2.0 | BSD-2 |
 
