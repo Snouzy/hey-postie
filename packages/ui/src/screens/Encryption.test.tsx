@@ -57,7 +57,7 @@ describe('The lock in the header', () => {
     await withChat(deps);
     fireEvent.click(seal());
     expect(await screen.findByRole('alert')).toHaveTextContent(
-      'I cannot seal this letter: no key on the other side.',
+      'I cannot seal this letter: no key on the other side yet. Ask them to check their devices.',
     );
     expect(seal()).toHaveAttribute('aria-pressed', 'false');
   });

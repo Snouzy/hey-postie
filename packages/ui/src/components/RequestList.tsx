@@ -13,7 +13,7 @@ interface RequestListProps {
 }
 
 /**
- * The "Message requests" group above the chats: a heading button with the count, folded by
+ * The "Letters from strangers" group above the chats: a heading button with the count, folded by
  * default, then one row per stranger. Arrow keys move between rows like in the chat list.
  */
 export function RequestList({ rows, selectedJid, onSelect }: RequestListProps) {

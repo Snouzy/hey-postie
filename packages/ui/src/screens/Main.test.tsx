@@ -25,7 +25,7 @@ describe('Main', () => {
       }),
     );
     expect(screen.getByRole('img', { name: /waving/ })).toBeInTheDocument();
-    expect(screen.getByText('Pick a conversation')).toBeInTheDocument();
+    expect(screen.getByText('Pick a chat')).toBeInTheDocument();
     expect(screen.getByText(/No letter open/)).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Got it' })).not.toBeInTheDocument();
   });
@@ -38,14 +38,14 @@ describe('Main', () => {
     expect(screen.getByText(/sealed/)).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Got it' }));
     expect(screen.queryByRole('heading', { name: 'Welcome aboard' })).not.toBeInTheDocument();
-    expect(screen.getByText('Pick a conversation')).toBeInTheDocument();
+    expect(screen.getByText('Pick a chat')).toBeInTheDocument();
 
     // Signed out and back in: the card does not come back for this account.
     fireEvent.click(screen.getByRole('button', { name: 'alice' }));
     fireEvent.click(screen.getByRole('menuitem', { name: 'Sign out' }));
     await screen.findByRole('button', { name: 'Create an account' });
     await act(() => core.accounts.signIn({ jid: 'alice@x.org', password: 'pw', remember: false }));
-    expect(screen.getByText('Pick a conversation')).toBeInTheDocument();
+    expect(screen.getByText('Pick a chat')).toBeInTheDocument();
     await waitFor(() => expect(screen.queryByRole('button', { name: 'Got it' })).toBeNull());
   });
 
@@ -117,7 +117,7 @@ describe('Main', () => {
         subscription: 'both',
       }),
     );
-    fireEvent.click(screen.getByRole('button', { name: 'Contacts' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Address book' }));
     expect(await screen.findByRole('heading', { name: 'Away' })).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: /Dan/ }));
     expect(await screen.findByRole('heading', { name: 'dan' })).toBeInTheDocument();

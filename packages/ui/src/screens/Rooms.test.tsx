@@ -18,8 +18,8 @@ async function signedIn(before: (deps: FakeDependencies) => void = () => {}) {
 
 function openJoinDialog() {
   fireEvent.click(screen.getByRole('button', { name: 'Add' }));
-  fireEvent.click(screen.getByRole('menuitem', { name: 'Join a room' }));
-  return screen.getByRole('dialog', { name: 'Join a room' });
+  fireEvent.click(screen.getByRole('menuitem', { name: 'Join a hall' }));
+  return screen.getByRole('dialog', { name: 'Join a hall' });
 }
 
 /** The members pane shows the list once the service answered; closes it again. */
@@ -44,12 +44,12 @@ async function inHall(deps: FakeDependencies, core: ReturnType<typeof setupCore>
   return screen.getByRole('region', { name: 'hall' });
 }
 
-describe('Join a room', () => {
+describe('Join a hall', () => {
   it('prefills the nick, joins by address and selects the hall', async () => {
     const { deps } = await signedIn();
     const dialog = openJoinDialog();
     expect(within(dialog).getByLabelText('Nickname')).toHaveValue('alice');
-    fireEvent.change(within(dialog).getByLabelText('Room address'), { target: { value: HALL } });
+    fireEvent.change(within(dialog).getByLabelText('Hall address'), { target: { value: HALL } });
     fireEvent.click(within(dialog).getByRole('button', { name: 'Join' }));
     await waitFor(() => expect(dialog).not.toBeInTheDocument());
     expect(deps.fakes.room.joined).toEqual([HALL]);
@@ -63,7 +63,7 @@ describe('Join a room', () => {
     );
     const dialog = openJoinDialog();
     expect(within(dialog).queryByLabelText('Password')).not.toBeInTheDocument();
-    fireEvent.change(within(dialog).getByLabelText('Room address'), { target: { value: HALL } });
+    fireEvent.change(within(dialog).getByLabelText('Hall address'), { target: { value: HALL } });
     fireEvent.click(within(dialog).getByRole('button', { name: 'Join' }));
     expect(await within(dialog).findByRole('alert')).toHaveTextContent('This hall is locked.');
     expect(within(dialog).getByLabelText('Password')).toBeInTheDocument();
@@ -72,7 +72,7 @@ describe('Join a room', () => {
   it('says the sentence when the nick is taken', async () => {
     await signedIn((deps) => deps.fakes.room.refusals.set(HALL, new DomainError('NickTaken')));
     const dialog = openJoinDialog();
-    fireEvent.change(within(dialog).getByLabelText('Room address'), { target: { value: HALL } });
+    fireEvent.change(within(dialog).getByLabelText('Hall address'), { target: { value: HALL } });
     fireEvent.click(within(dialog).getByRole('button', { name: 'Join' }));
     expect(await within(dialog).findByRole('alert')).toHaveTextContent(
       'already goes by that nickname',
@@ -115,7 +115,7 @@ describe('Join a room', () => {
     const row = await within(dialog).findByRole('button', { name: /The Hall/ });
     expect(within(row).getByText('3 members')).toBeInTheDocument();
     fireEvent.click(row);
-    expect(within(dialog).getByLabelText('Room address')).toHaveValue(HALL);
+    expect(within(dialog).getByLabelText('Hall address')).toHaveValue(HALL);
   });
 });
 
@@ -215,9 +215,9 @@ describe('A hall', () => {
     expect(within(pane).getByText('Letters and stamps')).toBeInTheDocument();
     expect(within(pane).getByText('owner')).toBeInTheDocument();
     expect(within(pane).getByRole('radio', { name: 'Mentions only' })).toBeChecked();
-    fireEvent.click(within(pane).getByRole('radio', { name: 'All messages' }));
+    fireEvent.click(within(pane).getByRole('radio', { name: 'Every letter' }));
     await waitFor(() =>
-      expect(within(pane).getByRole('radio', { name: 'All messages' })).toBeChecked(),
+      expect(within(pane).getByRole('radio', { name: 'Every letter' })).toBeChecked(),
     );
     expect((await core.rooms.list())[0]?.notify).toBe('all');
   });
