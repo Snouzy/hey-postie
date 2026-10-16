@@ -18,7 +18,7 @@ beforeEach(async () => {
 });
 
 describe('the tool list', () => {
-  it('has the nine tools of the spec, reads marked read-only', async () => {
+  it('has the twelve tools of the spec, reads marked read-only', async () => {
     const { tools } = await t.rpc('tools/list');
     const byName = new Map(tools.map((tool: { name: string }) => [tool.name, tool]));
     expect([...byName.keys()].sort()).toEqual(
@@ -31,6 +31,9 @@ describe('the tool list', () => {
         'read_messages',
         'draft_message',
         'send_message',
+        'edit_message',
+        'retract_message',
+        'hide_message',
         'set_presence',
       ].sort(),
     );
@@ -158,5 +161,56 @@ describe('history', () => {
     expect(cursor).toBeTruthy();
     const older = await t.call('read_messages', { chat: 'bob@x.org', before: cursor });
     expect(older.text).toContain('<message>An old letter</message>');
+  });
+});
+
+describe('editing and deleting', () => {
+  async function mine() {
+    return t.core.chats.send('bob@x.org', 'Helo');
+  }
+
+  it('edits and deletes my letters only in the sending mode', async () => {
+    const letter = await mine();
+    t.core.assistant.setSettings({ mode: 'readAndDraft' });
+    expect(
+      (await t.call('edit_message', { chat: 'bob@x.org', message_id: letter.id, text: 'Hello' }))
+        .isError,
+    ).toBe(true);
+    t.core.assistant.setSettings({ mode: 'readDraftAndSend' });
+    const edited = await t.call('edit_message', {
+      chat: 'bob@x.org',
+      message_id: letter.id,
+      text: 'Hello',
+    });
+    expect(edited.isError).toBe(false);
+    const deleted = await t.call('retract_message', { chat: 'bob@x.org', message_id: letter.id });
+    expect(deleted.isError).toBe(false);
+    expect(t.deps.fakes.chat.retracted).toEqual([letter.id]);
+  });
+
+  it('refuses someone else’s letter with a sentence that says why', async () => {
+    t.core.assistant.setSettings({ mode: 'readDraftAndSend' });
+    const theirs = (await t.core.chats.messages('bob@x.org'))[0];
+    const answer = await t.call('retract_message', {
+      chat: 'bob@x.org',
+      message_id: theirs?.id ?? '',
+    });
+    expect(answer).toMatchObject({ isError: true });
+    expect(answer.text).toMatch(/own sent messages/);
+  });
+
+  it('hides for the user from the drafting mode on, and sends nothing', async () => {
+    const theirs = (await t.core.chats.messages('bob@x.org'))[0];
+    expect(
+      (await t.call('hide_message', { chat: 'bob@x.org', message_id: theirs?.id ?? '' })).isError,
+    ).toBe(true);
+    t.core.assistant.setSettings({ mode: 'readAndDraft' });
+    const answer = await t.call('hide_message', {
+      chat: 'bob@x.org',
+      message_id: theirs?.id ?? '',
+    });
+    expect(answer.isError).toBe(false);
+    expect((await t.core.chats.messages('bob@x.org')).map((m) => m.id)).not.toContain(theirs?.id);
+    expect(t.deps.fakes.chat.retracted).toEqual([]);
   });
 });

@@ -23,6 +23,9 @@ const NEXT: Partial<Record<string, string>> = {
   StatusTooLong: 'The status is too long: 140 characters at most.',
   InvalidJid: 'That address is not a valid JID (name@server).',
   EncryptionUnavailable: 'This chat cannot be sealed: the contact has no device for it.',
+  NotAllowed:
+    'Only the user\u2019s own sent messages can be changed that way (not pending, failed or already deleted).',
+  NotRetractable: 'This message cannot be taken back: the server never gave it an address.',
 };
 
 /** Turns any failure into a sentence the model can act on. */

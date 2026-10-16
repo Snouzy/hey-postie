@@ -63,7 +63,7 @@ Claude Desktop ──stdio──▶ bridge (mcp-remote, or our MCPB bundle later
   socket shared with another team's process (the `claude` CLI), and a sandboxed app cannot ship a
   helper that an outside client launches. A loopback TCP port is the reliable channel.
 
-## 4. Tools (version 1: 9)
+## 4. Tools (12)
 
 Read tools share the `list_`, `get_`, `read_`, `find_` verbs so a user can allow every read with
 one Claude Code rule (`mcp__hey-postie__read_*` and so on) while writes keep asking.
@@ -76,6 +76,9 @@ one Claude Code rule (`mcp__hey-postie__read_*` and so on) while writes keep ask
 | `find_contacts` | Contacts matching a name or JID, with presence. | `contacts.list` | ✓ | | ✓ |
 | `draft_message` | Put text in the composer of an existing chat or a contact's chat; the user edits and sends it. Nothing is sent. | `assistant.draft` | | | |
 | `send_message` | Send text at once, only in the `readDraftAndSend` mode; `requiresUserInteraction`, so Claude Code asks the user before each call. | `chats.send` | | | |
+| `edit_message` | Correct one of the user's sent letters; same mode and same ask as sending (the others get it). | `chats.edit` | | ✓ | ✓ |
+| `retract_message` | Delete one of the user's letters for everyone; same mode and same ask as sending. | `chats.retract` | | ✓ | ✓ |
+| `hide_message` | Hide any letter on this device only; from the drafts mode on, nothing is sent. | `chats.hideForMe` | | ✓ | ✓ |
 | `react_to_message` | Add or remove one emoji on a message. | `chats.toggleReaction` | | | ✓ |
 | `mark_chat_read` | Mark a chat read. | `chats.markRead` | | | ✓ |
 | `set_presence` | Available / away / do not disturb, with an optional status. | `accounts.setPresence` | | | ✓ |
@@ -89,7 +92,7 @@ on every call, whatever the permissions) and its description tells Claude to use
 user explicitly asked to send, after showing the recipient and the text.
 
 Later, each in its own pull request and keeping under 15: `search_messages` (needs a search
-service), `edit_message` and `retract_message` (with their spec), `get_attachment`.
+service), `get_attachment`. Moderation stays out of Claude's reach.
 
 ### Answers
 

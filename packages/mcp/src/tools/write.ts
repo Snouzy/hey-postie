@@ -91,6 +91,107 @@ export function registerWriteTools(server: McpServer, core: Core) {
     },
   );
 
+  const messageRef = {
+    chat: z.string().describe('The chat JID (or its exact name)'),
+    message_id: z.string().describe('The id at the start of a read_messages line'),
+  };
+  const sendingOff = refusal(
+    'Changing letters others received needs direct sending, which is off in Hey Postie. Tell the user they can allow it in Settings › Claude.',
+  );
+
+  server.registerTool(
+    'edit_message',
+    {
+      title: 'Edit a message',
+      description:
+        'Corrects one of the user\u2019s own sent messages: the others get the new text, marked edited, and the earlier one stays in its history. Only when the user explicitly asked for this correction; show them the new text first.',
+      inputSchema: z.object({ ...messageRef, text: z.string().min(1).describe('The new text') }),
+      annotations: {
+        readOnlyHint: false,
+        destructiveHint: true,
+        idempotentHint: true,
+        openWorldHint: true,
+      },
+      _meta: ASK_EVERY_TIME,
+    },
+    async ({ chat: ref, message_id, text }) => {
+      const notOnline = offline(core);
+      if (notOnline) return notOnline;
+      if (!core.assistant.canSend()) return sendingOff;
+      try {
+        const chat = await findChat(core, ref);
+        if (isAnswer(chat)) return chat;
+        await core.chats.edit(chat.id, message_id, text);
+        return answer(`Corrected ${message_id} in ${chat.title}.`);
+      } catch (error) {
+        return failure(error);
+      }
+    },
+  );
+
+  server.registerTool(
+    'retract_message',
+    {
+      title: 'Delete a message for everyone',
+      description:
+        'Takes one of the user\u2019s own sent messages back, for everyone (other apps are asked to remove it; some ignore it). Only when the user explicitly asked to delete it for everyone.',
+      inputSchema: z.object(messageRef),
+      annotations: {
+        readOnlyHint: false,
+        destructiveHint: true,
+        idempotentHint: true,
+        openWorldHint: true,
+      },
+      _meta: ASK_EVERY_TIME,
+    },
+    async ({ chat: ref, message_id }) => {
+      const notOnline = offline(core);
+      if (notOnline) return notOnline;
+      if (!core.assistant.canSend()) return sendingOff;
+      try {
+        const chat = await findChat(core, ref);
+        if (isAnswer(chat)) return chat;
+        await core.chats.retract(chat.id, message_id);
+        return answer(`Deleted ${message_id} for everyone in ${chat.title}.`);
+      } catch (error) {
+        return failure(error);
+      }
+    },
+  );
+
+  server.registerTool(
+    'hide_message',
+    {
+      title: 'Hide a message for the user',
+      description:
+        'Hides any message on this device only (\u201cdelete for me\u201d): nothing is sent, the others still have it.',
+      inputSchema: z.object(messageRef),
+      annotations: {
+        readOnlyHint: false,
+        destructiveHint: true,
+        idempotentHint: true,
+        openWorldHint: false,
+      },
+    },
+    async ({ chat: ref, message_id }) => {
+      const notOnline = offline(core);
+      if (notOnline) return notOnline;
+      if (core.assistant.getSettings().mode === 'read') {
+        return refusal(
+          'Claude may only read in Hey Postie. Tell the user they can allow more in Settings › Claude.',
+        );
+      }
+      try {
+        const chat = await findChat(core, ref);
+        if (isAnswer(chat)) return chat;
+        await core.chats.hideForMe(chat.id, message_id);
+        return answer(`Hidden ${message_id} in ${chat.title}, on this device only.`);
+      } catch (error) {
+        return failure(error);
+      }
+    },
+  );
+
   server.registerTool(
     'react_to_message',
     {

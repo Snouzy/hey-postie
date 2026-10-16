@@ -129,8 +129,11 @@ matching methods over Converse; every service method has unit tests against fake
   root in `NODE_EXTRA_CA_CERTS`, 2026-10-16): alice's correction reaches bob as a `<replace>` naming
   the first letter; her retraction reaches him as a `<retract>` naming it; bob's correction reaches
   alice as an edited letter with its earlier text. All three pass.
-- Not yet: the MCP tools (`edit_message`, `retract_message`), and moderation against the server
-  (its module is not enabled on the test server yet).
+- MCP: `edit_message`, `retract_message` (direct-sending mode, Claude Code asks each time) and
+  `hide_message` (drafts mode), see the MCP spec; moderation is not offered to Claude.
+- Not yet: moderation against the real server. Prosody 13.0.7 does not ship `mod_muc_moderation`;
+  it is a community module (prosody-modules) to add to `tools/xmpp-server` deliberately, since the
+  test server is shared by every session.
 
 ## Points to check
 
