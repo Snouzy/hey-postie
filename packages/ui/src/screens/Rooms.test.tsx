@@ -22,11 +22,9 @@ function openJoinDialog() {
   return screen.getByRole('dialog', { name: 'Join a hall' });
 }
 
-/** The members pane shows the list once the service answered; closes it again. */
+/** The header counts the people once the service answered. */
 async function membersLoaded() {
-  fireEvent.click(screen.getByRole('button', { name: 'Members' }));
-  await screen.findByRole('heading', { name: 'Moderators' });
-  fireEvent.click(screen.getByRole('button', { name: 'Close details' }));
+  await screen.findByRole('button', { name: 'People in the hall: 4' });
 }
 
 /** Joins the hall through the service and opens it from the sidebar. */
@@ -54,7 +52,7 @@ describe('Join a hall', () => {
     await waitFor(() => expect(dialog).not.toBeInTheDocument());
     expect(deps.fakes.room.joined).toEqual([HALL]);
     expect(await screen.findByRole('heading', { name: 'hall' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Members' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Hall details' })).toBeInTheDocument();
   });
 
   it('reveals the password field when the hall is locked', async () => {
@@ -104,18 +102,19 @@ describe('Join a hall', () => {
     expect(await within(dialog).findByRole('alert')).toHaveTextContent('server name');
   });
 
-  it('browses the published halls and fills the address on click', async () => {
-    await signedIn((deps) =>
-      deps.fakes.room.publish('rooms.x.org', [{ jid: HALL, name: 'The Hall', membersCount: 3 }]),
+  it('reads the directory at once, and joins a listed hall in one click', async () => {
+    const { deps } = await signedIn((d) =>
+      d.fakes.room.publish('rooms.x.org', [{ jid: HALL, name: 'The Hall', membersCount: 3 }]),
     );
     const dialog = openJoinDialog();
     fireEvent.click(within(dialog).getByRole('button', { name: 'Browse' }));
     expect(within(dialog).getByLabelText('Server')).toHaveValue('rooms.x.org');
-    fireEvent.click(within(dialog).getByRole('button', { name: 'Look up' }));
-    const row = await within(dialog).findByRole('button', { name: /The Hall/ });
-    expect(within(row).getByText('3 members')).toBeInTheDocument();
-    fireEvent.click(row);
-    expect(within(dialog).getByLabelText('Hall address')).toHaveValue(HALL);
+    const listed = await within(dialog).findByRole('list', { name: 'Listed halls' });
+    expect(within(listed).getByText(/3 members/)).toBeInTheDocument();
+    fireEvent.click(within(listed).getByRole('button', { name: 'Join The Hall' }));
+    await waitFor(() => expect(dialog).not.toBeInTheDocument());
+    expect(deps.fakes.room.joined).toEqual([HALL]);
+    expect(await screen.findByRole('heading', { name: 'hall' })).toBeInTheDocument();
   });
 });
 
@@ -190,30 +189,37 @@ describe('A hall', () => {
     expect(await screen.findByRole('status')).toHaveTextContent('I am not in this hall');
     expect(screen.queryByRole('button', { name: 'Join again' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Details' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Members' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Hall details' })).not.toBeInTheDocument();
     expect(screen.queryByText('Remove contact')).not.toBeInTheDocument();
   });
 
-  it('shows the topic, the members by role and sets the notify rule', async () => {
+  it('shows the topic, the people with their standing and sets the notify rule', async () => {
     const { deps, core } = await signedIn();
     const region = await inHall(deps, core);
     const [room] = await core.rooms.list();
     if (!room) throw new Error('no room');
     act(() => deps.fakes.room.change({ ...room, topic: 'Letters and stamps' }));
     expect(await within(region).findByTitle('Letters and stamps')).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'Members' }));
-    const pane = screen.getByRole('complementary', { name: 'Members' });
-    // The Encryption heading is there at once; the role headings wait for the members.
-    await within(pane).findByRole('heading', { level: 3, name: 'Visitors' });
+    fireEvent.click(screen.getByRole('button', { name: 'Hall details' }));
+    const pane = screen.getByRole('complementary', { name: 'Hall details' });
     const headings = within(pane).getAllByRole('heading', { level: 3 });
     expect(headings.map((h) => h.textContent)).toEqual([
-      'Moderators',
-      'Participants',
-      'Visitors',
+      'Details',
+      'People',
       'Encryption',
+      'Actions',
     ]);
-    expect(within(pane).getByText('Letters and stamps')).toBeInTheDocument();
-    expect(within(pane).getByText('owner')).toBeInTheDocument();
+    // Present people, the owner first, then by name; my own row says so.
+    const people = within(pane).getByRole('region', { name: 'People' });
+    await waitFor(() => expect(within(people).getAllByRole('listitem')).toHaveLength(4));
+    const rows = within(people).getAllByRole('listitem');
+    expect(rows.map((row) => row.textContent)).toEqual([
+      expect.stringContaining('bob'),
+      expect.stringContaining('alice(you)'),
+      expect.stringContaining('Bo'),
+      expect.stringContaining('brenda'),
+    ]);
+    expect(within(rows[0] as HTMLElement).getByText('owner')).toBeInTheDocument();
     expect(within(pane).getByRole('radio', { name: 'Mentions only' })).toBeChecked();
     fireEvent.click(within(pane).getByRole('radio', { name: 'Every letter' }));
     await waitFor(() =>
@@ -225,18 +231,18 @@ describe('A hall', () => {
   it('Esc closes the leave confirmation but keeps the pane', async () => {
     const { deps, core } = await signedIn();
     await inHall(deps, core);
-    fireEvent.click(screen.getByRole('button', { name: 'Members' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Leave the hall' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Hall details' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Leave the hall…' }));
     fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' });
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
-    expect(screen.getByRole('complementary', { name: 'Members' })).toBeInTheDocument();
+    expect(screen.getByRole('complementary', { name: 'Hall details' })).toBeInTheDocument();
   });
 
   it('leaves after confirmation and goes back to the empty state', async () => {
     const { deps, core } = await signedIn();
     await inHall(deps, core);
-    fireEvent.click(screen.getByRole('button', { name: 'Members' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Leave the hall' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Hall details' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Leave the hall…' }));
     fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Leave' }));
     await waitFor(() => expect(deps.fakes.room.left).toEqual([HALL]));
     expect(await screen.findByText(/No letter open/)).toBeInTheDocument();

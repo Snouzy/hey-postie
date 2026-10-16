@@ -113,10 +113,15 @@ describe('The sidebar groups', () => {
     fireEvent.click(await screen.findByRole('button', { name: 'Halls: create or join' }));
     const menu = screen.getByRole('menu', { name: 'Halls: create or join' });
     const items = within(menu).getAllByRole('menuitem');
-    expect(items.map((item) => item.textContent)).toEqual(['Create a hall', 'Join a hall']);
+    expect(items.map((item) => item.textContent)).toEqual(['Create a hall', 'Browse halls']);
     expect(items[0]).toHaveFocus();
     fireEvent.click(items[1] as HTMLElement);
-    expect(screen.getByRole('dialog', { name: 'Join a hall' })).toBeInTheDocument();
+    // Browse halls: the join dialog, open on its directory.
+    const dialog = screen.getByRole('dialog', { name: 'Join a hall' });
+    expect(within(dialog).getByRole('button', { name: 'Browse' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
   });
 
   it('keeps the empty state when there is no chat, no hall and no invitation', async () => {
@@ -216,7 +221,7 @@ describe('Invite people', () => {
       ]);
     });
     fireEvent.click(await screen.findByRole('button', { name: /Team/ }));
-    fireEvent.click(screen.getByRole('button', { name: 'Members' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Hall details' }));
     fireEvent.click(screen.getByRole('button', { name: 'Invite people' }));
     const dialog = screen.getByRole('dialog', { name: 'Invite people to Team' });
     await within(dialog).findByRole('region', { name: 'Already in this hall' });

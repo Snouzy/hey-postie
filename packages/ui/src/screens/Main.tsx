@@ -55,6 +55,7 @@ type OpenDialog =
   | 'newChat'
   | 'createRoom'
   | 'joinRoom'
+  | 'browseRooms'
   | 'addContact'
   | 'myDevices'
   | 'settings'
@@ -82,6 +83,8 @@ export function Main({ account, onOpenLink, onSaveFile, onLeave }: MainProps) {
   const [returnFocus, setReturnFocus] = useState<'licenses' | 'deleteAccount' | null>(null);
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [encryptionFocus, setEncryptionFocus] = useState(0); // "Check their devices" requests
+  const [peopleFocus, setPeopleFocus] = useState(0); // the hall header's people button
+  const [createName, setCreateName] = useState(''); // "Create the hall …" from Browse halls
   const [error, setError] = useState<MessageKey | null>(null);
   // A letter Claude prepared; `chat.requested` (emitted right after) opens its chat.
   const [draft, setDraft] = useState<Draft | null>(null);
@@ -216,14 +219,19 @@ export function Main({ account, onOpenLink, onSaveFile, onLeave }: MainProps) {
     }
   }
 
-  /** The header button toggles the pane; a sealed letter opens it on its Encryption section. */
-  function showDetails(toEncryption: boolean) {
-    setEncryptionFocus(toEncryption ? (count) => count + 1 : 0);
-    setDetailsOpen(toEncryption || !detailsOpen);
+  /**
+   * The header button toggles the pane; a sealed letter opens it on its Encryption section, the
+   * hall's people button on its People section.
+   */
+  function showDetails(section?: 'encryption' | 'people') {
+    setEncryptionFocus(section === 'encryption' ? (count) => count + 1 : 0);
+    setPeopleFocus(section === 'people' ? (count) => count + 1 : 0);
+    setDetailsOpen(section !== undefined || !detailsOpen);
   }
 
   function closeDialog() {
     setDialog(null);
+    setCreateName('');
     setSettingsSection('general');
     setSettingsBehind(null);
     setReturnFocus(null);
@@ -284,6 +292,7 @@ export function Main({ account, onOpenLink, onSaveFile, onLeave }: MainProps) {
         onNewChat={() => setDialog('newChat')}
         onCreateRoom={() => setDialog('createRoom')}
         onJoinRoom={() => setDialog('joinRoom')}
+        onBrowseRooms={() => setDialog('browseRooms')}
         onAddContact={() => setDialog('addContact')}
         onMyDevices={() => setDialog('myDevices')}
         onSettings={() => setDialog('settings')}
@@ -347,8 +356,9 @@ export function Main({ account, onOpenLink, onSaveFile, onLeave }: MainProps) {
             contact={contact}
             room={room}
             detailsOpen={detailsOpen}
-            onToggleDetails={() => showDetails(false)}
-            onOpenEncryption={() => showDetails(true)}
+            onToggleDetails={() => showDetails()}
+            onOpenPeople={() => showDetails('people')}
+            onOpenEncryption={() => showDetails('encryption')}
             onOpenLink={onOpenLink}
             onSaveFile={onSaveFile}
             uploads={uploads.forChat(chat.id)}
@@ -394,6 +404,7 @@ export function Main({ account, onOpenLink, onSaveFile, onLeave }: MainProps) {
               contact={contact}
               room={room}
               focusRequest={encryptionFocus}
+              peopleFocus={peopleFocus}
               onClose={() => setDetailsOpen(false)}
               onRoomsChanged={refreshRooms}
               onLeft={() => {
@@ -435,6 +446,7 @@ export function Main({ account, onOpenLink, onSaveFile, onLeave }: MainProps) {
       {dialog === 'createRoom' && (
         <CreateRoom
           account={account}
+          initialName={createName}
           // The new hall opens, and the invite dialog with it: a hall starts with its people.
           onCreated={(created) => {
             openRoom(created);
@@ -444,9 +456,15 @@ export function Main({ account, onOpenLink, onSaveFile, onLeave }: MainProps) {
           onClose={closeDialog}
         />
       )}
-      {dialog === 'joinRoom' && (
+      {(dialog === 'joinRoom' || dialog === 'browseRooms') && (
         <JoinRoom
           account={account}
+          rooms={rooms}
+          initialTab={dialog === 'browseRooms' ? 'browse' : 'address'}
+          onCreate={(name) => {
+            setCreateName(name);
+            setDialog('createRoom');
+          }}
           onJoined={(joined) => {
             openRoom(joined);
             closeDialog();

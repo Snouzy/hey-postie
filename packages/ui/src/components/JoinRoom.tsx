@@ -10,22 +10,35 @@ import { RoomBrowser } from './RoomBrowser';
 
 interface JoinRoomProps {
   account: Account;
+  /** The halls the app knows: those joined are marked in the directory. */
+  rooms: Room[];
+  /** `browse` from the Halls heading's "Browse halls". Default: the address form. */
+  initialTab?: Tab;
   onJoined: (room: Room) => void;
+  /** "Create the hall …" from the directory: the caller opens the create dialog with that name. */
+  onCreate: (name: string) => void;
   onClose: () => void;
 }
 
 type Tab = 'address' | 'browse';
 
 /**
- * "Join a hall": an address and a nick, or the server's directory to pick one from. The password
- * field appears only once the hall asks for it.
+ * "Join a hall": an address and a nick, or the server's directory (Browse halls) to join one from
+ * at once. The password field appears only once the hall asks for it.
  */
-export function JoinRoom({ account, onJoined, onClose }: JoinRoomProps) {
+export function JoinRoom({
+  account,
+  rooms,
+  initialTab = 'address',
+  onJoined,
+  onCreate,
+  onClose,
+}: JoinRoomProps) {
   const core = useCore();
   const text = useText();
   const errorId = useId();
   const [localPart, domain] = account.jid.split('@');
-  const [tab, setTab] = useState<Tab>('address');
+  const [tab, setTab] = useState<Tab>(initialTab);
   const [jid, setJid] = useState('');
   const [nick, setNick] = useState(localPart ?? '');
   const [password, setPassword] = useState('');
@@ -33,6 +46,8 @@ export function JoinRoom({ account, onJoined, onClose }: JoinRoomProps) {
   const [error, setError] = useState<MessageKey | null>(null);
   const [joining, setJoining] = useState(false);
   const [browseDomain, setBrowseDomain] = useState(`rooms.${domain ?? ''}`);
+  const [discovered, setDiscovered] = useState(false);
+  const joined = new Set(rooms.filter((room) => room.joined).map((room) => room.jid));
 
   // The server says where its halls are; `rooms.<domain>` is the guess when it does not.
   useEffect(() => {
@@ -40,7 +55,8 @@ export function JoinRoom({ account, onJoined, onClose }: JoinRoomProps) {
     core.rooms
       .roomService(domain ?? '')
       .then((service) => service && !cancelled && setBrowseDomain(service))
-      .catch(() => {});
+      .catch(() => {})
+      .finally(() => !cancelled && setDiscovered(true));
     return () => {
       cancelled = true;
     };
@@ -63,13 +79,8 @@ export function JoinRoom({ account, onJoined, onClose }: JoinRoomProps) {
     }
   }
 
-  function pick(roomJid: string) {
-    setJid(roomJid);
-    setTab('address');
-  }
-
   return (
-    <Dialog title={text('joinRoom.title')} onClose={onClose}>
+    <Dialog title={text('joinRoom.title')} onClose={onClose} size="medium">
       <div className="flex border-b border-line">
         {(['address', 'browse'] as const).map((name) => (
           <button
@@ -84,7 +95,15 @@ export function JoinRoom({ account, onJoined, onClose }: JoinRoomProps) {
         ))}
       </div>
       {tab === 'browse' ? (
-        <RoomBrowser domain={browseDomain} onDomainChange={setBrowseDomain} onPick={pick} />
+        <RoomBrowser
+          domain={browseDomain}
+          onDomainChange={setBrowseDomain}
+          ready={discovered}
+          nick={nick}
+          joined={joined}
+          onJoined={onJoined}
+          onCreate={onCreate}
+        />
       ) : (
         <form className="flex flex-col gap-3" onSubmit={submit}>
           <Field

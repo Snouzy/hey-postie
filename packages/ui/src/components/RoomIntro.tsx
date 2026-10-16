@@ -1,7 +1,7 @@
 import type { Room } from '@hey-postie/core';
 import { UserPlus } from 'lucide-react';
-import { useEffect, useState } from 'react';
-import { useCore, useText } from '../core/CoreProvider';
+import { useText } from '../core/CoreProvider';
+import { useRoomSettings } from '../core/useRoomSettings';
 import { Button } from './Button';
 
 interface RoomIntroProps {
@@ -15,21 +15,9 @@ interface RoomIntroProps {
  * …", the hall's description when the server tells it, and "Invite people".
  */
 export function RoomIntro({ room, onInvite }: RoomIntroProps) {
-  const core = useCore();
   const text = useText();
-  const [description, setDescription] = useState('');
-
   // The description lives in the hall's configuration; a hall that will not say has none here.
-  useEffect(() => {
-    let cancelled = false;
-    core.rooms
-      .settings(room.jid)
-      .then((settings) => !cancelled && setDescription(settings.description))
-      .catch(() => {});
-    return () => {
-      cancelled = true;
-    };
-  }, [core, room.jid]);
+  const description = useRoomSettings(room.jid).settings?.description ?? '';
 
   return (
     <div className="flex flex-col items-start gap-2 px-0 pt-4 pb-2">

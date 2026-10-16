@@ -404,12 +404,14 @@ are bare and lowercase from the core, so rows and halls are matched as-is.
   answers `RoomPasswordRequired`. *Browse* (`RoomBrowser`): a domain prefilled with what
   `rooms.roomService(accountDomain)` discovers, or `rooms.<account domain>` when it finds
   nothing; "Look up" → `rooms.browse(domain)` (an `InvalidJid` reads as the `joinRoom.badDomain`
-  sentence and empties the list), then a list of `RoomInfo` (name, JID, members count); a click
-  fills the address and returns to the first tab. Submit → `rooms.join`; errors are Postie's
+  sentence and empties the list), then the directory, joined from in one click (see "Browse
+  halls" in [Halls the Slack way](#halls-the-slack-way), which replaced the click that filled the
+  address). Submit → `rooms.join`; errors are Postie's
   sentence inline; on success `Main` selects the hall. The only rule the dialog applies itself
   is that its fields are not empty; JIDs, nicks and domains are validated by the service.
-- **Conversation** of a hall: the topic next to the name (one line, the full text in `title`),
-  a "Members" button instead of "Details" that toggles `RoomDetails`, the sender's nick above
+- **Conversation** of a hall: the topic next to the name (one line, the full text in `title`;
+  editable in place, see the header in [Halls the Slack way](#halls-the-slack-way)), the people
+  button and a "⋯" ("Hall details") instead of "Details" that toggles `RoomDetails`, the sender's nick above
   each run of incoming messages (`MessageList showSenders`), and a **mention highlight**: a
   bubble with `isMention` gets a soft `--yellow` background, a yellow left border and a visually
   hidden "Mentions you" (`MessageBubble.mention`).
@@ -417,7 +419,7 @@ are bare and lowercase from the core, so rows and halls are matched as-is.
   right now" on a kraft banner and a disabled composer. When the hall is still known (bookmarked,
   left elsewhere, kicked) the banner offers "Join again" → `rooms.join` with the stored nick,
   errors inline. A room chat with no hall record at all (history of a hall left for good) shows
-  the banner alone, and neither the members button nor the contact pane: `DetailsPane` (keyed
+  the banner alone, and neither the hall's "⋯" nor the contact pane: `DetailsPane` (keyed
   by the chat) renders `Details` only for `chat.kind === 'direct'` and `RoomDetails` (keyed by
   the JID) only when the hall record exists.
 - **Nick completion**: `Composer` receives the members' nicks (minus my own). Tab completes the
@@ -425,11 +427,11 @@ are bare and lowercase from the core, so rows and halls are matched as-is.
   ignoring case: `nick: ` at the start of a line, `nick ` elsewhere, and no second space when one
   already follows the caret (`completeNick`, a pure function). The caret lands after the nick and
   the textarea regrows. Shift+Tab and a word that matches nobody leave Tab to the browser.
-- **RoomDetails** (right pane): topic, JID, members grouped by role (moderators, participants,
-  visitors) with the affiliation as a kraft hint (owner, admin, member, banned; none is silent),
-  the notify rule as three radios (`rooms.setNotify`, then `useRooms().refresh()` through
+- **RoomDetails** (right pane, rebuilt as the hall panel on 2026-10-16, see
+  [Halls the Slack way](#halls-the-slack-way)): the hall, its details, its people, the
+  Encryption section, the notify rule as three radios (`rooms.setNotify`, then `useRooms().refresh()` through
   `onChanged`, since the pane shows the rule from the hall record; a failure shows the sentence),
-  and "Leave the hall", confirmed through `LeaveRoomDialog` (below); `Main` then drops the
+  and "Leave the hall…", confirmed through `LeaveRoomDialog` (below); `Main` then drops the
   selection and the pane.
 - **Leaving from the row** (decision of 2026-10-16: leaving must be reachable from the room row
   as well as from its details pane). A row whose hall the app has a record of (joined or
@@ -472,8 +474,9 @@ channels as the model, our tokens). Sources: `components/Sidebar.tsx`, `SidebarG
   (`room.visibility === 'private'`) adds a 12px lock after the `users` icon (hidden "Private"), a
   hall whose bell is `none` sits at 50% with a bell-off after its name (hidden "Bell off"). On the
   Halls heading, a 24px "+" (`AddMenu size="small"`, "Halls: create or join"), shown while the
-  heading is hovered or holds the focus, opens "Create a hall" and "Join a hall". The sidebar's
-  own "+" gains "Create a hall" too. Nothing listed at all: the `ChatList` empty state as before.
+  heading is hovered or holds the focus, opens "Create a hall" and "Browse halls" (the join
+  dialog open on its directory; "Join a hall" until step 6). The sidebar's own "+" gains "Create
+  a hall" too and keeps "Join a hall". Nothing listed at all: the `ChatList` empty state as before.
   The search filters every group (an invitation by its address or its inviter's name).
 - **Arrows across groups**: each list moves between its own rows (`moveWithArrows`); at its end
   it leaves the key alone, and the sidebar's scroller, which hears it next, moves to the
@@ -493,9 +496,8 @@ channels as the model, our tokens). Sources: `components/Sidebar.tsx`, `SidebarG
   (removable, "Remove …"); Enter adds the first result while something is typed. People the hall
   already holds (`rooms.people`, by real address) are listed apart under "Already in this hall",
   without a button. "Invite" calls `rooms.invite(jid, chosen)` once; not closable meanwhile; a
-  refusal keeps the dialog with the sentence. Reached from the new hall, its intro, and a first
-  "Invite people" button in `RoomDetails` (only while joined) until the hall panel is rebuilt
-  (step 5).
+  refusal keeps the dialog with the sentence. Reached from the new hall, its intro, and the
+  Actions of the hall panel (only while joined).
 - **Invitations received**: `useInvitations()` reads `rooms.invitations()` and again on
   `room.invited` and `room.destroyed`. A row shows the hall (its address's local part, the only
   name an invitation carries) and "From …" (the contact's name, else the address or hall seat
@@ -512,6 +514,57 @@ channels as the model, our tokens). Sources: `components/Sidebar.tsx`, `SidebarG
   answered: "This is the beginning of …" in the heading font, the description from
   `rooms.settings(jid)` when the server tells it, a line by Postie, and "Invite people" while
   joined.
+
+_Steps 5 and 6, added 2026-10-16. Sources: `components/HallTopic.tsx`, `Conversation.tsx`,
+`RoomDetails.tsx`, `HallHero.tsx`, `EditHallDialog.tsx`, `VisibilityChoice.tsx`, `HallFacts.tsx`,
+`HallPeople.tsx`, `PersonMenu.tsx`, `RemovePersonDialog.tsx`, `HallActions.tsx`,
+`DeleteHallDialog.tsx`, `hallStyles.ts`, `RoomBrowser.tsx`, `JoinRoom.tsx`,
+`core/useRoomPeople.ts`, `core/useRoomSettings.ts`, `i18n/errors.ts` (`hallErrorKey`),
+`screens/HallPanel.test.tsx`, `screens/BrowseHalls.test.tsx`._
+
+- **Header of a hall** (`Conversation`): the topic on one line (`HallTopic`). Who may change it
+  (owner, admin, moderator, or a standing still unknown, which may try) gets a button: a click
+  turns it into a field (focused, "Topic"), Enter saves through `rooms.setTopic` (trimmed), Esc
+  cancels without closing the pane, a click away cancels and leaves the focus where it went. The
+  topic just saved shows until the hall tells one of its own. A refusal is Postie's sentence under
+  the header (`hallErrorKey`: `NotAllowed` reads "This hall does not let you do that."), the field
+  kept. Others see plain text. On the right: an outlined people button with the count of people
+  present (`useRoomMembers`; named "People in the hall: N"), which opens the panel with the focus
+  on People (`Main` counts the presses, like the Encryption requests), and a "⋯" ("Hall details",
+  `aria-pressed`) that toggles the panel.
+- **Hall panel** (`RoomDetails`, `aria-label` "Hall details", resizable as before). The top
+  (`HallHero`): the name in the 20px heading, the description up to six lines with the full text
+  in `title`, both from `rooms.settings` (`useRoomSettings`), else the hall record; for the owner a
+  pencil, shown on hover or focus, opens `EditHallDialog`: Name, Description, `VisibilityChoice`
+  (the Private / Public cards shared with `CreateRoom`), Cancel and "Save changes"; only what
+  changed goes to `rooms.configure`, then the settings and the halls are read again. **Details**
+  (`HallFacts`, a `dl`): the address in monospace with a copy button (`navigator.clipboard`,
+  "Address copied." announced politely), Private or Public, the members count (everyone with a
+  standing, the banned left out). **People** (`HallPeople`, from `rooms.people` through
+  `useRoomPeople`, re-read on `room.members` and after a change made here): the service's order
+  (present first, owners and admins first), a 24px avatar, the name, "(you)" on my row, a presence
+  dot for those present, the standing as small muted text, and a "⋯" (`PersonMenu`, "Actions for
+  …", a `role="menu"` popover) only when `actionsOn` gives something: Make admin / Make member for
+  an owner (a real address needed), Remove from the hall… and Ban… for an admin or owner (an owner
+  only by an owner; a ban needs a real address); never on myself or on someone banned. Making
+  admin or member is done at once; removing and banning go through `RemovePersonDialog` (a
+  sentence with both names, Cancel and the `danger` button; a refusal keeps it with the sentence).
+  Then the Encryption section, the bell, and **Actions** (`HallActions`): Invite people (while
+  joined), Leave the hall… (`LeaveRoomDialog`), and for the owner Delete the hall…
+  (`DeleteHallDialog`: a plain sentence that it cannot be undone and that the address stays taken
+  for a while, an optional reason, Cancel and "Delete" in `danger`, not closable meanwhile;
+  `rooms.destroy`, then `room.destroyed` takes the hall out of the list and `Main` drops the
+  selection and the pane).
+- **Browse halls** (`RoomBrowser`, the Browse tab of `JoinRoom`, now 480px; opened directly by
+  the Halls heading's "Browse halls"): the directory is read once as soon as the hall service
+  discovery settled, and again on "Look up" (only the latest answer counts). A search field
+  filters by name, address or description. Each row is "name · N members · description" on one
+  line (truncated, the whole line in `title`) with the address under it; "Join" (named "Join …")
+  shows on hover or focus and joins at once with the nick of the address tab (the account's local
+  part by default), then `Main` opens the hall. A hall I am in says "Joined" instead. A refusal is
+  Postie's sentence. When the search is not the exact name or address of a listed hall, a pinned
+  dashed row "Create the hall “…”" closes the dialog and opens `CreateRoom` with that name and the
+  address derived from it (`initialName`). Nothing listed: the `EmptyState` as before.
 
 ## Encryption (Postie Seal)
 
@@ -698,7 +751,7 @@ the `col-resize` cursor and disables text selection for the whole gesture.
 **Folded.** The sidebar is `hidden` and `inert` (mounted, so its tab and search survive) and the
 resizer stays at the window's edge as a thin grabber: drag it, press Enter on it, or Cmd/Ctrl+B
 to open it again. Cmd/Ctrl+K opens a folded sidebar before focusing the search. Folding the
-details pane by drag is the same as closing it: the header's "i" (or members) button opens it
+details pane by drag is the same as closing it: the header's "i" (or a hall's "⋯") button opens it
 again at its last width.
 
 **Keyboard on the separator.** Left/Right move the divider by 16px (Shift: 64px): Right widens
@@ -874,13 +927,26 @@ the confirmation with the focus back on "More", a refusal keeps the card with th
 skip the "⋯"), `LeaveRoomDialog.test.tsx` (the sentence with the name, Cancel calls nothing, Leave
 → service and `onLeft`, a refusal keeps the card and re-enables, not closable while in flight),
 `Rooms.test.tsx` (join by address, password field on `RoomPasswordRequired`, `NickTaken`
-sentence, focus back to "+", room service discovery, bad domain sentence, browse and pick,
-sender nick and mention highlight, Tab completion with the caret, outside a hall and "Join
-again", a room chat without a hall record, members by role and notify radios, Esc on the leave
+sentence, focus back to "+", room service discovery, bad domain sentence, the directory read
+at once and a hall joined from it, sender nick and mention highlight, Tab completion with the
+caret, outside a hall and "Join again", a room chat without a hall record, the panel's headings,
+people in order and notify radios, Esc on the leave
 confirmation, leave with confirmation, a fresh hall on top, mentions badge),
+`HallPanel.test.tsx` (the topic saved on Enter, trimmed, and shown; Esc cancels and keeps the
+pane; a refusal as Postie's sentence with the field kept; plain text for a member; the people
+button with its count focuses People; the panel's description, address, Private and count; the
+owner's edit dialog sends the changes, the hero follows and the focus returns to the pencil; a
+refusal keeps the dialog; no pencil and no delete for an admin; people in order with "(you)" and
+the dots; no menu on myself, the owner's items for a member and an admin; an admin's items, none
+on the owner; Make admin at once; Remove with Cancel first then confirmed; Ban of someone away
+then "banned" and no menu; delete with a reason → destroyed, out of the list, pane closed; Invite
+people from the panel), `BrowseHalls.test.tsx` (the directory read at once with the one-line rows
+and their title, filters by name, address and description with the empty sentence, Join with the
+account's nick opens the hall, "Joined" without a button, a refusal stays open with the sentence,
+the create row only without an exact match and the create dialog prefilled),
 `Halls.test.tsx` (Halls then Messages with their rows, a group folded and still folded in the
 next window with the other one open, the lock and the bell-off, arrows from a hall to a letter
-and back, the Halls "+" menu, the empty state kept; Create: the address derived until edited
+and back, the Halls "+" menu (Create a hall, Browse halls on the directory tab), the empty state kept; Create: the address derived until edited
 with the service shown, `RoomExists` as Postie's sentence with the address invalid, success
 opens the hall and the invite dialog, the intro with the description and "Invite people";
 Invite: the book with who is in apart, a contact and two pasted addresses as chips, one removed,

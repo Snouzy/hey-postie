@@ -35,3 +35,10 @@ const SENTENCES: Record<ErrorCode, MessageKey> = {
 export function errorKey(error: unknown): MessageKey {
   return error instanceof DomainError ? SENTENCES[error.code] : 'error.Unknown';
 }
+
+/** In a hall, a refusal is about the hall's rights, not about a letter. */
+export function hallErrorKey(error: unknown): MessageKey {
+  return error instanceof DomainError && error.code === 'NotAllowed'
+    ? 'room.notAllowed'
+    : errorKey(error);
+}

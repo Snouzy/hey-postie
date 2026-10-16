@@ -1,5 +1,4 @@
 import { type Account, DomainError, type Room, type RoomVisibility } from '@hey-postie/core';
-import { Globe, Lock } from 'lucide-react';
 import { type FormEvent, useEffect, useId, useState } from 'react';
 import { useCore, useText } from '../core/CoreProvider';
 import type { MessageKey } from '../i18n';
@@ -7,22 +6,17 @@ import { errorKey } from '../i18n/errors';
 import { Button } from './Button';
 import { Dialog } from './Dialog';
 import { Field } from './Field';
+import { VisibilityChoice } from './VisibilityChoice';
 
 interface CreateRoomProps {
   account: Account;
   /** The hall exists, its creator is its owner: the caller opens it and the invite dialog. */
   onCreated: (room: Room) => void;
   onClose: () => void;
+  /** A name to start from (the one searched for in Browse halls). */
+  initialName?: string;
 }
 
-const VISIBILITIES: readonly { value: RoomVisibility; icon: typeof Lock }[] = [
-  { value: 'private', icon: Lock },
-  { value: 'public', icon: Globe },
-];
-
-/** A choice card: the radio, an icon, a title and its hint; the chosen one wears a navy border. */
-const CHOICE =
-  'flex flex-1 cursor-pointer items-start gap-2 rounded-sm border border-line-strong bg-paper-raised p-3 has-checked:border-navy has-checked:bg-fill-hover [&_input]:accent-navy';
 const NOTE = "m-0 font-heading [font-variation-settings:'SOFT'_100]";
 
 /**
@@ -30,13 +24,14 @@ const NOTE = "m-0 font-heading [font-variation-settings:'SOFT'_100]";
  * optional description, and Private (default) or Public. The rules (lengths, what an address
  * accepts, a taken address) are the service's; this only shows its sentence.
  */
-export function CreateRoom({ account, onCreated, onClose }: CreateRoomProps) {
+export function CreateRoom({ account, onCreated, onClose, initialName = '' }: CreateRoomProps) {
   const core = useCore();
   const text = useText();
   const errorId = useId();
-  const hintId = useId();
-  const [name, setName] = useState('');
-  const [address, setAddress] = useState('');
+  const [name, setName] = useState(initialName);
+  const [address, setAddress] = useState(() =>
+    initialName.trim() ? core.rooms.suggestAddress(initialName) : '',
+  );
   const [addressEdited, setAddressEdited] = useState(false);
   const [description, setDescription] = useState('');
   const [visibility, setVisibility] = useState<RoomVisibility>('private');
@@ -127,35 +122,7 @@ export function CreateRoom({ account, onCreated, onClose }: CreateRoomProps) {
           onChange={(e) => setDescription(e.target.value)}
           disabled={creating}
         />
-        <fieldset className="m-0 flex flex-col gap-2 border-0 p-0" disabled={creating}>
-          <legend className="mb-1 p-0 text-[13px] font-semibold text-ink-muted">
-            {text('createRoom.visibility')}
-          </legend>
-          <div className="flex gap-2">
-            {VISIBILITIES.map(({ value, icon: Icon }) => (
-              <label key={value} className={CHOICE}>
-                <input
-                  type="radio"
-                  name="visibility"
-                  value={value}
-                  className="mt-1"
-                  checked={visibility === value}
-                  onChange={() => setVisibility(value)}
-                  aria-describedby={`${hintId}-${value}`}
-                />
-                <span className="flex flex-col gap-1">
-                  <span className="flex items-center gap-1 font-semibold">
-                    <Icon size={14} aria-hidden />
-                    {text(`createRoom.${value}`)}
-                  </span>
-                  <span id={`${hintId}-${value}`} className="text-[13px] text-ink-muted">
-                    {text(`createRoom.${value}Hint`)}
-                  </span>
-                </span>
-              </label>
-            ))}
-          </div>
-        </fieldset>
+        <VisibilityChoice value={visibility} onChange={setVisibility} disabled={creating} />
         {error && (
           <p id={errorId} className={`${NOTE} text-red`} role="alert">
             {text(error.key)}

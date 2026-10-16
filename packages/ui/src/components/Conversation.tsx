@@ -1,5 +1,5 @@
 import type { Chat, Contact, Message, Room } from '@hey-postie/core';
-import { Info, Users } from 'lucide-react';
+import { Ellipsis, Info, Users } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useCore, useText } from '../core/CoreProvider';
 import { useEncryption } from '../core/useEncryption';
@@ -8,6 +8,7 @@ import { useMessages } from '../core/useMessages';
 import { useRoomMembers } from '../core/useRoomMembers';
 import { useTyping } from '../core/useTyping';
 import type { ChatUploads } from '../core/useUploads';
+import type { MessageKey } from '../i18n';
 import { errorKey } from '../i18n/errors';
 import { Postie } from '../illustrations/Postie';
 import type { SaveFile } from './Attachments';
@@ -17,6 +18,7 @@ import { Composer } from './Composer';
 import { DeleteMessageDialog } from './DeleteMessageDialog';
 import { DropOverlay } from './DropOverlay';
 import { EmptyState } from './EmptyState';
+import { HallTopic } from './HallTopic';
 import { actionsFor, type MessageAction } from './MessageActions';
 import { MessageList } from './MessageList';
 import { PendingParcel } from './PendingParcel';
@@ -32,6 +34,8 @@ interface ConversationProps {
   room: Room | undefined;
   detailsOpen: boolean;
   onToggleDetails: () => void;
+  /** Opens the hall's pane on its People section (the header's people button). */
+  onOpenPeople?: (() => void) | undefined;
   /** Opens the details pane on its Encryption section (from a letter sealed for another device). */
   onOpenEncryption: () => void;
   onOpenLink: (url: string) => void;
@@ -53,6 +57,7 @@ export function Conversation({
   room,
   detailsOpen,
   onToggleDetails,
+  onOpenPeople,
   onOpenEncryption,
   onOpenLink,
   onSaveFile,
@@ -85,6 +90,15 @@ export function Conversation({
   } | null>(null);
   const self = room ? members.find((member) => member.nick === room.nick) : undefined;
   const canModerate = self?.role === 'moderator';
+  // Owners, admins and moderators may change the topic; a standing still unknown may try.
+  const topicEditable =
+    !!room?.joined &&
+    (canModerate ||
+      room.affiliation === 'owner' ||
+      room.affiliation === 'admin' ||
+      (!self && room.affiliation === undefined));
+  const [topicError, setTopicError] = useState<MessageKey | null>(null);
+  const headerError = seal.error ?? topicError;
 
   /** Enter sends a new letter, or saves the correction under way. */
   async function sendOrSave(body: string) {
@@ -143,15 +157,7 @@ export function Conversation({
           <Avatar name={chat.title} jid={chat.peerJid} avatarUrl={contact?.avatarUrl} />
           {contact && <PresenceDot presence={contact.presence} />}
           <h2 className="truncate text-[20px]">{chat.title}</h2>
-          {/* One line; the full topic sits in the title attribute. */}
-          {room && (
-            <p
-              className="m-0 ml-2 min-w-0 flex-1 truncate text-[13px] text-ink-muted"
-              title={room.topic}
-            >
-              {room.topic || text('room.topicEmpty')}
-            </p>
-          )}
+          {room && <HallTopic room={room} editable={topicEditable} onError={setTopicError} />}
         </div>
         <div className="flex shrink-0 items-center gap-1">
           <SealToggle
@@ -159,24 +165,37 @@ export function Conversation({
             pending={seal.pending}
             onToggle={() => void seal.toggle()}
           />
+          {room && onOpenPeople && (
+            <button
+              type="button"
+              className="flex h-8 cursor-pointer items-center gap-1 rounded-sm border border-line-strong bg-transparent px-2 text-[13px] font-semibold text-ink-muted tabular-nums transition-[background-color,color] duration-(--motion-fast) hover:bg-fill-hover hover:text-ink"
+              aria-label={text('room.peopleButton').replace('{count}', String(members.length))}
+              title={text('room.peopleButton').replace('{count}', String(members.length))}
+              onClick={onOpenPeople}
+            >
+              <Users size={16} aria-hidden />
+              {members.length}
+            </button>
+          )}
           {hasDetails && (
             <Button
               variant="ghost"
               onClick={onToggleDetails}
               aria-pressed={detailsOpen}
-              aria-label={text(room ? 'main.members' : 'main.details')}
+              aria-label={text(room ? 'room.panel' : 'main.details')}
+              title={text(room ? 'room.panel' : 'main.details')}
             >
-              {room ? <Users size={18} aria-hidden /> : <Info size={18} aria-hidden />}
+              {room ? <Ellipsis size={18} aria-hidden /> : <Info size={18} aria-hidden />}
             </Button>
           )}
         </div>
       </header>
-      {seal.error && (
+      {headerError && (
         <p
           className="m-0 px-4 py-2 font-heading [font-variation-settings:'SOFT'_100] text-[14px] text-red"
           role="alert"
         >
-          {text(seal.error)}
+          {text(headerError)}
         </p>
       )}
       {/* Postie at the door of a hall the user is not in. */}

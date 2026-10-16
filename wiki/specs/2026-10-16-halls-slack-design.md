@@ -3,7 +3,7 @@
 _Written on 2026-10-16 from two research passes the same day (Buzz's channels, read in its
 `desktop/src`; Converse 14 and Prosody 13.0.7 for XEP-0045 room management). Asked by the author:
 "the adding, managing and display of a group, a bit like Slack", with Buzz as the model. Steps 1
-to 4 built on 2026-10-16 (section 8)._
+to 6 built on 2026-10-16 (section 8)._
 
 ## 1. Goal
 
@@ -194,6 +194,37 @@ declineInvitation(roomJid: string): Promise<void>;
   (step 5). An invitation shows the hall by its address's local part: an invitation carries no
   name, and nothing of the hall is read before joining. A destroyed hall's letters, when it had
   some, stay listed like a hall left for good.
+
+### Steps 5 and 6 (2026-10-16)
+
+- UI, as described in [ui.md](../development/ui.md#halls-the-slack-way): the hall header
+  (`HallTopic`, edited in place; the people button with the count of people present; the "⋯"),
+  the hall panel split into `HallHero` (+ `EditHallDialog`), `HallFacts`, `HallPeople` (+
+  `PersonMenu`, `RemovePersonDialog`), the Encryption section, the bell and `HallActions` (+
+  `DeleteHallDialog`); `VisibilityChoice` shared with `CreateRoom`; Browse halls rebuilt in
+  `RoomBrowser` (search, Join at once, "Joined", the create row prefilling `CreateRoom`); hooks
+  `useRoomPeople` and `useRoomSettings`; tests in `screens/HallPanel.test.tsx` and
+  `screens/BrowseHalls.test.tsx`.
+- Different from section 6, or decided on the way:
+  - Who may edit the topic is not known before trying (the hall's config decides): owners,
+    admins and moderators get the click, and so does a standing the app does not know yet; a
+    refusal reads "This hall does not let you do that." (`hallErrorKey`, as `error.NotAllowed`
+    speaks of a letter).
+  - The header's count is the people present now (occupants), the panel's "Members" count is
+    everyone with a standing (present or away, the banned left out), when the server tells.
+  - "Make member" is offered on an admin and on someone present without a standing; "Make
+    admin" on a member or someone without a standing; both need a real address. Nothing is
+    offered on a banned person (no "unban" yet). Making admin or member is not confirmed (it is
+    undone the same way); removing and banning are.
+  - The create row of Browse halls shows when the search is not exactly the name or address of a
+    listed hall (Buzz's rule), not only when nothing matches: "Crew" can be listed while
+    "Crew notes" is created. It shows once the directory listed something; an empty directory
+    keeps its empty state.
+  - The directory is read at once when the Browse tab opens (after the hall service discovery),
+    instead of waiting for "Look up"; "Join" uses the nick of the address tab. The Halls
+    heading's "+" now offers "Browse halls"; the sidebar's "+" keeps "Join a hall".
+  - The panel shows the bell and the Encryption section between People and Actions; the
+    Encryption section is unchanged.
 
 ## Points to check
 

@@ -92,7 +92,7 @@ describe('The Encryption section of a hall', () => {
     await act(() => core.rooms.join({ jid: HALL, nick: 'alice' }));
     act(() => deps.fakes.room.setMembers(HALL, members));
     fireEvent.click(await screen.findByRole('button', { name: /hall/ }));
-    fireEvent.click(screen.getByRole('button', { name: 'Members' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Hall details' }));
     return screen.getByRole('region', { name: 'Encryption' });
   }
 

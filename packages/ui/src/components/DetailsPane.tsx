@@ -15,10 +15,12 @@ interface DetailsPaneProps {
   room: Room | undefined;
   /** Counts the "Check their devices" requests; each new one focuses the Encryption section. */
   focusRequest: number;
+  /** Counts the header's people button presses; each new one focuses a hall's People section. */
+  peopleFocus: number;
   onClose: () => void;
   /** After a change the core may not announce (the notify rule): Main re-reads the halls. */
   onRoomsChanged: () => Promise<void>;
-  /** After leaving a hall: Main drops the selection. */
+  /** After leaving or deleting a hall: Main drops the selection. */
   onLeft: () => void;
   /** "Invite people" from a hall's pane. */
   onInvite?: (() => void) | undefined;
@@ -34,6 +36,7 @@ export function DetailsPane({
   contact,
   room,
   focusRequest,
+  peopleFocus,
   onClose,
   onRoomsChanged,
   onLeft,
@@ -73,6 +76,7 @@ export function DetailsPane({
       key={room.jid}
       room={room}
       focusRequest={focusRequest}
+      peopleFocus={peopleFocus}
       onChanged={onRoomsChanged}
       onClose={onClose}
       onLeft={onLeft}

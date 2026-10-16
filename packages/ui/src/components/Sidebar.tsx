@@ -1,5 +1,12 @@
 import type { Account, Chat, Contact, Room, RoomInvitation } from '@hey-postie/core';
-import { DoorOpen, MessageSquarePlus, Search, SquarePlus, UserPlus } from 'lucide-react';
+import {
+  DoorOpen,
+  LayoutList,
+  MessageSquarePlus,
+  Search,
+  SquarePlus,
+  UserPlus,
+} from 'lucide-react';
 import { type RefObject, useState } from 'react';
 import { useText } from '../core/CoreProvider';
 import { inviterName } from '../core/useInvitations';
@@ -66,6 +73,8 @@ interface SidebarProps {
   onNewChat: () => void;
   onCreateRoom: () => void;
   onJoinRoom: () => void;
+  /** The Halls heading's "Browse halls": the join dialog, open on its directory. */
+  onBrowseRooms: () => void;
   onAddContact: () => void;
   /** Opens the "My devices" dialog (own OMEMO keys). */
   onMyDevices: () => void;
@@ -110,6 +119,11 @@ export function Sidebar(props: SidebarProps) {
     action: props.onCreateRoom,
   };
   const joinRoom = { label: text('main.joinRoom'), icon: DoorOpen, action: props.onJoinRoom };
+  const browseRooms = {
+    label: text('main.browseRooms'),
+    icon: LayoutList,
+    action: props.onBrowseRooms,
+  };
 
   return (
     <nav
@@ -222,7 +236,7 @@ export function Sidebar(props: SidebarProps) {
                   action={
                     <AddMenu
                       label={text('sidebar.hallsAdd')}
-                      items={[createRoom, joinRoom]}
+                      items={[createRoom, browseRooms]}
                       size="small"
                       className={HALLS_ADD}
                     />
