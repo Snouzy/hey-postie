@@ -81,7 +81,7 @@ from there. A failed load is never an empty state (`RetryNotice`).
 
 | Where | Pose | Title | Button |
 |---|---|---|---|
-| `ChatList`, no chat | `writing` | No letter yet | "Start a chat" → the New chat dialog (`Sidebar` hands `onNewChat` as `onStartChat`) |
+| `ChatList`, no chat | `writing` | No letter yet | "Start a chat" → the New chat dialog (`Sidebar` hands `onNewChat` as `onStartChat`). Not shown while the "Letters from strangers" group has rows: the list is not empty to the reader. |
 | `ContactList`, no contact | `searching` | An empty address book | "Add a contact" → the Add contact dialog (`onAddContact`) |
 | `MessageList`, no letter in the open chat | `writing` | A blank page | none: the composer is right below |
 | `RoomBrowser`, nothing listed on the server | `searching` | No hall here | none |
@@ -231,6 +231,12 @@ hook remembers the latest version each event brought (`fromEvents`): a page that
 update (`messages()` or `loadOlder()` still pending) takes the event's version, never the older
 snapshot. It also holds `send` (clears the chat's error on success), `retry` (sets it on
 failure), `loadOlder` and `react` (`chats.toggleReaction`), so `Conversation` is layout only.
+A letter sent from here reaches the list through `message.received`, which `chats.send` emits
+for the sent message (the repository reports no echo of our own letters), so a send from anywhere
+else (the smoke driver, a notification reply) shows in the open chat too (fixed 2026-10-16, issue 1
+of the [night report](../reports/2026-10-16-night-report.md)). A parcel still joins the list through
+`add`, from the uploads store. "Load older" is offered only once the first page is a full one
+(`MESSAGE_PAGE_SIZE`, exported by the core): a shorter page is the whole history.
 `MessageList` keeps the viewport still when an older page lands by anchoring on the message that
 was first before the load (`data-message-id`) and restoring its offset once something sits above
 it; a letter arriving at the bottom meanwhile does not consume the anchor. `useChats` numbers its requests so an older `list()` answer never
@@ -295,7 +301,9 @@ address book, or answered, is an ordinary chat with a composer.
   one row per stranger (name, time, their note or last letter as preview); arrows move between
   rows with `ChatList.moveWithArrows`. `ChatList` receives the chats **minus** the requests, so a
   stranger's letter never sits among the chats; the search filters both lists by name. No rows:
-  no group at all (a plain absence, the empty-state illustrations are another lane's).
+  no group at all (a plain absence, the empty-state illustrations are another lane's). The search
+  field's placeholder follows the tab ("Search chats" / "Search contacts"; in French "Rechercher…"
+  / "Rechercher un contact") and ends with an ellipsis when it does not fit.
 - **`Main`** keeps `requestJid` next to `selected`; `select(chat)` routes a chat that is a
   request (from the list, a `chat.requested` event, or `chats.open` from the "New chat" dialog or
   a contact click) to the request screen, and the screen also takes over when a stranger's

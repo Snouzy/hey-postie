@@ -1,6 +1,8 @@
 .backdrop {
   position: fixed;
   inset: 0;
+  /* Above the sticky day chips of the conversation behind it. */
+  z-index: var(--z-dialog);
   display: flex;
   align-items: center;
   justify-content: center;

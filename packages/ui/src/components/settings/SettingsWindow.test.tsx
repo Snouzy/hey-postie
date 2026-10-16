@@ -174,9 +174,7 @@ describe('Settings window: general (language)', () => {
     fireEvent.click(screen.getByRole('radio', { name: 'Français' }));
     expect(screen.getByRole('dialog', { name: 'Réglages' })).toBeInTheDocument();
     expect(screen.getByRole('tab', { name: 'Général' })).toBeInTheDocument();
-    expect(
-      screen.getByRole('searchbox', { name: 'Rechercher une discussion' }),
-    ).toBeInTheDocument();
+    expect(screen.getByRole('searchbox', { name: 'Rechercher…' })).toBeInTheDocument();
     expect(window.localStorage.getItem('hey-postie:locale')).toBe('fr');
     // The languages keep their own names, whatever the current one.
     expect(screen.getByRole('radio', { name: 'English' })).toBeInTheDocument();

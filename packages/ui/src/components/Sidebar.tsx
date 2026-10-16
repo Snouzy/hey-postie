@@ -48,6 +48,7 @@ export function Sidebar(props: SidebarProps) {
   const text = useText();
   const [tab, setTab] = useState<SidebarTab>('chats');
   const [query, setQuery] = useState('');
+  const searchKey = tab === 'chats' ? 'main.search' : 'main.searchContacts';
   const needle = query.trim().toLowerCase();
   // A stranger's chat waits in the requests group, not among the chats.
   const listed = props.chats.filter((chat) => !isRequest(chat));
@@ -111,8 +112,8 @@ export function Sidebar(props: SidebarProps) {
             ref={props.searchRef}
             type="search"
             value={query}
-            placeholder={text('main.search')}
-            aria-label={text('main.search')}
+            placeholder={text(searchKey)}
+            aria-label={text(searchKey)}
             onChange={(event) => setQuery(event.target.value)}
           />
         </label>
@@ -131,15 +132,18 @@ export function Sidebar(props: SidebarProps) {
               selectedJid={props.selectedRequestJid}
               onSelect={props.onSelectRequest}
             />
-            <ChatList
-              chats={chats}
-              rooms={props.rooms}
-              contacts={props.contacts}
-              selectedId={props.selectedChatId}
-              onSelect={props.onSelectChat}
-              onLeaveRoom={props.onLeaveRoom}
-              onStartChat={props.onNewChat}
-            />
+            {/* Strangers waiting at the door: the list is not empty to the reader. */}
+            {(chats.length > 0 || requests.length === 0) && (
+              <ChatList
+                chats={chats}
+                rooms={props.rooms}
+                contacts={props.contacts}
+                selectedId={props.selectedChatId}
+                onSelect={props.onSelectChat}
+                onLeaveRoom={props.onLeaveRoom}
+                onStartChat={props.onNewChat}
+              />
+            )}
           </>
         ) : (
           <ContactList

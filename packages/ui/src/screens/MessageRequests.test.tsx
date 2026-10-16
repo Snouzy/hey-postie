@@ -88,6 +88,21 @@ describe('Letters from strangers', () => {
     expect(chats.some((row) => row.getAttribute('aria-current') === 'true')).toBe(true);
   });
 
+  it('shows a letter sent through the service once the chat is open, whoever sent it', async () => {
+    const { deps, core } = await signedIn(atTheDoor);
+    await openRequests();
+    fireEvent.click(screen.getByRole('button', { name: /frank/ }));
+    await screen.findByRole('region', { name: 'frank' });
+    act(() => deps.fakes.roster.request({ jid: 'frank@x.org', name: 'Frank' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Accept' }));
+    await screen.findByRole('textbox', { name: /Write/ });
+    // Not through the composer: the smoke driver, a notification reply, call the service.
+    await act(() => core.chats.send('frank@x.org', 'welcome in'));
+    const log = screen.getByRole('log');
+    expect(await within(log).findByText('welcome in')).toBeInTheDocument();
+    expect(within(log).getAllByText('welcome in')).toHaveLength(1);
+  });
+
   it('ignoring declines the request and puts it away until they ask again', async () => {
     const { deps } = await signedIn(atTheDoor);
     await openRequests();

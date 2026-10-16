@@ -8,7 +8,8 @@ import { normalizeJid } from './jid';
 import { stripControlCharacters } from './text';
 import { createTypingTracker } from './typing';
 
-const PAGE_SIZE = 50;
+/** The size of a page of history: a first page shorter than this is the whole history. */
+export const MESSAGE_PAGE_SIZE = 50;
 
 export function createChatsService(
   deps: Pick<CoreDependencies, 'chat' | 'roster'>,
@@ -35,7 +36,7 @@ export function createChatsService(
     if (!chat.lastMessage || written.has(chat.id)) return false;
     noteWritten([chat.lastMessage]);
     if (written.has(chat.id)) return false;
-    noteWritten(await deps.chat.messages(chat.id, { limit: PAGE_SIZE }));
+    noteWritten(await deps.chat.messages(chat.id, { limit: MESSAGE_PAGE_SIZE }));
     return !written.has(chat.id);
   };
 
@@ -72,7 +73,9 @@ export function createChatsService(
       return flag(await deps.roster.list(), chat);
     },
     async messages(chatId) {
-      const messages = (await deps.chat.messages(chatId, { limit: PAGE_SIZE })).map(sanitize);
+      const messages = (await deps.chat.messages(chatId, { limit: MESSAGE_PAGE_SIZE })).map(
+        sanitize,
+      );
       noteWritten(messages);
       remember(oldest, chatId, messages);
       return messages;
@@ -80,7 +83,7 @@ export function createChatsService(
     async loadOlder(chatId) {
       const before = oldest.get(chatId);
       if (!before) return [];
-      const messages = (await deps.chat.messages(chatId, { before, limit: PAGE_SIZE })).map(
+      const messages = (await deps.chat.messages(chatId, { before, limit: MESSAGE_PAGE_SIZE })).map(
         sanitize,
       );
       noteWritten(messages);
@@ -92,7 +95,11 @@ export function createChatsService(
       if (!trimmed) throw new DomainError('EmptyMessage');
       typing.sent(chatId);
       written.add(chatId);
-      return deps.chat.send(chatId, trimmed);
+      const sent = await deps.chat.send(chatId, trimmed);
+      // The repository reports no echo of our own letters: every listener (the open chat, the
+      // smoke driver) learns of one here, whoever asked for the send.
+      events.emit('message.received', sent);
+      return sent;
     },
     async toggleReaction(chatId, messageId, emoji) {
       const trimmed = emoji.trim();

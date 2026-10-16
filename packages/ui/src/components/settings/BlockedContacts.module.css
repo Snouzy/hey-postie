@@ -6,8 +6,6 @@
 
 .empty {
   margin: 0;
-  font-family: var(--font-heading);
-  font-variation-settings: 'SOFT' 100;
   color: var(--ink-muted);
 }
 
