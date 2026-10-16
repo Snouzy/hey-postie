@@ -170,8 +170,9 @@ overwrites a newer one.
 
 ## Rooms (halls)
 
-_Added 2026-10-15. Sources: `components/JoinRoom.tsx`, `RoomBrowser.tsx`, `RoomDetails.tsx`,
-`AddMenu.tsx`, `core/useRooms.ts`, `core/useRoomMembers.ts`, `screens/Rooms.test.tsx`._
+_Added 2026-10-15, leaving from the row added 2026-10-16. Sources: `components/JoinRoom.tsx`,
+`RoomBrowser.tsx`, `RoomDetails.tsx`, `RoomRowMenu.tsx`, `LeaveRoomDialog.tsx`, `AddMenu.tsx`,
+`core/useRooms.ts`, `core/useRoomMembers.ts`, `screens/Rooms.test.tsx`, `LeaveRoom.test.tsx`._
 
 A hall is a chat with `kind: 'room'`: its messages arrive through the same `chats` /
 `message.received` path, with `fromNick` and `isMention` set by the repository. The UI keeps one
@@ -215,8 +216,27 @@ are bare and lowercase from the core, so rows and halls are matched as-is.
   visitors) with the affiliation as a kraft hint (owner, admin, member, banned; none is silent),
   the notify rule as three radios (`rooms.setNotify`, then `useRooms().refresh()` through
   `onChanged`, since the pane shows the rule from the hall record; a failure shows the sentence),
-  and "Leave the hall", confirmed through `Dialog` → `rooms.leave`; `Main` then drops the
+  and "Leave the hall", confirmed through `LeaveRoomDialog` (below); `Main` then drops the
   selection and the pane.
+- **Leaving from the row** (decision of 2026-10-16: leaving must be reachable from the room row
+  as well as from its details pane). A row whose hall the app has a record of (joined or
+  bookmarked; `ChatList` receives `rooms` and `onLeaveRoom`) carries `RoomRowMenu`: a "⋯"
+  button (`aria-haspopup="menu"`, visible on hover or focus of the row, over the time's corner)
+  and a right-click on the row, both opening a `Popover` (`prefer="below"`) with a `role="menu"`
+  of one item, "Leave the hall…". `ChatList` owns which row's menu is open; the "⋯" and the row
+  are siblings inside the `<li>` (a button never nests in a button), and `moveWithArrows` only
+  walks `button[data-row]`, so arrows skip the "⋯". Focus goes to the item on open and back to
+  what opened the menu (the "⋯", or the row on a right-click) on Esc or on a click outside; Tab
+  out closes it without moving the focus. Picking the item gives the focus back first, then asks
+  `Main` (`onLeaveRoom` through `Sidebar`), which mounts the dialog as `leavingRoom`; after the
+  service accepted, `Main` drops the selection and the pane only if the hall left is the open
+  chat. A hall with no record (history of a hall left for good) and a direct chat have no menu.
+- **`LeaveRoomDialog`**, the one confirmation, used by the row menu and by `RoomDetails`: titled
+  "Leave the hall", a sentence with the hall's name (`room.confirmLeave`, `{name}` replaced) that
+  says the bookmark goes and the letters stay on the server, Cancel and a `danger` "Leave". The
+  dialog itself calls `rooms.leave(jid)` and reports through `onLeft`; while the call runs it is
+  `closable={false}` with both buttons disabled; a failure keeps it open with Postie's sentence
+  as a `role="alert"`.
 - The sidebar badge of a hall is the **mentions count** on stamp yellow when it is above zero,
   otherwise the unread count in a muted chip.
 
@@ -343,7 +363,8 @@ _Added 2026-10-15. Sources: `scripts/trim-emoji.mjs`, `data/emoji.json`, `data/e
   `QUICK_EMOJIS` of the reaction row. Nothing new is installed: see
   [dependencies.md](dependencies.md) for Converse.
 - **Popover** (`Popover`): a `role="dialog"` card with `position: fixed`, placed above its
-  `anchor` (below when there is no room, clamped to the viewport), so neither the message
+  `anchor` (below when there is no room, clamped to the viewport; `prefer="below"` tries the
+  other way round first, for a menu under a row), so neither the message
   scroller nor the composer clips it, and re-placed on every scroll (capture phase on the
   document) and window resize. Esc, heard at the document level wherever the focus is, and a
   click outside call `onClose`; the opener gives the focus back. Decision of 2026-10-15: no portal, no library; a fixed card measured once on mount
@@ -381,7 +402,8 @@ Cmd/Ctrl+K focuses the search (listener in `Main`). The "+" of the sidebar opens
 (`AddMenu`, `role="menu"`): focus lands on the first item, arrow keys cycle, Esc, Tab out, a
 click outside or picking an item closes it. Picking an item puts the focus back on "+" before
 the dialog opens, so the dialog gives the focus back to "+" when it closes. The account row opens
-`AccountMenu` with the same keyboard rules (focus back on the row). Esc closes the open
+`AccountMenu` with the same keyboard rules (focus back on the row), and a room row's "⋯" or a
+right-click opens `RoomRowMenu` with the same rules again (see [Rooms](#rooms-halls)). Esc closes the open
 dialog (`Dialog` listens in the capture phase and stops the event there, so a confirmation over
 the details pane closes alone; it also traps Tab inside the card and gives the focus back to the
 opener) or, when no dialog is open, the details pane (listener in `Main`).
@@ -443,6 +465,11 @@ shown, failure sentence, not closable while deleting, Esc with focus back on the
 `Composer.test.tsx` (Enter / Shift+Enter, empty disabled, inline error), `Main.test.tsx`
 (empty state, markRead and notification rules, new chat dialog, contacts, sign out through the
 account menu),
+`LeaveRoom.test.tsx` ("More" only on a hall row, the menu with the focus on its item, right-click,
+Esc back to the row, confirmation with the name → `rooms.leave` and the selection dropped, Esc on
+the confirmation with the focus back on "More", a refusal keeps the card with the sentence, arrows
+skip the "⋯"), `LeaveRoomDialog.test.tsx` (the sentence with the name, Cancel calls nothing, Leave
+→ service and `onLeft`, a refusal keeps the card and re-enables, not closable while in flight),
 `Rooms.test.tsx` (join by address, password field on `RoomPasswordRequired`, `NickTaken`
 sentence, focus back to "+", room service discovery, bad domain sentence, browse and pick,
 sender nick and mention highlight, Tab completion with the caret, outside a hall and "Join

@@ -6,7 +6,7 @@ import { useRoomMembers } from '../core/useRoomMembers';
 import type { MessageKey } from '../i18n';
 import { errorKey } from '../i18n/errors';
 import { Button } from './Button';
-import { Dialog } from './Dialog';
+import { LeaveRoomDialog } from './LeaveRoomDialog';
 import styles from './RoomDetails.module.css';
 import { RoomEncryption } from './RoomEncryption';
 
@@ -43,16 +43,6 @@ export function RoomDetails({
       await core.rooms.setNotify(room.jid, rule);
       await onChanged();
     } catch (caught) {
-      setError(errorKey(caught));
-    }
-  }
-
-  async function leave() {
-    try {
-      await core.rooms.leave(room.jid);
-      onLeft();
-    } catch (caught) {
-      setConfirming(false);
       setError(errorKey(caught));
     }
   }
@@ -120,15 +110,7 @@ export function RoomDetails({
         </p>
       )}
       {confirming && (
-        <Dialog title={text('room.leave')} onClose={() => setConfirming(false)}>
-          <p className={styles.confirm}>{text('room.confirmLeave')}</p>
-          <div className={styles.actions}>
-            <Button onClick={() => setConfirming(false)}>{text('dialog.cancel')}</Button>
-            <Button variant="danger" onClick={() => void leave()}>
-              {text('room.confirm')}
-            </Button>
-          </div>
-        </Dialog>
+        <LeaveRoomDialog room={room} onClose={() => setConfirming(false)} onLeft={onLeft} />
       )}
     </aside>
   );

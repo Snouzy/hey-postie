@@ -1,0 +1,61 @@
+/* The "⋯" sits over the row's top-right corner, where the time is; shown on hover or focus. */
+.more {
+  position: absolute;
+  top: var(--space-1);
+  right: var(--space-3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: var(--paper-raised);
+  color: var(--ink-muted);
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity var(--motion-fast);
+}
+
+/* The row (an `li`) is hovered or holds the focus: the "⋯" shows. */
+li:hover > .more,
+li:focus-within > .more,
+.more[aria-expanded='true'] {
+  opacity: 1;
+}
+
+.more:hover,
+.more[aria-expanded='true'] {
+  color: var(--ink);
+  background: var(--paper);
+}
+
+.menu {
+  min-width: 180px;
+  display: flex;
+  flex-direction: column;
+}
+
+.item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2);
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--ink);
+  cursor: pointer;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.item:hover,
+.item:focus-visible {
+  background: var(--paper);
+}
+
+.item[data-tone='danger'] {
+  color: var(--red);
+}

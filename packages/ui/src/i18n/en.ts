@@ -133,6 +133,7 @@ export const en = {
   'main.members': 'Members',
   'chatList.room': 'Hall',
   'chatList.mentions': 'mentions',
+  'chatList.more': 'More',
 
   'joinRoom.title': 'Join a room',
   'joinRoom.tabs.address': 'Address',
@@ -166,9 +167,10 @@ export const en = {
   'room.notify.mentions': 'Mentions only',
   'room.notify.none': 'Nothing',
   'room.leave': 'Leave the hall',
-  'room.confirmLeave': 'Leave this hall? I will forget its bookmark too.',
+  'room.confirmLeave': 'Leave {name}? I will forget its bookmark; the letters stay on the server.',
   'room.confirm': 'Leave',
   'message.mention': 'Mentions you',
+  'room.leaveMenu': 'Leave the hall…',
 
   'crypto.seal': 'Seal letters',
   'crypto.unavailable': 'I cannot seal this letter: no key on the other side.',

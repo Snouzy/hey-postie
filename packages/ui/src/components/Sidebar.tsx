@@ -24,6 +24,8 @@ interface SidebarProps {
   error: MessageKey | null;
   onSelectChat: (chat: Chat) => void;
   onSelectContact: (contact: Contact) => void;
+  /** "Leave the hall…" from a room row. */
+  onLeaveRoom: (room: Room) => void;
   onNewChat: () => void;
   onJoinRoom: () => void;
   onAddContact: () => void;
@@ -117,6 +119,7 @@ export function Sidebar(props: SidebarProps) {
             rooms={props.rooms}
             selectedId={props.selectedChatId}
             onSelect={props.onSelectChat}
+            onLeaveRoom={props.onLeaveRoom}
           />
         ) : (
           <ContactList contacts={contacts} onSelect={props.onSelectContact} />

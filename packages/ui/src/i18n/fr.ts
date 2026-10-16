@@ -139,6 +139,7 @@ export const fr: Record<MessageKey, string> = {
   'main.members': 'Membres',
   'chatList.room': 'Salon',
   'chatList.mentions': 'mentions',
+  'chatList.more': 'Plus',
 
   'joinRoom.title': 'Rejoindre un salon',
   'joinRoom.tabs.address': 'Adresse',
@@ -172,9 +173,11 @@ export const fr: Record<MessageKey, string> = {
   'room.notify.mentions': 'Les mentions seulement',
   'room.notify.none': 'Rien',
   'room.leave': 'Quitter le salon',
-  'room.confirmLeave': 'Quitter ce salon ? J’oublierai aussi son signet.',
+  'room.confirmLeave':
+    'Quitter {name} ? J’oublierai son signet ; les lettres restent sur le serveur.',
   'room.confirm': 'Quitter',
   'message.mention': 'Vous mentionne',
+  'room.leaveMenu': 'Quitter le salon…',
 
   'crypto.seal': 'Sceller les lettres',
   'crypto.unavailable': 'Je ne peux pas sceller cette lettre : aucune clé de l’autre côté.',

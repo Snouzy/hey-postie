@@ -7,6 +7,8 @@ interface PopoverProps {
   label: string;
   /** Esc, or a click outside. The opener gives the focus back. */
   onClose: () => void;
+  /** Which side of the anchor to try first; the other side when there is no room. Default above. */
+  prefer?: 'above' | 'below';
   children: ReactNode;
 }
 
@@ -17,7 +19,7 @@ const MARGIN = 8;
  * list), so a message list or a composer never clips it; follows the opener when the page scrolls
  * or the window resizes.
  */
-export function Popover({ anchor, label, onClose, children }: PopoverProps) {
+export function Popover({ anchor, label, onClose, prefer = 'above', children }: PopoverProps) {
   const card = useRef<HTMLDivElement>(null);
   const [position, setPosition] = useState<{ top: number; left: number } | null>(null);
 
@@ -27,10 +29,19 @@ export function Popover({ anchor, label, onClose, children }: PopoverProps) {
     const at = anchor.getBoundingClientRect();
     const { width, height } = element.getBoundingClientRect();
     const above = at.top - height - MARGIN;
-    const top = above >= MARGIN ? above : Math.min(at.bottom + MARGIN, window.innerHeight - height);
+    const below = at.bottom + MARGIN;
+    const fitsBelow = below + height <= window.innerHeight - MARGIN;
+    const top =
+      prefer === 'below'
+        ? fitsBelow
+          ? below
+          : Math.max(above, MARGIN)
+        : above >= MARGIN
+          ? above
+          : Math.min(below, window.innerHeight - height);
     const left = Math.max(MARGIN, Math.min(at.left, window.innerWidth - width - MARGIN));
     setPosition({ top: Math.max(MARGIN, top), left });
-  }, [anchor]);
+  }, [anchor, prefer]);
 
   useLayoutEffect(place, [place]);
 
