@@ -276,6 +276,12 @@ pnpm desktop:smoke:scenario
   `join`, `leave`, each acknowledged by a `done` or `failed` step) and reports `account` (state)
   and `message-received` (chat id, message id, direction, nick) steps. Steps carry identifiers
   only, never a body: the driver's output is safe to paste in a report.
+- A `--smoke` run must not steal the screen from whoever is working on the machine (observed on
+  2026-10-16 while screenshots were taken next to the author): on macOS the app sets
+  `ActivationPolicy::Accessory` in `setup` (no dock icon, no activation) and `window::show_main`
+  skips `set_focus` when the `window::Smoke` state is on. Added 2026-10-16, not yet verified on
+  screen. Capture the window with `screencapture -l <window id> -x`: it works on a window that is
+  not in front.
 - Cleanup: bob leaves the room and closes, the app gets `quit` (SIGKILL after 5 s), and Prosody is
   stopped only when this run started it.
 - Shared server: the built Prosody is git-ignored, so it lives in one checkout. Another folder is
