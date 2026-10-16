@@ -1,77 +1,43 @@
+<div align="center">
+
+<img src="apps/desktop/src-tauri/icons/icon.png" width="96" alt="Hey Postie">
+
 # Hey Postie
 
-**A modern XMPP desktop client for teams that want control without going back to Pidgin.**
+**A modern desktop chat app for XMPP: your server, your rules, a friendly app.**
 
-Private conversations, shared rooms, OMEMO encryption and a local MCP bridge for Claude — on the
-XMPP server you already trust.
+macOS · Windows · Linux · OMEMO end-to-end encryption · Claude built in, off by default · Free software (AGPL)
 
 https://github.com/user-attachments/assets/9db9c88e-9c1c-4163-825b-9db26ada2a22
 
-> **Status: in active development. There is no public download or managed service yet.**
-
+**In active development: no public download yet.**
 [Join an early pilot](mailto:hello@hey-postie.com?subject=Hey%20Postie%20early%20pilot) ·
-[Explore the wiki](wiki/index.md) · [Contribute](CONTRIBUTING.md)
+[Wiki](wiki/index.md) · [Contribute](CONTRIBUTING.md)
 
-## Keep your server. Upgrade the experience.
+</div>
 
-Hey Postie is an open-source XMPP client for macOS, Windows and Linux (the Windows and Linux
-builds are not tested yet). It works with existing XMPP
-servers and with people using Conversations, Gajim, Monal, Dino and other federated clients.
+---
 
-The current code includes:
+**On this page:** [What is XMPP?](#what-is-xmpp) · [What you get](#what-you-get) ·
+[How it compares](#how-it-compares) · [For teams](#for-teams) · [Run it from source](#run-it-from-source) ·
+[License](#license)
 
-- one-to-one conversations and group rooms;
-- OMEMO end-to-end encryption;
-- files, images, reactions and server-backed history;
-- search in a conversation, read state synchronized across your devices, desktop notifications;
-- a local MCP server that lets Claude read, draft and act through explicit permission levels.
+## What is XMPP?
 
-Claude access is off by default. Direct sending requires the highest permission level and an
-explicit confirmation in Claude. Your Anthropic account and model usage remain separate from Hey
-Postie.
+XMPP is to chat what email is to letters: an open standard (IETF, since 1999) that no company owns.
+Every organization can run its own server, addresses look like `alice@your-company.com`, and anyone
+on one server can talk to anyone on another. Many apps speak it: Conversations, Gajim, Monal, Dino…
+and Hey Postie, which keeps your server and gives your team a modern desktop app on top of it.
 
-## For teams
+## What you get
 
-### Already running XMPP?
-
-Keep Prosody, ejabberd, Openfire or your current provider. Hey Postie can become the desktop client
-for your team without moving accounts or breaking federation.
-
-We are looking for early organizations that need help with:
-
-- compatibility validation against their XMPP setup;
-- desktop packaging and managed deployment;
-- migration from Pidgin or another legacy client;
-- onboarding, updates and technical support.
-
-This is the first commercial pilot: a deployment and support engagement around your existing
-server. The client remains free software.
-
-[Discuss a deployment pilot](mailto:hello@hey-postie.com?subject=Hey%20Postie%20deployment%20pilot)
-
-### Need the server managed too?
-
-A managed Hey Postie space is a separate service we are validating. It would cover the XMPP server,
-local accounts, domain setup, backups, monitoring, updates, onboarding and support.
-
-Billing would apply to **local accounts hosted and administered for your organization**, not to the
-people they can contact. XMPP is federated: for example, `alice@your-company.com` can talk to
-`client@another-server.org`; the external contact is not a billable Hey Postie account.
-
-The managed offer is not available yet. We will build its automation only after teams validate the
-need through paid pilots.
-
-[Ask about the managed pilot](mailto:hello@hey-postie.com?subject=Hey%20Postie%20managed%20pilot)
-
-## Why Hey Postie
-
-- **Open network:** communicate across XMPP servers instead of locking every participant into one
-  vendor.
-- **Modern desktop experience:** give teams a focused client without replacing their infrastructure.
-- **Privacy by design:** OMEMO, local storage, OS keychain and no advertising or analytics SDK.
-- **Claude on your terms:** MCP runs locally, is disabled by default and exposes separate read,
-  draft and send permissions.
-- **Open source:** inspect, self-build and adapt the client under AGPL-3.0-or-later.
+| | |
+|---|---|
+| 💬 **Conversations and rooms** | One-to-one chats and group rooms ("halls"): replies, reactions, mentions, edit and delete, files and images. |
+| 🔒 **Private by design** | OMEMO end-to-end encryption that phone apps can read; secrets in the OS keychain; no ads, no analytics. |
+| 🔎 **Find things** | Search in a conversation; its media, links and documents in one place; read state synced across your devices. |
+| 🤖 **Claude, on your terms** | A local MCP server, off by default, with separate read, draft and send levels. Direct sending needs the highest level and your confirmation in Claude. |
+| 🌐 **Open network** | Works with your current XMPP server (Prosody, ejabberd, Openfire…) and with everyone on other servers. |
 
 ## How it compares
 
@@ -101,17 +67,22 @@ the "read" state for the sender and an interface built for teams. Fluux, the oth
 has no encryption the phone apps can read. Still missing on our side: a public release, search
 across all conversations, and link previews in one-to-one chats.
 
-## Business model
+## For teams
 
-The desktop client stays free and open source. Hey Postie intends to earn revenue from services that
-require ongoing operational work:
+**Already running XMPP?** Keep Prosody, ejabberd, Openfire or your provider: Hey Postie becomes your
+team's desktop client without moving accounts or breaking federation. Our first pilots cover
+compatibility checks against your setup, packaging and managed deployment, migration from Pidgin,
+onboarding, updates and support. The client stays free software.
+[Discuss a deployment pilot](mailto:hello@hey-postie.com?subject=Hey%20Postie%20deployment%20pilot)
 
-1. deployment, compatibility work and support for organizations with an existing XMPP server;
-2. managed XMPP spaces, once demand is validated;
-3. later, team administration and support capabilities that do not turn federation into an
-   artificial paywall.
+**Need the server managed too?** A managed Hey Postie space (server, accounts, domain, backups,
+monitoring, updates, support) is being validated, not available yet. It would be billed per local
+account hosted for your organization, never for the people they talk to on other servers.
+[Ask about the managed pilot](mailto:hello@hey-postie.com?subject=Hey%20Postie%20managed%20pilot)
 
-External contacts, participants hosted elsewhere and the ability to federate are not paid seats.
+**How we make money.** From services that need ongoing work: deployment and support for existing
+servers first, managed spaces once teams ask for them, then team administration. Federation and
+external contacts are never paid seats.
 
 ## Run it from source
 
@@ -122,15 +93,18 @@ pnpm verify        # types, lint, unit tests, Rust checks, build
 ```
 
 Requirements: Node 24 or later, pnpm 12 and Rust stable through rustup. Linux also needs the WebKitGTK
-development packages required by Tauri. See [CONTRIBUTING.md](CONTRIBUTING.md) for details.
+development packages required by Tauri. Details in [CONTRIBUTING.md](CONTRIBUTING.md).
 
-## Repository
+<details>
+<summary>Repository layout</summary>
 
 - `packages/core/`: TypeScript contracts, services and repositories over `@converse/headless`;
 - `packages/ui/`: React interface, design system, screens and illustrations;
 - `packages/mcp/`: local MCP tools over the core services;
 - `apps/desktop/`: Tauri 2 desktop app, XMPP relay, keychain and notifications;
 - `wiki/`: product decisions, feature specifications and technical guides.
+
+</details>
 
 ## License
 
