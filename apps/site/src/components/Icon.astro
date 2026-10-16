@@ -1,0 +1,47 @@
+---
+/** Three decorative line icons for the feature cards: a letter, a wax seal, a parcel. */
+interface Props {
+  name: 'letter' | 'seal' | 'parcel';
+}
+
+const { name } = Astro.props;
+---
+
+<svg
+  width="32"
+  height="32"
+  viewBox="0 0 32 32"
+  fill="none"
+  stroke="var(--kraft-ink)"
+  stroke-width="2"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+  aria-hidden="true"
+>
+  {
+    name === 'letter' && (
+      <>
+        <rect x="3" y="7" width="26" height="18" rx="2" />
+        <path d="M3 9 L16 18 L29 9" />
+      </>
+    )
+  }
+  {
+    name === 'seal' && (
+      <>
+        <rect x="3" y="5" width="26" height="20" rx="2" />
+        <path d="M3 7 L16 16 L29 7" />
+        <circle cx="23" cy="22" r="5" fill="var(--red)" stroke="none" />
+      </>
+    )
+  }
+  {
+    name === 'parcel' && (
+      <>
+        <path d="M4 10 L16 4 L28 10 L28 22 L16 28 L4 22 Z" />
+        <path d="M4 10 L16 16 L28 10" />
+        <path d="M16 16 L16 28" />
+      </>
+    )
+  }
+</svg>

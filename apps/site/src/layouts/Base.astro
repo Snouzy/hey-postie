@@ -1,0 +1,61 @@
+---
+import { type Locale, ROUTES, type Route, useTexts } from '../i18n';
+import '../styles/global.css';
+
+interface Props {
+  locale: Locale;
+  route: Route;
+  title: string;
+}
+
+const { locale, route, title } = Astro.props;
+const t = useTexts(locale);
+const other: Locale = locale === 'en' ? 'fr' : 'en';
+const paths = ROUTES[route];
+/** To confirm by the author: the repository is not published yet. */
+const SOURCE_URL = 'https://github.com/heypostie/hey-postie';
+---
+
+<!doctype html>
+<html lang={locale}>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{title}</title>
+    <meta name="description" content={t('meta.description')} />
+    <link rel="alternate" hreflang="en" href={new URL(paths.en, Astro.site)} />
+    <link rel="alternate" hreflang="fr" href={new URL(paths.fr, Astro.site)} />
+    <link rel="alternate" hreflang="x-default" href={new URL(paths.en, Astro.site)} />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+  </head>
+  <body>
+    <a class="skip-link" href="#main">{t('skip')}</a>
+    <header class="site-header">
+      <div class="container">
+        <a class="brand" href={ROUTES.home[locale]} aria-label={t('nav.home')}>Hey Postie</a>
+        <nav class="site-nav" aria-label={t('nav.label')}>
+          <a href={`${ROUTES.home[locale]}#download`}>{t('nav.download')}</a>
+          <a href={ROUTES.privacy[locale]} aria-current={route === 'privacy' ? 'page' : undefined}>
+            {t('nav.privacy')}
+          </a>
+          <a class="lang-switch" href={paths[other]} lang={other} hreflang={other}>
+            {t('nav.switch')}
+          </a>
+        </nav>
+      </div>
+    </header>
+    <main id="main" class="container" tabindex="-1">
+      <slot />
+    </main>
+    <footer class="site-footer">
+      <div class="container">
+        <p>
+          {t('footer.license')}{' '}
+          <a href={SOURCE_URL} rel="noreferrer">{t('footer.source')}</a>
+        </p>
+        <p>{t('footer.privacy')}</p>
+        <p>{t('footer.publisher')}</p>
+      </div>
+    </footer>
+  </body>
+</html>

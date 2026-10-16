@@ -1,0 +1,17 @@
+{
+  "name": "@hey-postie/site",
+  "version": "0.1.0",
+  "private": true,
+  "license": "SEE LICENSE IN ../../LICENSING.md",
+  "type": "module",
+  "scripts": {
+    "dev": "ASTRO_TELEMETRY_DISABLED=1 astro dev",
+    "build": "ASTRO_TELEMETRY_DISABLED=1 astro build",
+    "preview": "ASTRO_TELEMETRY_DISABLED=1 astro preview",
+    "check": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "astro": "7.3.8",
+    "typescript": "6.0.3"
+  }
+}

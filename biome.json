@@ -17,8 +17,20 @@
       "!**/dist",
       "!**/target",
       "!**/node_modules",
+      "!**/.astro",
       "!pnpm-lock.yaml",
-      "!apps/desktop/public"
+      "!apps/desktop/public",
+      "!apps/site/public"
     ]
-  }
+  },
+  "overrides": [
+    {
+      "includes": ["**/*.astro"],
+      "linter": {
+        "rules": {
+          "correctness": { "noUnusedImports": "off", "noUnusedVariables": "off" }
+        }
+      }
+    }
+  ]
 }

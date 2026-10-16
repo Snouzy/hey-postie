@@ -1,0 +1,88 @@
+---
+import { type Locale, useTexts } from '../i18n';
+import Base from '../layouts/Base.astro';
+import Icon from './Icon.astro';
+import Postie from './Postie.astro';
+
+interface Props {
+  locale: Locale;
+}
+
+const { locale } = Astro.props;
+const t = useTexts(locale);
+
+/** Placeholders: the files do not exist yet (see the notice under "Download"). */
+const downloads = [
+  {
+    label: t('download.macos'),
+    file: t('download.macosFile'),
+    href: '/releases/latest/Hey.Postie_aarch64.dmg',
+  },
+  {
+    label: t('download.windows'),
+    file: t('download.windowsFile'),
+    href: '/releases/latest/Hey.Postie_x64-setup.exe',
+  },
+  {
+    label: t('download.linuxAppImage'),
+    file: t('download.linuxAppImageFile'),
+    href: '/releases/latest/Hey.Postie_amd64.AppImage',
+  },
+  {
+    label: t('download.linuxDeb'),
+    file: t('download.linuxDebFile'),
+    href: '/releases/latest/Hey.Postie_amd64.deb',
+  },
+];
+
+const features = [
+  { icon: 'letter', title: t('features.letters.title'), body: t('features.letters.body') },
+  { icon: 'seal', title: t('features.sealed.title'), body: t('features.sealed.body') },
+  { icon: 'parcel', title: t('features.parcels.title'), body: t('features.parcels.body') },
+] as const;
+---
+
+<Base locale={locale} route="home" title={t('meta.title')}>
+  <section class="hero" aria-labelledby="hero-title">
+    <div>
+      <h1 id="hero-title">{t('hero.title')}</h1>
+      <p class="tagline">{t('hero.tagline')}</p>
+      <p class="promise">{t('hero.promise')}</p>
+      <a class="button primary" href="#download">{t('hero.cta')}</a>
+    </div>
+    <Postie label={t('hero.postie')} />
+  </section>
+
+  <section aria-labelledby="features-title">
+    <h2 id="features-title">{t('features.title')}</h2>
+    <ul class="cards">
+      {
+        features.map((feature) => (
+          <li class="card">
+            <Icon name={feature.icon} />
+            <h3>{feature.title}</h3>
+            <p>{feature.body}</p>
+          </li>
+        ))
+      }
+    </ul>
+    <p class="servers">{t('features.servers')}</p>
+  </section>
+
+  <section id="download" aria-labelledby="download-title">
+    <h2 id="download-title">{t('download.title')}</h2>
+    <p class="notice" id="download-notice">{t('download.notice')}</p>
+    <ul class="downloads">
+      {
+        downloads.map((download) => (
+          <li>
+            <a class="button" href={download.href} aria-describedby="download-notice">
+              {download.label}
+              <small>{download.file}</small>
+            </a>
+          </li>
+        ))
+      }
+    </ul>
+  </section>
+</Base>

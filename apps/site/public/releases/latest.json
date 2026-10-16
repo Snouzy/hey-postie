@@ -1,0 +1,23 @@
+{
+  "version": "0.1.0",
+  "notes": "The first stamp is being printed: no build is published yet.",
+  "pub_date": "2026-10-16T00:00:00Z",
+  "platforms": {
+    "darwin-aarch64": {
+      "signature": "PLACEHOLDER",
+      "url": "https://hey-postie.com/releases/0.1.0/Hey.Postie_aarch64.app.tar.gz"
+    },
+    "darwin-x86_64": {
+      "signature": "PLACEHOLDER",
+      "url": "https://hey-postie.com/releases/0.1.0/Hey.Postie_x64.app.tar.gz"
+    },
+    "windows-x86_64": {
+      "signature": "PLACEHOLDER",
+      "url": "https://hey-postie.com/releases/0.1.0/Hey.Postie_0.1.0_x64-setup.exe"
+    },
+    "linux-x86_64": {
+      "signature": "PLACEHOLDER",
+      "url": "https://hey-postie.com/releases/0.1.0/Hey.Postie_0.1.0_amd64.AppImage"
+    }
+  }
+}

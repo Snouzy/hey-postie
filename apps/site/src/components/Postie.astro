@@ -1,0 +1,42 @@
+---
+/**
+ * Postie waving hello: the `waving` pose of packages/ui/src/illustrations/Postie.tsx, with the same
+ * paths, inlined so that the site imports no React. Keep the two in step by hand.
+ */
+interface Props {
+  label: string;
+  size?: number;
+}
+
+const { label, size = 200 } = Astro.props;
+---
+
+<svg
+  class="postie"
+  role="img"
+  aria-label={label}
+  width={size}
+  height={size}
+  viewBox="0 0 200 200"
+  fill="none"
+  stroke="var(--ink)"
+  stroke-width="4"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+>
+  <path d="M58 118 L58 158 Q58 166 66 166 L112 166 Q120 166 120 158 L120 118 Z" fill="var(--kraft)"></path>
+  <path d="M58 126 L120 126"></path>
+  <path d="M62 118 L128 60"></path>
+  <path d="M80 112 Q100 100 120 112 L128 166 L72 166 Z" fill="var(--navy)" stroke="var(--navy)"></path>
+  <circle cx="100" cy="76" r="30" fill="var(--paper-raised)"></circle>
+  <path d="M68 66 Q100 36 132 66 Z" fill="var(--navy)" stroke="var(--navy)"></path>
+  <path d="M64 66 L140 66" stroke="var(--navy)" stroke-width="6"></path>
+  <circle cx="100" cy="54" r="4" fill="var(--yellow)" stroke="none"></circle>
+  <circle cx="90" cy="78" r="3" fill="var(--ink)" stroke="none"></circle>
+  <circle cx="110" cy="78" r="3" fill="var(--ink)" stroke="none"></circle>
+  <path d="M90 90 Q100 98 110 90"></path>
+  <path d="M126 118 L152 92"></path>
+  <path d="M146 84 L152 92 L160 88"></path>
+  <path d="M156 76 L162 70"></path>
+  <path d="M166 86 L174 84"></path>
+</svg>

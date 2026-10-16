@@ -63,6 +63,10 @@ TypeScript 6, Biome 2, Vitest 5, Vite 8, `@vitejs/plugin-react`, Testing Library
 (30.1.3 in `packages/core`, for the Converse repository tests), `@tauri-apps/cli` 2.12. All MIT or
 Apache-2.0.
 
+`astro` 7.3.8 (MIT) builds the marketing site (`apps/site/`, see its README): static HTML, no
+framework integration, nothing shipped in the app. It pulls Vite and its own plugins (MIT). Its CLI
+telemetry is disabled in the package scripts. Added 2026-10-16.
+
 Rust, `[dev-dependencies]`: `rcgen` 0.14.10 (MIT or Apache-2.0), a self-signed certificate for the
 relay's certificate-rejection test; `proptest` 1.12.0 (MIT or Apache-2.0; pulls `rusty-fork`,
 `bit-set`, `unarray`, `wait-timeout`, `rand_xorshift`, all MIT or Apache-2.0), property-based
