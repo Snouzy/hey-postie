@@ -33,15 +33,31 @@ pub struct Forwarded {
 /// Requests waiting for the webview's reply, by id.
 type Pending = Arc<Mutex<HashMap<u64, oneshot::Sender<Reply>>>>;
 
+/// The token the guard checks, shared with the running listener so a new one applies at once.
+pub type Token = Arc<Mutex<String>>;
+
+/// A listener that runs: its port, its token, and how to stop it.
+struct Running {
+    port: u16,
+    token: Token,
+    shutdown: oneshot::Sender<()>,
+}
+
 /// The listener while it runs, and the replies it waits for.
 #[derive(Default)]
 pub struct McpState {
-    running: Mutex<Option<oneshot::Sender<()>>>,
+    running: Mutex<Option<Running>>,
     pending: Pending,
     next_id: Arc<AtomicU64>,
 }
 
-/// Starts the listener on `127.0.0.1:<port>` with this token, replacing a running one.
+/// A port just let go may still be held for a moment by the listener that is closing.
+const BIND_ATTEMPTS: u32 = 20;
+const BIND_RETRY: std::time::Duration = std::time::Duration::from_millis(50);
+
+/// Listens on `127.0.0.1:<port>` with this token. On the port already served, only the token
+/// changes (no rebind, so no race with the closing socket); on another port, the old listener
+/// stops and the new one binds.
 #[tauri::command]
 pub fn mcp_start(
     app: tauri::AppHandle,
@@ -49,26 +65,54 @@ pub fn mcp_start(
     port: u16,
     token: String,
 ) -> Result<(), String> {
-    stop(&state);
-    let listener = TcpListener::bind(("127.0.0.1", port)).map_err(|error| {
-        log::warn!("mcp: cannot listen on port {port}: {}", error.kind());
-        "PortUnavailable".to_string()
-    })?;
-    listener
-        .set_nonblocking(true)
-        .map_err(|_| "PortUnavailable".to_string())?;
+    let mut running = lock(&state.running);
+    if let Some(current) = running.as_ref().filter(|current| current.port == port) {
+        *lock(&current.token) = token;
+        return Ok(());
+    }
+    if let Some(previous) = running.take() {
+        let _ = previous.shutdown.send(());
+    }
+    let listener = bind(port)?;
     let (shutdown, stopped) = oneshot::channel();
+    let token: Token = Arc::new(Mutex::new(token));
     let context = server::Context {
         app,
         port,
-        token,
+        token: Arc::clone(&token),
         pending: Arc::clone(&state.pending),
         next_id: Arc::clone(&state.next_id),
     };
     tauri::async_runtime::spawn(server::serve(listener, context, stopped));
-    *lock(&state.running) = Some(shutdown);
+    *running = Some(Running {
+        port,
+        token,
+        shutdown,
+    });
     log::info!("mcp: listening on 127.0.0.1:{port}");
     Ok(())
+}
+
+fn bind(port: u16) -> Result<TcpListener, String> {
+    let mut attempt = 1;
+    loop {
+        match TcpListener::bind(("127.0.0.1", port)) {
+            Ok(listener) => {
+                listener
+                    .set_nonblocking(true)
+                    .map_err(|_| "PortUnavailable".to_string())?;
+                return Ok(listener);
+            }
+            Err(error) if attempt >= BIND_ATTEMPTS => {
+                log::warn!("mcp: cannot listen on port {port}: {}", error.kind());
+                return Err("PortUnavailable".to_string());
+            }
+            Err(_) => {
+                attempt += 1;
+                std::thread::sleep(BIND_RETRY);
+            }
+        }
+    }
 }
 
 #[tauri::command]
@@ -85,8 +129,8 @@ pub fn mcp_reply(state: tauri::State<'_, McpState>, id: u64, reply: Reply) {
 }
 
 fn stop(state: &McpState) {
-    if let Some(shutdown) = lock(&state.running).take() {
-        let _ = shutdown.send(());
+    if let Some(running) = lock(&state.running).take() {
+        let _ = running.shutdown.send(());
         log::info!("mcp: stopped");
     }
 }

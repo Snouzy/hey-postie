@@ -2,7 +2,7 @@
 //! answers with the webview's reply.
 
 use super::guard::{self, Incoming, Rejection};
-use super::{lock, Forwarded, McpState, Pending, Reply};
+use super::{lock, Forwarded, McpState, Pending, Reply, Token};
 use http_body_util::{BodyExt, Full, Limited};
 use hyper::body::{Bytes, Incoming as Body};
 use hyper::{header, Request, Response};
@@ -29,7 +29,7 @@ const FORWARDED_HEADERS: [&str; 5] = [
 pub struct Context {
     pub app: tauri::AppHandle,
     pub port: u16,
-    pub token: String,
+    pub token: Token,
     pub pending: Pending,
     pub next_id: Arc<AtomicU64>,
 }
@@ -89,7 +89,8 @@ async fn handle(
         authorization: text(header::AUTHORIZATION),
         content_length: text(header::CONTENT_LENGTH).and_then(|value| value.parse().ok()),
     };
-    if let Err(rejection) = guard::check(&incoming, context.port, &context.token) {
+    let token = lock(&context.token).clone();
+    if let Err(rejection) = guard::check(&incoming, context.port, &token) {
         log::info!("mcp: refused with {}", rejection.status);
         return Ok(error_response(&rejection));
     }
