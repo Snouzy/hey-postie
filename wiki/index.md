@@ -18,6 +18,10 @@ The folder opens as an Obsidian vault.
 - [Design system](development/design-system.md): tokens, fonts, Postie's moods, the components and their rules.
 - [Interface](development/ui.md): screens, the state machine, how the UI subscribes to the core, how to add a screen.
 
+## Reports
+
+- [Visual report, night of 2026-10-16](reports/2026-10-16-night-report.md): screenshots of the real window in light and dark, French and English, and the visual issues found.
+
 Contributing: [CONTRIBUTING.md](../CONTRIBUTING.md). Rules for agents and developers: [AGENTS.md](../AGENTS.md).
 
 ## Specs
