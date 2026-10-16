@@ -859,7 +859,7 @@ at all if it fails. Elsewhere there is no picture and no "Load image" either.
 ## Emoji
 
 _Added 2026-10-15. Sources: `scripts/trim-emoji.mjs`, `data/emoji.json`, `data/emoji.ts`,
-`components/Popover.tsx`, `EmojiPicker.tsx`, `composerText.ts`, `EmojiPicker.test.tsx`._
+`components/Popover.tsx`, `EmojiPicker.tsx`, `EmojiButton.tsx`, `composerText.ts`, `EmojiPicker.test.tsx`._
 
 - **Data**: `packages/ui/src/data/emoji.json` (149 kB, 1589 entries) is generated from Converse's
   `emoji.json` (the one `apps/desktop/public/` serves to the engine) by
@@ -885,8 +885,9 @@ _Added 2026-10-15. Sources: `scripts/trim-emoji.mjs`, `data/emoji.json`, `data/e
   `COLUMNS` (8, matching the stylesheet's `repeat(8, minmax(0, 1fr))`: a wide glyph never widens
   its column, the grid never scrolls sideways; `layout.test.ts`); Down from the search enters
   the grid; Esc closes. The
-  smile button of the `Composer` opens it; a pick runs `insertAt` on the textarea's selection,
-  closes the picker and focuses the text with the caret after the emoji (the same
+  smile button of the `Composer` (`EmojiButton.tsx`, which owns the open state and gives the focus
+  back to itself when the picker closes without a pick) opens it; a pick closes the picker, runs
+  `insertAt` on the textarea's selection and focuses the text with the caret after the emoji (the same
   `requestAnimationFrame` dance as the nick completion). `:shortcode` completion in the composer:
   see [Inside a conversation](#inside-a-conversation).
 

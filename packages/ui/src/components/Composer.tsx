@@ -1,4 +1,4 @@
-import { Send, Smile } from 'lucide-react';
+import { Send } from 'lucide-react';
 import {
   type ClipboardEvent,
   type KeyboardEvent,
@@ -16,7 +16,7 @@ import { Button } from './Button';
 import { ComposerBanner } from './ComposerBanner';
 import { ComposerSuggestions } from './ComposerSuggestions';
 import { formatMarker, grow, insertAt, pastedImages, wrapSelection } from './composerText';
-import { EmojiPicker } from './EmojiPicker';
+import { EmojiButton } from './EmojiButton';
 import { completeNick, type MentionCandidate } from './mentions';
 import { useComposerCompletions } from './useComposerCompletions';
 
@@ -80,9 +80,7 @@ export function Composer({
   const [body, setBody] = useState(() => readDraft(chatId));
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<MessageKey | null>(null);
-  const [pickerOpen, setPickerOpen] = useState(false);
   const area = useRef<HTMLTextAreaElement>(null);
-  const emojiButton = useRef<HTMLButtonElement>(null);
   const [caret, setCaret] = useState(0);
   const canSend = body.trim().length > 0 && !sending && !disabled;
   const completions = useComposerCompletions(body, caret, people, replace);
@@ -226,13 +224,7 @@ export function Composer({
     const start = element?.selectionStart ?? body.length;
     const end = element?.selectionEnd ?? body.length;
     replace(insertAt(body, start, end, emoji));
-    setPickerOpen(false);
     element?.focus({ preventScroll: true });
-  }
-
-  function closePicker() {
-    setPickerOpen(false);
-    emojiButton.current?.focus({ preventScroll: true });
   }
 
   return (
@@ -255,21 +247,7 @@ export function Composer({
       <div className="relative flex items-end gap-2">
         <ComposerSuggestions {...completions} />
         {onAttach && <AttachButton className={TOOL} disabled={disabled} onAttach={onAttach} />}
-        <Button
-          ref={emojiButton}
-          variant="ghost"
-          className={TOOL}
-          aria-label={text('composer.emoji')}
-          aria-haspopup="dialog"
-          aria-expanded={pickerOpen}
-          disabled={disabled}
-          onClick={() => setPickerOpen((open) => !open)}
-        >
-          <Smile size={18} aria-hidden />
-        </Button>
-        {pickerOpen && (
-          <EmojiPicker anchor={emojiButton.current} onPick={pickEmoji} onClose={closePicker} />
-        )}
+        <EmojiButton className={TOOL} disabled={disabled} onPick={pickEmoji} />
         <textarea
           ref={area}
           className={AREA}
