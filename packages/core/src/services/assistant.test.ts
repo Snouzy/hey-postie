@@ -24,8 +24,6 @@ function chat(overrides: Partial<Chat> = {}): Chat {
   };
 }
 
-const message = { chatId: 'bob@x.org', title: 'Bob', body: 'On my way' };
-
 describe('assistant settings', () => {
   it('starts off, sealed chats excluded, on the default port', () => {
     expect(core.assistant.getSettings()).toEqual({
