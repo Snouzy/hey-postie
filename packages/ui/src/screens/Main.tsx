@@ -10,8 +10,9 @@ import { LeaveRoomDialog } from '../components/LeaveRoomDialog';
 import { Licenses } from '../components/Licenses';
 import { MyDevices } from '../components/MyDevices';
 import { NewChat } from '../components/NewChat';
-import { Settings } from '../components/Settings';
 import { Sidebar } from '../components/Sidebar';
+import { SettingsWindow } from '../components/settings/SettingsWindow';
+import type { SettingsSection } from '../components/settings/sections';
 import { useCore, useText } from '../core/CoreProvider';
 import { useChats } from '../core/useChats';
 import { useContacts } from '../core/useContacts';
@@ -52,7 +53,10 @@ export function Main({ account, onOpenLink, onSaveFile, onLeave }: MainProps) {
   const [selected, setSelected] = useState<Chat | null>(null);
   const [dialog, setDialog] = useState<OpenDialog>(null);
   const [leavingRoom, setLeavingRoom] = useState<Room | null>(null); // from a room row's menu
-  const [backFromLicenses, setBackFromLicenses] = useState(false);
+  const [settingsSection, setSettingsSection] = useState<SettingsSection>('general');
+  // The settings window is behind the open dialog, and comes back with the focus on that button.
+  const [settingsBehind, setSettingsBehind] = useState<'licenses' | 'deleteAccount' | null>(null);
+  const [returnFocus, setReturnFocus] = useState<'licenses' | 'deleteAccount' | null>(null);
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [encryptionFocus, setEncryptionFocus] = useState(0); // "Check their devices" requests
   const [error, setError] = useState<MessageKey | null>(null);
@@ -122,8 +126,22 @@ export function Main({ account, onOpenLink, onSaveFile, onLeave }: MainProps) {
 
   function closeDialog() {
     setDialog(null);
-    setBackFromLicenses(false);
+    setSettingsSection('general');
+    setSettingsBehind(null);
+    setReturnFocus(null);
     setError(null);
+  }
+
+  /** Opens a dialog in place of the settings window; closing it reopens the window. */
+  function fromSettings(next: 'licenses' | 'deleteAccount') {
+    setSettingsBehind(next);
+    setDialog(next);
+  }
+
+  function backToSettings() {
+    setReturnFocus(settingsBehind);
+    setSettingsBehind(null);
+    setDialog('settings');
   }
 
   async function leave(door: 'welcome' | 'signIn') {
@@ -219,26 +237,23 @@ export function Main({ account, onOpenLink, onSaveFile, onLeave }: MainProps) {
       {dialog === 'addContact' && <AddContact onClose={closeDialog} />}
       {dialog === 'myDevices' && <MyDevices onClose={closeDialog} />}
       {dialog === 'settings' && (
-        <Settings
+        <SettingsWindow
+          account={account}
+          section={settingsSection}
+          onSelectSection={setSettingsSection}
           onClose={closeDialog}
-          onLicenses={() => setDialog('licenses')}
+          onSignOut={() => void leave('welcome')}
+          onDeleteAccount={() => fromSettings('deleteAccount')}
+          onLicenses={() => fromSettings('licenses')}
           onOpenLink={onOpenLink}
-          focusLicenses={backFromLicenses}
+          returnFocus={returnFocus}
         />
       )}
-      {dialog === 'licenses' && (
-        <Licenses
-          onClose={() => {
-            setBackFromLicenses(true);
-            setDialog('settings');
-          }}
-          onOpenLink={onOpenLink}
-        />
-      )}
+      {dialog === 'licenses' && <Licenses onClose={backToSettings} onOpenLink={onOpenLink} />}
       {dialog === 'deleteAccount' && (
         <DeleteAccountDialog
           jid={account.jid}
-          onClose={closeDialog}
+          onClose={settingsBehind ? backToSettings : closeDialog}
           onDeleted={() => onLeave('welcome')}
         />
       )}

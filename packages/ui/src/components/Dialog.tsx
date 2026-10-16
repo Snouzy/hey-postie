@@ -9,23 +9,29 @@ interface DialogProps {
   onClose: () => void;
   /** False while an action is in flight: Esc and the X are ignored. Default true. */
   closable?: boolean;
+  /** `large`: a window-like card (the settings), its children lay out the inside. Default small. */
+  size?: 'small' | 'large';
   children: ReactNode;
 }
 
-const FOCUSABLE = 'input, textarea, button, a[href], [tabindex]:not([tabindex="-1"])';
+const FOCUSABLE = 'input, textarea, button, a[href], [tabindex]';
 
 /**
- * A small modal card. Focus starts in its first field, Tab cycles inside it, Esc or the close
- * button closes it and focus goes back to whatever opened it.
+ * A modal card. Focus starts on the element marked `data-autofocus`, else in the first field,
+ * else on the card; Tab cycles inside it, Esc or the close button closes it and focus goes back
+ * to whatever opened it.
  */
-export function Dialog({ title, onClose, closable = true, children }: DialogProps) {
+export function Dialog({ title, onClose, closable = true, size = 'small', children }: DialogProps) {
   const text = useText();
   const titleId = useId();
   const card = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const opener = document.activeElement;
-    const first = card.current?.querySelector<HTMLElement>('input, textarea') ?? card.current;
+    const first =
+      card.current?.querySelector<HTMLElement>('[data-autofocus]') ??
+      card.current?.querySelector<HTMLElement>('input, textarea') ??
+      card.current;
     first?.focus();
     return () => {
       if (opener instanceof HTMLElement) opener.focus();
@@ -46,7 +52,7 @@ export function Dialog({ title, onClose, closable = true, children }: DialogProp
   function cycleFocus(event: KeyboardEvent) {
     if (event.key !== 'Tab' || !card.current) return;
     const controls = [...card.current.querySelectorAll<HTMLElement>(FOCUSABLE)].filter(
-      (element) => !element.hasAttribute('disabled'),
+      (element) => !element.hasAttribute('disabled') && element.tabIndex >= 0,
     );
     const first = controls[0];
     const last = controls[controls.length - 1];
@@ -64,7 +70,7 @@ export function Dialog({ title, onClose, closable = true, children }: DialogProp
     <div className={styles.backdrop}>
       <div
         ref={card}
-        className={styles.card}
+        className={size === 'large' ? `${styles.card} ${styles.large}` : styles.card}
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}

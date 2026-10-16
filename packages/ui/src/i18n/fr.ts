@@ -205,11 +205,10 @@ export const fr: Record<MessageKey, string> = {
   'composer.placeholderSealed': 'Écrire une lettre scellée…',
 
   'settings.title': 'Réglages',
-  'settings.appearance': 'Apparence',
+  'settings.theme': 'Thème',
   'settings.theme.system': 'Suivre le système',
   'settings.theme.light': 'Clair',
   'settings.theme.dark': 'Sombre',
-  'settings.notifications': 'Notifications',
   'settings.showPreview': 'Montrer la lettre dans les notifications',
   'settings.showPreviewHint': 'Désactivé, je dis seulement qu’une lettre est arrivée.',
   'settings.language': 'Langue',
@@ -217,6 +216,37 @@ export const fr: Record<MessageKey, string> = {
   'settings.about': 'À propos',
   'settings.repository': 'Code source',
   'settings.licenses': 'Licences',
+  'settings.sections': 'Sections des réglages',
+  'settings.section.general': 'Général',
+  'settings.section.account': 'Compte',
+  'settings.section.appearance': 'Apparence',
+  'settings.section.notifications': 'Notifications',
+  'settings.section.privacy': 'Confidentialité et chiffrement',
+  'settings.section.advanced': 'Avancé',
+  'settings.account.identity': 'Qui vous êtes',
+  'settings.account.password': 'Mot de passe',
+  'settings.account.remembered':
+    'Votre mot de passe est gardé dans le trousseau du système, pour vous connecter la prochaine fois.',
+  'settings.account.notRemembered':
+    'Votre mot de passe n’est pas gardé : je le redemanderai la prochaine fois.',
+  'settings.account.leave': 'Partir',
+  'settings.account.deleteHint':
+    'Supprimer ferme votre boîte aux lettres sur le serveur, pour de bon. Je vous demanderai d’abord de taper votre adresse.',
+  'settings.preview': 'Ce qu’une notification montre',
+  'settings.notificationsRooms':
+    'Chaque salon a sa propre cloche : ouvrez le salon, puis « Membres », pour choisir quand elle sonne.',
+  'settings.privacy.thisFingerprint': 'Empreinte de cet appareil',
+  'settings.privacy.trust': 'Comment je fais confiance à un appareil',
+  'settings.privacy.trustExplain':
+    'Un nouvel appareil d’un contact est utilisé mais affiché comme non vérifié. Comparez son empreinte avec lui en personne, puis marquez-le vérifié ; ou bloquez-le. Dès qu’un de ses appareils est vérifié, je ne fais plus confiance aux nouveaux les yeux fermés.',
+  'settings.privacy.ownDevicesExplain':
+    'Vos propres appareils suivent la même règle : un nouvel appareil à vous reste à l’écart tant que vous ne l’avez pas vérifié ou débloqué, pour qu’un mot de passe volé ne suffise pas à obtenir vos futures clés.',
+  'settings.privacy.parcels': 'Colis d’inconnus',
+  'settings.privacy.parcelsExplain':
+    'Une image envoyée par quelqu’un hors de vos contacts attend un clic : la récupérer lui dirait quand vous avez ouvert la discussion.',
+  'settings.about.license':
+    'Logiciel libre sous licence AGPL-3.0. Vous pouvez le lire, le modifier et le partager aux mêmes conditions.',
+  'settings.website': 'Site web',
   'licenses.title': 'Licences',
   'licenses.intro': 'Les pièces dont je suis fait, et leurs conditions.',
   'licenses.search': 'Chercher par nom ou licence',
