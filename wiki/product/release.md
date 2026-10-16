@@ -166,10 +166,11 @@ Not done; the steps, from Apple's and Tauri's documentation (consulted 2026-10-1
    then upload with `xcrun altool --upload-app` or the Transporter app.
 4. Submit for review with the listing below.
 
-The sandbox entitlements (`Entitlements.plist`: `app-sandbox`, `network.client`,
-`files.user-selected.read-write`) are already the Store's requirements. The relay listens on
-`127.0.0.1` only, which the sandbox allows for a client connection to localhost; to confirm in the
-first Store build.
+The sandbox entitlements (`Entitlements.plist`: `app-sandbox`, `network.client`, `network.server`,
+`files.user-selected.read-write`) are already the Store's requirements. `network.server` (added
+2026-10-16) covers the two loopback listeners, the XMPP relay and the MCP endpoint, both on
+`127.0.0.1` only; to confirm in the first Store build. Claude's access sends message text to a
+third-party AI: the App Review wording on that consent is still to check (MCP spec, points to check).
 
 ### Store listing checklist
 
@@ -203,8 +204,7 @@ first Store build.
 ## Points to check
 
 - The release domain and the `latest.json` hosting (static hosting is enough).
-- Whether the sandboxed `.app` can open the relay's `127.0.0.1` listening socket under the Store's
-  stricter review (`network.client` is enough for the webview to connect; the relay *listens*,
-  which normally needs `network.server`). The unsigned sandboxed build works locally; the Store
-  build is the one to test.
+- Whether the Store review accepts `network.server` for the two `127.0.0.1` listeners (the relay
+  and the MCP endpoint). The unsigned sandboxed build works locally; the Store build is the one to
+  test.
 - Windows: MSIX for the Microsoft Store (spec, section 6) is not configured; NSIS and MSI are.

@@ -18,6 +18,7 @@
   },
   "dependencies": {
     "@hey-postie/core": "workspace:*",
+    "@hey-postie/mcp": "workspace:*",
     "@hey-postie/ui": "workspace:*",
     "@tauri-apps/api": "2.12.4",
     "@tauri-apps/plugin-notification": "2.7.0",

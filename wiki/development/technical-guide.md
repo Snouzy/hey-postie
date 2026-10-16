@@ -105,8 +105,8 @@ _Checked on 2026-10-15 against Tauri 2.12.4, `tauri-plugin-notification` 2.7.0,
   window events; `keychain.rs` wraps the `keyring` crate (macOS Keychain, Windows Credential
   Manager, Linux Secret Service; `KeychainUnavailable` when none works); `tray.rs`, `links.rs`,
   `window.rs`, `save.rs`, `i18n.rs` are described below; `smoke.rs` implements `--smoke`.
-- macOS entitlements (`src-tauri/Entitlements.plist`): app sandbox, network client, user-selected
-  files. They are on from the first build so that the App Store build is the same build.
+- macOS entitlements (`src-tauri/Entitlements.plist`): app sandbox, network client, network server
+  (the loopback listeners: the relay and the MCP endpoint), user-selected files. They are on from the first build so that the App Store build is the same build.
 
 ### Dev windows (`scripts/dev.mjs`, `src-tauri/.cargo/config.toml`)
 
@@ -128,6 +128,25 @@ Many sessions work at once, one worktree each, and the author watches their work
   password. The identity is `HEY_POSTIE_DEV_IDENTITY`, else the first "Apple Development" one of the
   login keychain; without any, the binary runs unsigned as before. Its signing identifier is
   `com.snouzylabs.heypostie.dev`. Release builds (`tauri build`) never go through the runner.
+
+### The MCP endpoint (`src-tauri/src/mcp/`, `app/assistant.ts`)
+
+Claude's way in ([spec](../specs/2026-10-16-mcp-design.md)). Off by default; the webview starts it
+(`mcp_start { port, token }`) when the assistant mode leaves `off`, moves it when the port
+changes and stops it (`mcp_stop`) when it goes back to `off`, following `assistant.changed`.
+
+- **Rust guards and carries, nothing more.** `mcp/guard.rs` (pure, tested) lets through only
+  `POST /mcp` with `Host` `127.0.0.1:<port>` or `localhost:<port>` (DNS rebinding), **no** `Origin`
+  (no web page may call it), `Authorization: Bearer <token>` compared in constant time, and a
+  `Content-Length` of at most 1 MB; anything else gets a JSON-RPC error with 401, 403, 404, 405,
+  411 or 413. Bound to 127.0.0.1 only.
+- **The webview runs MCP.** An accepted request goes to the webview as the `mcp-request` event
+  (`content-type`, `accept`, `mcp-protocol-version`, `mcp-method`, `mcp-name` and the body);
+  `app/assistant.ts` runs it through `createMcpFetch` (`packages/mcp`) and answers with
+  `mcp_reply`. No answer within 150 s (longer than the 2 minutes a send waits for the user) → 503.
+- **Logs**: `mcp: <method> -> <status>` and refusals by status; never a body or the token.
+- **Sandbox**: listening needs `com.apple.security.network.server` (`Entitlements.plist`, added
+  2026-10-16 for this and the XMPP relay, which also listens on loopback).
 
 ### The XMPP relay (`src-tauri/src/relay/`)
 

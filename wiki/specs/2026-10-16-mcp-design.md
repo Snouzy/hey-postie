@@ -164,8 +164,9 @@ an MCPB bundle on the site later. Neither ships in the App Store build.
 
 1. Contract and `AssistantService` with its tests (section 6): done.
 2. `packages/mcp`: server, the 8 tools, instructions, tests on fakes: done (section 9).
-3. Rust listener and bridge, `mcp_reply` command, capability, entitlement
-   `com.apple.security.network.server` (the relay needs it too).
+3. Rust listener and bridge, `mcp_reply` command, entitlement
+   `com.apple.security.network.server` (the relay needs it too): done (technical-guide, "The MCP
+   endpoint").
 4. Settings section and the approval `Dialog`; texts in `en.ts` and `fr.ts`.
 5. Try it in this repository's Claude Code against a `pnpm desktop:dev` window; then docs
    (technical-guide, ui.md, dependencies, release.md: entitlement and privacy).

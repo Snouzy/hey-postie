@@ -8,6 +8,9 @@
   <!-- Talk to XMPP servers. -->
   <key>com.apple.security.network.client</key>
   <true/>
+  <!-- The loopback listeners: the XMPP relay and the MCP endpoint (127.0.0.1 only). -->
+  <key>com.apple.security.network.server</key>
+  <true/>
   <!-- Attachments the user picks or saves. -->
   <key>com.apple.security.files.user-selected.read-write</key>
   <true/>

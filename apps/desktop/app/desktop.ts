@@ -1,4 +1,5 @@
 import type { Core } from '@hey-postie/core';
+import { serveAssistant } from './assistant';
 import { trackWindowFocus } from './focus';
 import { openChatsFromXmppLinks } from './links';
 import { openChatOnNotificationClick } from './notificationClicks';
@@ -7,12 +8,13 @@ import { trackUnreadCount } from './unread';
 import { checkForUpdatesAtStartup } from './updater';
 
 /** Everything the desktop shell adds around the interface, for the lifetime of the app. */
-export async function startDesktopIntegrations(core: Core): Promise<void> {
+export async function startDesktopIntegrations(core: Core, version: string): Promise<void> {
   trackUnreadCount(core);
   await Promise.all([
     trackWindowFocus(core),
     openChatOnNotificationClick(core),
     openChatsFromXmppLinks(core),
+    serveAssistant(core, version),
   ]);
   await runSmokeLogin(core);
   // Last and never blocking: an unreachable release server must not delay the sign-in.

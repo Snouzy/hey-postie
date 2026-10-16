@@ -40,6 +40,11 @@ percent-encoding = "2"
 tauri-plugin-updater = "2"
 tauri-plugin-process = "2"
 rustls-platform-verifier = "0.7.1"
+# The local MCP listener (src/mcp/): already in the tree through tauri-plugin-updater (reqwest).
+hyper = { version = "1.12", features = ["server", "http1"] }
+hyper-util = { version = "0.1.21", features = ["tokio"] }
+http-body-util = "0.1.5"
+subtle = "2.6"
 
 # Already in the tree through tauri-plugin-notification; used directly to claim the app's identity
 # for dev notifications (see src/notification_identity.rs).

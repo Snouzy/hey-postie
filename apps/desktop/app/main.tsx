@@ -13,7 +13,7 @@ const core = createCore(createTauriDependencies());
 const locale = pickLocale(navigator.languages);
 const desktop = isTauri();
 if (desktop) {
-  startDesktopIntegrations(core).catch((error: unknown) =>
+  startDesktopIntegrations(core, import.meta.env.VITE_APP_VERSION).catch((error: unknown) =>
     console.warn('[desktop] integrations failed to start', error),
   );
 }

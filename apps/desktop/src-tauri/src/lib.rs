@@ -4,6 +4,7 @@
 mod i18n;
 mod keychain;
 mod links;
+mod mcp;
 #[cfg(target_os = "macos")]
 mod notification_identity;
 mod relay;
@@ -94,7 +95,10 @@ pub fn run() {
             relay_url,
             smoke_login,
             set_unread_count,
-            save_file
+            save_file,
+            mcp::mcp_start,
+            mcp::mcp_stop,
+            mcp::mcp_reply
         ])
         .on_window_event(|window, event| {
             if !CLOSE_HIDES {
@@ -107,6 +111,7 @@ pub fn run() {
                 }
             }
         })
+        .manage(mcp::McpState::default())
         .manage(login)
         .manage(i18n::system_language())
         .manage(window::Smoke(smoke))
