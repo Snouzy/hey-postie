@@ -13,6 +13,8 @@ listed at the end. Checked on 2026-10-15.
 | `tailwindcss` | 4.3.3 | MIT | Utility classes, read from the Postal tokens (`packages/ui/src/theme/tailwind.css`). Only the CSS it generates ships. Added 2026-10-16 ([spec](../specs/2026-10-16-buzz-ui-tailwind-design.md)). |
 | `clsx`, `tailwind-merge` | 2.1.1, 3.7.0 | MIT | `cn()` (`packages/ui/src/lib/cn.ts`): joins classes, the last of two clashing utilities wins. Added 2026-10-16. |
 | `class-variance-authority` | 0.7.1 | Apache-2.0 | Component variants (`Button`). Added 2026-10-16. |
+| `@modelcontextprotocol/server` | 2.3.1 | Apache-2.0 (older parts MIT) | The MCP server of `packages/mcp`: Claude reads and acts through it ([spec](../specs/2026-10-16-mcp-design.md)). Browser build, MCP spec 2026-07-28 and older clients. Pulls `@modelcontextprotocol/core` (same license). Added 2026-10-16. |
+| `zod` | 4.6.7 | MIT | The MCP tools' input schemas; the same version the SDK resolves, so one copy. Added 2026-10-16. |
 | `@tauri-apps/api` and plugins (`notification`, `store`) | 2.x | MIT or Apache-2.0 | Bridge to the Rust side. |
 | `@tauri-apps/plugin-opener` | 2.7.2 | MIT or Apache-2.0 | `openUrl`: links in messages go to the system browser (`apps/desktop/app/openLink.ts`). Added 2026-10-15. |
 | `@tauri-apps/plugin-updater` | 2.14.0 | MIT or Apache-2.0 | `check()` for a newer release at startup (`apps/desktop/app/updater.ts`); `downloadAndInstall()` later, with the update screen. Added 2026-10-16. |

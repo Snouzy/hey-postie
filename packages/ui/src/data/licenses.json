@@ -36,6 +36,20 @@
   },
   {
     "source": "npm",
+    "name": "@modelcontextprotocol/core",
+    "version": "2.3.1",
+    "license": "Apache-2.0",
+    "repository": "https://github.com/modelcontextprotocol/typescript-sdk"
+  },
+  {
+    "source": "npm",
+    "name": "@modelcontextprotocol/server",
+    "version": "2.3.1",
+    "license": "Apache-2.0",
+    "repository": "https://github.com/modelcontextprotocol/typescript-sdk"
+  },
+  {
+    "source": "npm",
     "name": "@tauri-apps/api",
     "version": "2.12.3",
     "license": "Apache-2.0 OR MIT",
@@ -110,6 +124,20 @@
     "version": "6.26.0",
     "license": "MIT",
     "repository": "https://github.com/babel/babel/tree/master/packages/babel-runtime"
+  },
+  {
+    "source": "npm",
+    "name": "class-variance-authority",
+    "version": "0.7.1",
+    "license": "Apache-2.0",
+    "repository": "https://github.com/joe-bell/cva"
+  },
+  {
+    "source": "npm",
+    "name": "clsx",
+    "version": "2.1.1",
+    "license": "MIT",
+    "repository": "lukeed/clsx"
   },
   {
     "source": "npm",
@@ -295,6 +323,20 @@
   },
   {
     "source": "npm",
+    "name": "tailwind-merge",
+    "version": "3.7.0",
+    "license": "MIT",
+    "repository": "https://github.com/dcastil/tailwind-merge"
+  },
+  {
+    "source": "npm",
+    "name": "tailwindcss",
+    "version": "4.3.3",
+    "license": "MIT",
+    "repository": "https://github.com/tailwindlabs/tailwindcss"
+  },
+  {
+    "source": "npm",
     "name": "tslib",
     "version": "1.14.1",
     "license": "0BSD",
@@ -306,6 +348,13 @@
     "version": "2.8.1",
     "license": "0BSD",
     "repository": "https://github.com/Microsoft/tslib"
+  },
+  {
+    "source": "npm",
+    "name": "zod",
+    "version": "4.6.7",
+    "license": "MIT",
+    "repository": "https://github.com/colinhacks/zod"
   },
   {
     "source": "cargo",

@@ -28,6 +28,7 @@ The app ships these components, each under its own license. The full list, with 
 | Tauri 2 and its plugins, with the Rust crates they pull in | Desktop shell | MIT or Apache-2.0 |
 | React | Interface | MIT |
 | Tailwind CSS, clsx, tailwind-merge, class-variance-authority | Interface styles | MIT, Apache-2.0 for class-variance-authority |
+| MCP TypeScript SDK (`@modelcontextprotocol/server`), zod | Claude's access (MCP) | Apache-2.0 (older parts MIT), MIT |
 | Fraunces, Figtree | Fonts | SIL Open Font License 1.1 |
 | Lucide | Icons | ISC |
 

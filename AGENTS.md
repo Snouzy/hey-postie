@@ -25,7 +25,7 @@ Every feature is split into three layers. A layer only calls the layer directly 
 
 | Layer | Contains | Where |
 |---|---|---|
-| **Presentation** | What the user sees: React components, screens, hooks that format data for display, texts (i18n). No business rule, no XMPP, no storage. | `packages/ui`, `apps/*` |
+| **Presentation** | What the user sees: React components, screens, hooks that format data for display, texts (i18n). Also the MCP server, the entry point for Claude. No business rule, no XMPP, no storage. | `packages/ui`, `packages/mcp`, `apps/*` |
 | **Service** | Business code: rules, authorization, validation, sanitizing of incoming content, technical error handling and translation into domain errors, logging. Exposes plain data and events. | `packages/core/src/services/` |
 | **Persistence** | Data access: repositories over the XMPP engine (`@converse/headless`), local storage (IndexedDB), the OS keychain (through Tauri). Knows *how* data is stored or fetched, never *why*. | `packages/core/src/repositories/` |
 

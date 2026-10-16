@@ -12,6 +12,7 @@ packages/core/     the engine, TypeScript, no React
   src/fakes/       in-memory repositories for tests and for the UI in development
   src/container.ts createCore(deps): the single place where everything is wired
 packages/ui/       React: theme/, i18n/, illustrations/, screens/, components/
+packages/mcp/      the MCP server for Claude: tools over the core services (spec 2026-10-16-mcp-design)
 apps/desktop/      Tauri 2: app/ (Vite entry, Tauri-backed repositories), src-tauri/ (Rust)
 wiki/              this documentation
 tasks/             agents' plans and lessons, untracked

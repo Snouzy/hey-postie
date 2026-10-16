@@ -163,12 +163,31 @@ an MCPB bundle on the site later. Neither ships in the App Store build.
 ## 8. Plan
 
 1. Contract and `AssistantService` with its tests (section 6): done.
-2. `packages/mcp`: server, the 8 tools, instructions, tests on fakes.
+2. `packages/mcp`: server, the 8 tools, instructions, tests on fakes: done (section 9).
 3. Rust listener and bridge, `mcp_reply` command, capability, entitlement
    `com.apple.security.network.server` (the relay needs it too).
 4. Settings section and the approval `Dialog`; texts in `en.ts` and `fr.ts`.
 5. Try it in this repository's Claude Code against a `pnpm desktop:dev` window; then docs
    (technical-guide, ui.md, dependencies, release.md: entitlement and privacy).
+
+## 9. `packages/mcp` as built (2026-10-16)
+
+- `createMcpFetch(core, version)` returns a web-standard `(Request) => Promise<Response>` over the
+  SDK's `createMcpHandler`; a fresh `McpServer` per request (`server.ts`), the 8 tools in
+  `tools/read.ts` and `tools/write.ts`, the text format in `format.ts`, the error sentences in
+  `answers.ts`, chat lookup (JID, else a unique exact name; hidden chats never found) in `chatRef.ts`.
+- **The Rust listener is the only guard** for the token, `Host` and `Origin`: a browser `Request`
+  cannot carry `Host` or `Origin` (forbidden headers), so the webview side cannot check them.
+- **Headers to forward** from Rust, or the SDK answers 400: `MCP-Protocol-Version`, `Mcp-Method`,
+  `Mcp-Name` (spec 2026-07-28), with `Content-Type` and `Accept`. Older clients (2025-11-25) are
+  answered in SSE; 2026-07-28 ones in plain JSON.
+- **Deferred to keep it small**: `read_messages` returns the latest messages the service holds (at
+  most 50), with no `before` cursor yet (the service's `loadOlder` is shared with the UI, so the
+  cursor needs a stateless history call in `ChatsService` first); results are text only, no
+  `structuredContent` yet.
+- Tests (`server.test.ts`) call the handler with real 2026-07-28 requests on a signed-in core over
+  fakes: the tool list and annotations, sealed chats hidden, fenced bodies, contacts, signed out,
+  and send refused, approved and declined.
 
 ## Points to check
 
