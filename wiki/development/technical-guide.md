@@ -306,8 +306,16 @@ cache is cleared, so the next sign-in tries again.
 ### Notifications (`app/repositories/notifier.ts`, `app/notificationClicks.ts`)
 
 - `TauriNotifier.show` checks `isPermissionGranted()`, asks `requestPermission()` once per run if
-  needed, then `sendNotification({ title, body, extra: { chatId } })`. A refused permission is
-  silent: the message still shows in the window.
+  needed, then `sendNotification({ title, body, sound, extra: { chatId } })`. A refused permission is
+  silent: the message still shows in the window. On desktop the plugin always answers "granted"
+  without prompting (`src/desktop.rs`, 2.7.0, `request_permission` and `permission_state`): the
+  real switch is the OS setting (macOS: System Settings > Notifications).
+- The sound must be named, or the notification is silent on every desktop (fixed 2026-10-16, it was
+  missing). `notificationSound()` picks the system default from the user agent: macOS
+  `NSUserNotificationDefaultSoundName` (the only name `mac-notification-sys` 0.6.15,
+  `objc/notify.m`, maps to the user's chosen alert sound), Windows `Default`
+  (`tauri-winrt-notification` 0.8.1 makes a toast without a sound `silent="true"`), Linux
+  `message-new-instant` (freedesktop sound theme). Checked on 2026-10-16 in the crate sources.
 - A click opens the chat: `onAction` of the plugin reports a click (`actionId: 'tap'`) with the
   notification's `extra` on desktop too (verified in the plugin's `src/desktop.rs`, 2.7.0: macOS
   and Windows wait on `notify-rust`'s response; Linux listens on D-Bus). `openChatOnNotificationClick`
@@ -315,8 +323,16 @@ cache is cleared, so the next sign-in tries again.
   while a listener existed. On a click it brings the window to front (`app/window.ts`) and emits
   `chat.requested` with the chat id. Nothing about the message is logged.
 - Known limits (plugin docs): on Windows a click is reported only while the toast is on screen,
-  not from the Action Center. In `tauri dev` on macOS, notifications are sent in the name of the
-  terminal app, since the binary is not a bundle.
+  not from the Action Center.
+- macOS and `tauri dev` (verified in the plugin's `src/desktop.rs`, 2.7.0: `if tauri::is_dev()
+  { "com.apple.Terminal" }`): in dev every notification is sent in the name of **Terminal.app**,
+  whatever terminal launched the app. If Terminal.app is not allowed to notify (System Settings >
+  Notifications > Terminal), or a Focus mode is on, nothing shows while the dock badge still counts.
+  A non-dev build uses the bundle identifier `com.snouzylabs.heypostie`, which macOS only knows once
+  the app is bundled (`pnpm desktop:build`). Assumed, not tested: an unbundled binary cannot claim
+  it, since `setApplication` in `mac-notification-sys` (`objc/notify.m`) only accepts an
+  identifier that Launch Services knows. To test notifications for
+  real, run the bundled `.app` and allow "Hey Postie" in System Settings > Notifications.
 
 ### Window focus (`app/focus.ts`)
 
