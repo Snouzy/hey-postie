@@ -32,3 +32,4 @@ Feature designs live in [`specs/`](specs/), one file per feature: `YYYY-MM-DD-<t
 - [Version 1 design](specs/2026-10-15-hey-postie-v1-design.md): architecture, data and flows, interface and brand, tests, milestones.
 - [Buzz as the UI reference, Tailwind](specs/2026-10-16-buzz-ui-tailwind-design.md): what we take from Buzz, the migration to Tailwind, two message layouts, sealed letters in notifications.
 - [Edit and delete messages](specs/2026-10-16-edit-delete-messages-design.md): edit, delete for me or for everyone, moderation in halls; after the move to Tailwind.
+- [Claude in Hey Postie (MCP)](specs/2026-10-16-mcp-design.md): an MCP server in the app so Claude reads chats and sends with approval; 8 tools, safety, architecture.
