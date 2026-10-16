@@ -20,6 +20,8 @@ interface DetailsPaneProps {
   onRoomsChanged: () => Promise<void>;
   /** After leaving a hall: Main drops the selection. */
   onLeft: () => void;
+  /** "Invite people" from a hall's pane. */
+  onInvite?: (() => void) | undefined;
 }
 
 /**
@@ -35,6 +37,7 @@ export function DetailsPane({
   onClose,
   onRoomsChanged,
   onLeft,
+  onInvite,
 }: DetailsPaneProps) {
   const text = useText();
   if (chat.kind === 'direct') {
@@ -73,6 +76,7 @@ export function DetailsPane({
       onChanged={onRoomsChanged}
       onClose={onClose}
       onLeft={onLeft}
+      onInvite={onInvite}
     />
   );
 }

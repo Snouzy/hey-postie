@@ -1,12 +1,15 @@
-import type { Account, Chat, Contact, Draft, Room } from '@hey-postie/core';
+import type { Account, Chat, Contact, Draft, Room, RoomInvitation } from '@hey-postie/core';
 import { type CSSProperties, useCallback, useEffect, useRef, useState } from 'react';
 import { flushSync } from 'react-dom';
 import { AddContact } from '../components/AddContact';
 import type { SaveFile } from '../components/Attachments';
 import { Conversation } from '../components/Conversation';
+import { CreateRoom } from '../components/CreateRoom';
 import { DeleteAccountDialog } from '../components/DeleteAccountDialog';
 import { DetailsPane } from '../components/DetailsPane';
 import { EmptyState } from '../components/EmptyState';
+import { HallInvitation } from '../components/HallInvitation';
+import { InviteToRoom } from '../components/InviteToRoom';
 import { JoinRoom } from '../components/JoinRoom';
 import { LeaveRoomDialog } from '../components/LeaveRoomDialog';
 import { Licenses } from '../components/Licenses';
@@ -23,6 +26,7 @@ import { DETAILS_BOUNDS, readWelcomed, SIDEBAR_BOUNDS, writeWelcomed } from '../
 import { useChats } from '../core/useChats';
 import { useContacts } from '../core/useContacts';
 import { useCoreEvent } from '../core/useCoreEvent';
+import { useInvitations } from '../core/useInvitations';
 import { usePaneSizes } from '../core/usePaneSizes';
 import { isRequest, type RequestRow, useRequests } from '../core/useRequests';
 import { roomChat, useRooms, withRooms } from '../core/useRooms';
@@ -49,6 +53,7 @@ interface MainProps {
 
 type OpenDialog =
   | 'newChat'
+  | 'createRoom'
   | 'joinRoom'
   | 'addContact'
   | 'myDevices'
@@ -67,6 +72,8 @@ export function Main({ account, onOpenLink, onSaveFile, onLeave }: MainProps) {
   const uploads = useUploads();
   const [selected, setSelected] = useState<Chat | null>(null);
   const [requestJid, setRequestJid] = useState<string | null>(null); // the open message request
+  const [invitationJid, setInvitationJid] = useState<string | null>(null); // the open invitation
+  const [inviteTo, setInviteTo] = useState<Room | null>(null); // the hall people are invited to
   const [dialog, setDialog] = useState<OpenDialog>(null);
   const [leavingRoom, setLeavingRoom] = useState<Room | null>(null); // from a room row's menu
   const [settingsSection, setSettingsSection] = useState<SettingsSection>('general');
@@ -88,12 +95,16 @@ export function Main({ account, onOpenLink, onSaveFile, onLeave }: MainProps) {
   // The list is the fresh source once the chat is in it (title, unread count).
   const chats = withRooms(directChats, rooms);
   const requests = useRequests(chats);
+  const invitations = useInvitations();
+  const invitation = invitationJid
+    ? invitations.invitations.find((candidate) => candidate.roomJid === invitationJid)
+    : undefined;
   const selectedChat = selected ? (chats.find((c) => c.id === selected.id) ?? selected) : null;
   // A stranger's chat shows the request screen, even if their letter came while it was open.
   const wanted =
     requestJid ?? (selectedChat && isRequest(selectedChat) ? selectedChat.peerJid : null);
   const request = wanted ? requests.rows.find((row) => row.jid === wanted) : undefined;
-  const chat = request ? null : selectedChat;
+  const chat = request || invitation ? null : selectedChat;
   const contact = chat ? contacts.find((c) => c.jid === chat.peerJid) : undefined;
   const room = chat?.kind === 'room' ? rooms.find((r) => r.jid === chat.id) : undefined;
   const chatId = chat?.id ?? request?.chat?.id ?? null;
@@ -160,15 +171,37 @@ export function Main({ account, onOpenLink, onSaveFile, onLeave }: MainProps) {
     else void openWith(requested);
   });
 
+  // A hall destroyed (by its owner, here or elsewhere) is no place to stay in.
+  useCoreEvent('room.destroyed', ({ jid }) => {
+    if (selected?.id === jid) {
+      setSelected(null);
+      setDetailsOpen(false);
+    }
+    if (inviteTo?.jid === jid) setInviteTo(null);
+  });
+
   /** A chat from the list, or a stranger's chat that belongs to the requests group. */
   function select(next: Chat) {
     setRequestJid(isRequest(next) ? next.peerJid : null);
+    setInvitationJid(null);
     setSelected(next);
   }
 
   function selectRequest(row: RequestRow) {
     setRequestJid(row.jid);
+    setInvitationJid(null);
     setSelected(null);
+  }
+
+  function selectInvitation(next: RoomInvitation) {
+    setInvitationJid(next.roomJid);
+    setRequestJid(null);
+    setSelected(null);
+  }
+
+  /** A hall just created or joined: open it. */
+  function openRoom(room: Room) {
+    select(roomChat(room));
   }
 
   async function openWith(jid: string) {
@@ -237,15 +270,19 @@ export function Main({ account, onOpenLink, onSaveFile, onLeave }: MainProps) {
         rooms={rooms}
         contacts={contacts}
         requests={requests.rows}
+        invitations={invitations.invitations}
         selectedChatId={chat?.id ?? null}
         selectedRequestJid={request?.jid ?? null}
+        selectedInvitationJid={invitation?.roomJid ?? null}
         searchRef={searchRef}
         error={dialog ? null : error}
         onSelectChat={select}
         onSelectContact={(c: Contact) => void openWith(c.jid)}
         onSelectRequest={selectRequest}
+        onSelectInvitation={selectInvitation}
         onLeaveRoom={setLeavingRoom}
         onNewChat={() => setDialog('newChat')}
+        onCreateRoom={() => setDialog('createRoom')}
         onJoinRoom={() => setDialog('joinRoom')}
         onAddContact={() => setDialog('addContact')}
         onMyDevices={() => setDialog('myDevices')}
@@ -288,6 +325,20 @@ export function Main({ account, onOpenLink, onSaveFile, onLeave }: MainProps) {
             onOpenLink={onOpenLink}
             onSaveFile={onSaveFile}
           />
+        ) : invitation ? (
+          <HallInvitation
+            key={invitation.roomJid}
+            invitation={invitation}
+            contacts={contacts}
+            onJoined={(joined) => {
+              invitations.refresh();
+              openRoom(joined);
+            }}
+            onDeclined={() => {
+              invitations.refresh();
+              setInvitationJid(null);
+            }}
+          />
         ) : chat ? (
           <Conversation
             // A new key per chat: the draft, the loaded messages and in-flight work stay with their chat.
@@ -303,6 +354,7 @@ export function Main({ account, onOpenLink, onSaveFile, onLeave }: MainProps) {
             uploads={uploads.forChat(chat.id)}
             draft={draft?.chatId === chat.id ? draft.body : undefined}
             onDraftTaken={takeDraft}
+            onInvite={room ? () => setInviteTo(room) : undefined}
           />
         ) : welcoming ? (
           <section className={EMPTY}>
@@ -348,6 +400,7 @@ export function Main({ account, onOpenLink, onSaveFile, onLeave }: MainProps) {
                 setSelected(null);
                 setDetailsOpen(false);
               }}
+              onInvite={room ? () => setInviteTo(room) : undefined}
             />
           </div>
         </>
@@ -373,8 +426,20 @@ export function Main({ account, onOpenLink, onSaveFile, onLeave }: MainProps) {
           error={error}
           onOpen={(jid) => void openWith(jid)}
           onJoined={(joined) => {
-            setSelected(roomChat(joined));
+            openRoom(joined);
             closeDialog();
+          }}
+          onClose={closeDialog}
+        />
+      )}
+      {dialog === 'createRoom' && (
+        <CreateRoom
+          account={account}
+          // The new hall opens, and the invite dialog with it: a hall starts with its people.
+          onCreated={(created) => {
+            openRoom(created);
+            closeDialog();
+            setInviteTo(created);
           }}
           onClose={closeDialog}
         />
@@ -383,11 +448,14 @@ export function Main({ account, onOpenLink, onSaveFile, onLeave }: MainProps) {
         <JoinRoom
           account={account}
           onJoined={(joined) => {
-            setSelected(roomChat(joined));
+            openRoom(joined);
             closeDialog();
           }}
           onClose={closeDialog}
         />
+      )}
+      {inviteTo && (
+        <InviteToRoom room={inviteTo} contacts={contacts} onClose={() => setInviteTo(null)} />
       )}
       {dialog === 'addContact' && <AddContact onClose={closeDialog} />}
       {dialog === 'myDevices' && <MyDevices onClose={closeDialog} />}

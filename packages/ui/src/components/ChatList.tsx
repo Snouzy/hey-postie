@@ -1,5 +1,5 @@
 import type { Chat, Contact, Room } from '@hey-postie/core';
-import { Users } from 'lucide-react';
+import { BellOff, Lock, Users } from 'lucide-react';
 import { type KeyboardEvent, useState } from 'react';
 import { useLocale, useText } from '../core/CoreProvider';
 import { formatRecent } from '../i18n/dates';
@@ -66,14 +66,17 @@ export function ChatList({
   return (
     <ul className="m-0 flex list-none flex-col gap-[2px] px-2 py-0" onKeyDown={moveWithArrows}>
       {chats.map((chat) => {
-        const room = onLeaveRoom && chat.kind === 'room' ? roomOf(chat) : undefined;
+        const record = chat.kind === 'room' ? roomOf(chat) : undefined;
+        const room = onLeaveRoom ? record : undefined;
+        const muted = record?.notify === 'none';
         return (
           // A row with a menu: the "⋯" (RoomRowMenu) sits over the time's corner.
           <li key={chat.id} className="group/row relative">
             <button
               type="button"
               data-row=""
-              className={ROW}
+              // A hall whose bell never rings steps back: half ink, a bell-off after its name.
+              className={cn(ROW, muted && 'opacity-50')}
               aria-current={chat.id === selectedId ? 'true' : undefined}
               onClick={() => onSelect(chat)}
               onContextMenu={
@@ -94,7 +97,19 @@ export function ChatList({
                       <span className="sr-only">{text('chatList.room')} </span>
                     </>
                   )}
+                  {record?.visibility === 'private' && (
+                    <>
+                      <Lock size={12} className="-ml-1 shrink-0 text-ink-muted" aria-hidden />
+                      <span className="sr-only">{text('chatList.private')} </span>
+                    </>
+                  )}
                   <span className="min-w-0 flex-1 truncate font-semibold">{chat.title}</span>
+                  {muted && (
+                    <>
+                      <BellOff size={12} className="shrink-0 text-ink-muted" aria-hidden />
+                      <span className="sr-only">{text('chatList.muted')}</span>
+                    </>
+                  )}
                   {chat.lastMessage && (
                     <time
                       // The "⋯" takes the corner while the row is hovered or holds the focus.
@@ -158,14 +173,18 @@ function Badge({ mentions, unread }: { mentions: number; unread: number }) {
   return null;
 }
 
-/** Up and Down move between the `button[data-row]` of a list; shared with `RequestList`. */
-export function moveWithArrows(event: KeyboardEvent<HTMLUListElement>) {
-  if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') return;
+/**
+ * Up and Down move between the `button[data-row]` inside the element that hears the keys; shared
+ * with `RequestList` and `InvitationList`. At the end of a list the key is left alone, so the
+ * sidebar, which hears it next, moves on to the next group's rows.
+ */
+export function moveWithArrows(event: KeyboardEvent<HTMLElement>) {
+  if (event.defaultPrevented || (event.key !== 'ArrowDown' && event.key !== 'ArrowUp')) return;
   const rows = [...event.currentTarget.querySelectorAll<HTMLButtonElement>('button[data-row]')];
   const active = document.activeElement;
   const index = active instanceof HTMLButtonElement ? rows.indexOf(active) : -1;
-  if (index === -1) return;
+  const next = index === -1 ? undefined : rows[event.key === 'ArrowDown' ? index + 1 : index - 1];
+  if (!next) return;
   event.preventDefault();
-  const next = rows[event.key === 'ArrowDown' ? index + 1 : index - 1];
-  next?.focus();
+  next.focus();
 }

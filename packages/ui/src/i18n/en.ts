@@ -384,6 +384,57 @@ export const en = {
   'welcomeCard.room': 'Join a hall to talk with a few people at once.',
   'welcomeCard.sealed': 'Your letters are sealed whenever the other side has a key.',
   'welcomeCard.dismiss': 'Got it',
+
+  'main.createRoom': 'Create a hall',
+  'chatList.private': 'Private',
+  'chatList.muted': 'Bell off',
+  'sidebar.invitations': 'Invitations',
+  'sidebar.halls': 'Halls',
+  'sidebar.letters': 'Letters',
+  'sidebar.hallsAdd': 'Halls: create or join',
+  'sidebar.hallsEmpty': 'You are in no hall yet.',
+  'sidebar.lettersEmpty': 'No letter with anyone yet.',
+
+  'createRoom.title': 'Create a hall',
+  'createRoom.intro':
+    'A hall gathers a few people around one subject. I carry every letter to everyone in it.',
+  'createRoom.name': 'Name',
+  'createRoom.namePlaceholder': 'Release notes',
+  'createRoom.address': 'Address',
+  'createRoom.description': 'Description (optional)',
+  'createRoom.visibility': 'Who can come in',
+  'createRoom.private': 'Private',
+  'createRoom.privateHint': 'By invitation only. Its letters can be sealed.',
+  'createRoom.public': 'Public',
+  'createRoom.publicHint': 'Listed on the server: anyone can walk in.',
+  'createRoom.submit': 'Create',
+  'createRoom.creating': 'Creating…',
+
+  'invite.title': 'Invite people to {name}',
+  'invite.search': 'Name or address',
+  'invite.chosen': 'People to invite',
+  'invite.remove': 'Remove {name}',
+  'invite.results': 'People found',
+  'invite.add': 'Add {name}',
+  'invite.addShort': 'Add',
+  'invite.nobody': 'I know nobody by that name. An address reads name@server.',
+  'invite.nobodyLeft':
+    'Everyone in your address book is chosen or already here. Paste an address to invite someone else.',
+  'invite.already': 'Already in this hall',
+  'invite.submit': 'Invite',
+  'invite.sending': 'Inviting…',
+  'room.invite': 'Invite people',
+  'roomIntro.title': 'This is the beginning of {name}',
+  'roomIntro.hint': 'No letter here yet. Bring a few people in, and I will carry the first one.',
+
+  'invitation.from': 'From {name}',
+  'invitation.explain': '{name} invites you to this hall.',
+  'invitation.stranger': 'They are not in your address book.',
+  'invitation.reason': 'Their note',
+  'invitation.joining':
+    'Joining adds the hall to your list, and its members will see you there. Declining tells them, politely.',
+  'invitation.join': 'Join',
+  'invitation.decline': 'Decline',
 } as const;
 
 export type MessageKey = keyof typeof en;

@@ -3,7 +3,7 @@
 _Written on 2026-10-16 from two research passes the same day (Buzz's channels, read in its
 `desktop/src`; Converse 14 and Prosody 13.0.7 for XEP-0045 room management). Asked by the author:
 "the adding, managing and display of a group, a bit like Slack", with Buzz as the model. Steps 1
-and 2 built on 2026-10-16 (section 8)._
+to 4 built on 2026-10-16 (section 8)._
 
 ## 1. Goal
 
@@ -163,7 +163,9 @@ declineInvitation(roomJid: string): Promise<void>;
 5. Hall panel and header.
 6. Browse halls.
 
-## 8. As built: steps 1 and 2 (2026-10-16)
+## 8. As built
+
+### Steps 1 and 2 (2026-10-16)
 
 - Core: `RoomAdminRepository` and `RoomInvitationRepository` (with fakes), the rules in
   `services/roomAdmin.ts` (spread into `RoomsService`), error codes `RoomExists` and
@@ -178,6 +180,20 @@ declineInvitation(roomJid: string): Promise<void>;
   anyone enters and `RoomExists` on a taken address; invite (bob gets it from alice and enters the
   private hall as a member); admin, topic, member, kick (status 307); bob's invitation reaches alice
   with no stray chat; destroy reported once.
+
+### Steps 3 and 4 (2026-10-16)
+
+- UI, as described in [ui.md](../development/ui.md#halls-the-slack-way): `SidebarGroup` (Invitations,
+  Halls, Letters; folded state per viewer in `localStorage`), the lock and the bell-off on hall
+  rows, the Halls "+" (Create a hall, Join a hall) and "Create a hall" in the sidebar's "+";
+  `CreateRoom`, `InviteToRoom`, `InvitationList` and `HallInvitation`, `RoomIntro` (the intro of an
+  empty hall), `useInvitations`; tests in `packages/ui/src/screens/Halls.test.tsx`.
+- Different from section 6: the Halls "+" offers "Join a hall" (the existing `JoinRoom`, with its
+  Browse tab) until Browse halls is rebuilt (step 6). "Invite people" is reached from the new
+  hall, its intro and a temporary button in `RoomDetails` (only while joined), until the hall panel
+  (step 5). An invitation shows the hall by its address's local part: an invitation carries no
+  name, and nothing of the hall is read before joining. A destroyed hall's letters, when it had
+  some, stay listed like a hall left for good.
 
 ## Points to check
 

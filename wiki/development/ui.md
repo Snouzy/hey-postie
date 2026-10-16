@@ -82,7 +82,7 @@ from there. A failed load is never an empty state (`RetryNotice`).
 
 | Where | Pose | Title | Button |
 |---|---|---|---|
-| `ChatList`, no chat | `writing` | No letter yet | "Start a chat" → the New chat dialog (`Sidebar` hands `onNewChat` as `onStartChat`). Not shown while the "Letters from strangers" group has rows: the list is not empty to the reader. |
+| `ChatList`, no chat | `writing` | No letter yet | "Start a chat" → the New chat dialog (`Sidebar` hands `onNewChat` as `onStartChat`). Not shown while the "Letters from strangers" group has rows or an invitation waits: the list is not empty to the reader. |
 | `ContactList`, no contact | `searching` | An empty address book | "Add a contact" → the Add contact dialog (`onAddContact`) |
 | `MessageList`, no letter in the open chat | `writing` | A blank page | none: the composer is right below |
 | `RoomBrowser`, nothing listed on the server | `searching` | No hall here | none |
@@ -93,8 +93,11 @@ from there. A failed load is never an empty state (`RetryNotice`).
 empty; `Conversation` passes it only once `useMessages().loaded` is true (the first page answered,
 or failed), so a chat whose history is still on its way does not flash "A blank page". The sidebar
 search with no match shows the same empty state as an empty list (not a separate "no result").
-There is no rooms-only list in the sidebar, so "no rooms" has no state of its own: a hall with no
-letter yet shows the blank page, and browsing shows "No hall here".
+When anything is listed (a hall, a letter, a stranger or an invitation), the Chats tab shows its
+groups instead (see [Halls the Slack way](#halls-the-slack-way)); an empty "Halls" or "Letters"
+group says so in one muted line, not with Postie. A hall with no letter yet shows its intro
+("This is the beginning of …", see below) instead of the blank page, and browsing shows "No hall
+here".
 
 ### First launch
 
@@ -450,6 +453,66 @@ are bare and lowercase from the core, so rows and halls are matched as-is.
 - The sidebar badge of a hall is the **mentions count** on stamp yellow when it is above zero,
   otherwise the unread count in a muted chip.
 
+## Halls the Slack way
+
+_Added 2026-10-16, steps 3 and 4 of the [spec](../specs/2026-10-16-halls-slack-design.md) (Buzz's
+channels as the model, our tokens). Sources: `components/Sidebar.tsx`, `SidebarGroup.tsx`,
+`InvitationList.tsx`, `CreateRoom.tsx`, `InviteToRoom.tsx`, `HallInvitation.tsx`, `RoomIntro.tsx`,
+`AddMenu.tsx`, `core/useInvitations.ts`, `core/useRooms.ts`, `core/settings.ts`,
+`screens/Main.tsx`, `screens/Halls.test.tsx`._
+
+- **Sidebar groups** (Chats tab): under "Letters from strangers", an **Invitations** group (only
+  when one waits, its count on stamp yellow), then **Halls** (the rows of `kind: 'room'`) and
+  **Letters** (the direct chats), each a `SidebarGroup`: an `h3` holding the heading button
+  (`aria-expanded`, chevron, uppercase like `ContactList`), the group a `section` named by its
+  title. Open by default; folding is a per-viewer convenience, kept in `localStorage`
+  `hey-postie:folded-groups` (a JSON list of the folded groups, `readFoldedGroups` /
+  `writeFoldedGroup` in `core/settings.ts`, same `try/catch` rules as the other choices). The
+  rows stay `ChatList`'s two-line rows with their badges and their "⋯"; a private hall
+  (`room.visibility === 'private'`) adds a 12px lock after the `users` icon (hidden "Private"), a
+  hall whose bell is `none` sits at 50% with a bell-off after its name (hidden "Bell off"). On the
+  Halls heading, a 24px "+" (`AddMenu size="small"`, "Halls: create or join"), shown while the
+  heading is hovered or holds the focus, opens "Create a hall" and "Join a hall". The sidebar's
+  own "+" gains "Create a hall" too. Nothing listed at all: the `ChatList` empty state as before.
+  The search filters every group (an invitation by its address or its inviter's name).
+- **Arrows across groups**: each list moves between its own rows (`moveWithArrows`); at its end
+  it leaves the key alone, and the sidebar's scroller, which hears it next, moves to the
+  neighbouring group's row.
+- **Create a hall** (`CreateRoom`, a 480px `Dialog`): one sentence on what a hall is; Name
+  (focused, placeholder "Release notes"); Address, derived live by `rooms.suggestAddress(name)`
+  until the user types in it, in monospace, with `@` and the hall service after it once
+  `rooms.roomService(account domain)` answers; Description (optional); "Who can come in" as two
+  radio cards (Private, the default, with the lock and "By invitation only. Its letters can be
+  sealed."; Public with the globe). "Create" calls `rooms.create`; meanwhile it reads
+  "Creating…" and the dialog is not closable. A refusal is Postie's sentence (`errorKey`), the
+  field at fault `aria-invalid` (name for `InvalidRoomName`, address for `RoomExists` /
+  `InvalidJid`). On success `Main` opens the hall and the invite dialog on it.
+- **Invite people** (`InviteToRoom`, 480px): a field over the address book (name or address);
+  each result (avatar, name, address) has an "Add" button; a typed or pasted address outside the
+  book is offered as a row of its own (the service validates it). Chosen people become chips
+  (removable, "Remove …"); Enter adds the first result while something is typed. People the hall
+  already holds (`rooms.people`, by real address) are listed apart under "Already in this hall",
+  without a button. "Invite" calls `rooms.invite(jid, chosen)` once; not closable meanwhile; a
+  refusal keeps the dialog with the sentence. Reached from the new hall, its intro, and a first
+  "Invite people" button in `RoomDetails` (only while joined) until the hall panel is rebuilt
+  (step 5).
+- **Invitations received**: `useInvitations()` reads `rooms.invitations()` and again on
+  `room.invited` and `room.destroyed`. A row shows the hall (its address's local part, the only
+  name an invitation carries) and "From …" (the contact's name, else the address or hall seat
+  as given). Selecting one shows `HallInvitation` in place of a conversation (`Main` keeps
+  `invitationJid` beside `requestJid`): the kraft card with the address in monospace, "… invites
+  you to this hall.", "They are not in your address book." for a stranger, their reason quoted
+  (text, never Postie's font, React escapes it), then "Join" (`rooms.acceptInvitation`, then the
+  hall opens) and "Decline" (`rooms.declineInvitation`, then back to "Pick a chat").
+- **A hall destroyed** (`room.destroyed`): `useRooms` keeps its JID aside for the session and
+  leaves it out of the list (an engine may still remember it as joined); a later `room.updated`
+  that bookmarks it again (joined or created anew) brings it back. `Main` closes it if it was
+  open. Its history, if any, stays a row like a hall left for good.
+- **A new hall's intro** (`RoomIntro`): the `empty` of a hall's `MessageList` once its first page
+  answered: "This is the beginning of …" in the heading font, the description from
+  `rooms.settings(jid)` when the server tells it, a line by Postie, and "Invite people" while
+  joined.
+
 ## Encryption (Postie Seal)
 
 _Added 2026-10-15, reworked after review the same day. Sources: `components/SealToggle.tsx`,
@@ -673,7 +736,7 @@ button is announced as such by screen readers. Decision of 2026-10-15; revisit i
 past two or three panels. The settings window, with six sections, is the one real `tablist`
 (see [Settings](#settings)). Enter in the composer sends, except while an
 IME is composing (`isComposing`). Arrow keys move
-between rows of the chat list (`ChatList.moveWithArrows`) and, in the "New chat" picker, move the
+between rows of the chat list (`ChatList.moveWithArrows`, across the sidebar's groups) and, in the "New chat" picker, move the
 active row under a focused field (`aria-activedescendant`, see [New chat](#new-chat)). Every control is a `<button>`,
 `<input>` or `<a>`, so Tab reaches it; `:focus-visible` is styled once in `tokens.css`.
 
@@ -815,6 +878,15 @@ sentence, focus back to "+", room service discovery, bad domain sentence, browse
 sender nick and mention highlight, Tab completion with the caret, outside a hall and "Join
 again", a room chat without a hall record, members by role and notify radios, Esc on the leave
 confirmation, leave with confirmation, a fresh hall on top, mentions badge),
+`Halls.test.tsx` (Halls then Letters with their rows, a group folded and still folded in the
+next window with the other one open, the lock and the bell-off, arrows from a hall to a letter
+and back, the Halls "+" menu, the empty state kept; Create: the address derived until edited
+with the service shown, `RoomExists` as Postie's sentence with the address invalid, success
+opens the hall and the invite dialog, the intro with the description and "Invite people";
+Invite: the book with who is in apart, a contact and two pasted addresses as chips, one removed,
+`rooms.invite` with the rest, a refusal keeps the dialog; Invitations: the group and the card
+with the reason as text, Join opens the hall, Decline tells the inviter; a destroyed hall leaves
+the list and its conversation),
 `Encryption.test.tsx` (the lock seals through the service and the composer hint follows, pending
 lock with `aria-busy` and a double click, `chat.updated` wins after the call, the no-key
 sentence, devices with formatted fingerprints and stamps, Verify / Block / Unblock through

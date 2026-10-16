@@ -1,15 +1,18 @@
-import type { Account, Chat, Contact, Room } from '@hey-postie/core';
-import { Search } from 'lucide-react';
+import type { Account, Chat, Contact, Room, RoomInvitation } from '@hey-postie/core';
+import { DoorOpen, MessageSquarePlus, Search, SquarePlus, UserPlus } from 'lucide-react';
 import { type RefObject, useState } from 'react';
 import { useText } from '../core/CoreProvider';
+import { inviterName } from '../core/useInvitations';
 import { isRequest, type RequestRow } from '../core/useRequests';
 import type { MessageKey } from '../i18n';
 import { AccountMenu } from './AccountMenu';
 import { AddMenu } from './AddMenu';
 import { Button } from './Button';
-import { ChatList } from './ChatList';
+import { ChatList, moveWithArrows } from './ChatList';
 import { ContactList } from './ContactList';
+import { InvitationList } from './InvitationList';
 import { RequestList } from './RequestList';
+import { SidebarGroup } from './SidebarGroup';
 
 export type SidebarTab = 'chats' | 'contacts';
 
@@ -27,6 +30,11 @@ const SEARCH =
 const SEARCH_INPUT =
   'min-w-0 flex-1 border-none bg-transparent px-0 py-2 text-ink outline-none placeholder:overflow-hidden placeholder:text-ellipsis';
 /** Connection banner: Postie speaks, so the heading font. */
+/** The "+" of the Halls heading: shown while the heading is hovered or holds the focus, or open. */
+const HALLS_ADD =
+  'opacity-0 group-focus-within/heading:opacity-100 group-hover/heading:opacity-100 aria-expanded:opacity-100';
+/** One muted line in an empty group (not while searching: the search empties groups on purpose). */
+const GROUP_EMPTY = 'm-0 px-5 py-1 text-[13px] text-ink-muted';
 const BANNER =
   "mx-3 my-0 flex flex-wrap items-center justify-between gap-2 rounded-sm bg-kraft-soft px-3 py-2 font-heading text-[14px] [font-variation-settings:'SOFT'_100] data-[tone=error]:text-red";
 
@@ -41,17 +49,22 @@ interface SidebarProps {
   contacts: Contact[];
   /** The message requests: strangers asking, or writing before asking. */
   requests: RequestRow[];
+  /** Invitations to halls waiting for an answer. */
+  invitations: RoomInvitation[];
   selectedChatId: string | null;
   selectedRequestJid: string | null;
+  selectedInvitationJid: string | null;
   searchRef: RefObject<HTMLInputElement | null>;
   /** A failed background action (sign out, opening a chat), in Postie's words. */
   error: MessageKey | null;
   onSelectChat: (chat: Chat) => void;
   onSelectContact: (contact: Contact) => void;
   onSelectRequest: (row: RequestRow) => void;
+  onSelectInvitation: (invitation: RoomInvitation) => void;
   /** "Leave the hall…" from a room row. */
   onLeaveRoom: (room: Room) => void;
   onNewChat: () => void;
+  onCreateRoom: () => void;
   onJoinRoom: () => void;
   onAddContact: () => void;
   /** Opens the "My devices" dialog (own OMEMO keys). */
@@ -80,6 +93,23 @@ export function Sidebar(props: SidebarProps) {
   const contacts = needle
     ? props.contacts.filter((contact) => contact.name.toLowerCase().includes(needle))
     : props.contacts;
+  const invitations = needle
+    ? props.invitations.filter((invitation) =>
+        `${invitation.roomJid} ${inviterName(invitation, props.contacts)}`
+          .toLowerCase()
+          .includes(needle),
+      )
+    : props.invitations;
+  const halls = chats.filter((chat) => chat.kind === 'room');
+  const letters = chats.filter((chat) => chat.kind !== 'room');
+  // Strangers or invitations waiting: the list is not empty to the reader.
+  const nothing = chats.length === 0 && requests.length === 0 && invitations.length === 0;
+  const createRoom = {
+    label: text('main.createRoom'),
+    icon: SquarePlus,
+    action: props.onCreateRoom,
+  };
+  const joinRoom = { label: text('main.joinRoom'), icon: DoorOpen, action: props.onJoinRoom };
 
   return (
     <nav
@@ -143,13 +173,19 @@ export function Sidebar(props: SidebarProps) {
           />
         </label>
         <AddMenu
-          onNewChat={props.onNewChat}
-          onJoinRoom={props.onJoinRoom}
-          onAddContact={props.onAddContact}
+          label={text('main.add')}
+          items={[
+            { label: text('main.newChat'), icon: MessageSquarePlus, action: props.onNewChat },
+            createRoom,
+            joinRoom,
+            { label: text('main.addContact'), icon: UserPlus, action: props.onAddContact },
+          ]}
         />
       </div>
 
-      <div className="min-h-0 flex-1 overflow-y-auto">
+      {/* Each list moves its own rows with the arrows; at its end, this one moves to the next group. */}
+      {/* biome-ignore lint/a11y/noStaticElementInteractions: it hears the arrows of the row buttons inside; it takes no focus itself */}
+      <div className="min-h-0 flex-1 overflow-y-auto" onKeyDown={moveWithArrows}>
         {tab === 'chats' ? (
           <>
             <RequestList
@@ -157,17 +193,66 @@ export function Sidebar(props: SidebarProps) {
               selectedJid={props.selectedRequestJid}
               onSelect={props.onSelectRequest}
             />
-            {/* Strangers waiting at the door: the list is not empty to the reader. */}
-            {(chats.length > 0 || requests.length === 0) && (
+            {nothing ? (
               <ChatList
-                chats={chats}
-                rooms={props.rooms}
-                contacts={props.contacts}
-                selectedId={props.selectedChatId}
-                onSelect={props.onSelectChat}
-                onLeaveRoom={props.onLeaveRoom}
+                chats={[]}
+                selectedId={null}
+                onSelect={() => {}}
                 onStartChat={props.onNewChat}
               />
+            ) : (
+              <>
+                {invitations.length > 0 && (
+                  <SidebarGroup
+                    id="invitations"
+                    title={text('sidebar.invitations')}
+                    count={{ value: invitations.length, label: text('requests.waiting') }}
+                  >
+                    <InvitationList
+                      invitations={invitations}
+                      contacts={props.contacts}
+                      selectedJid={props.selectedInvitationJid}
+                      onSelect={props.onSelectInvitation}
+                    />
+                  </SidebarGroup>
+                )}
+                <SidebarGroup
+                  id="halls"
+                  title={text('sidebar.halls')}
+                  action={
+                    <AddMenu
+                      label={text('sidebar.hallsAdd')}
+                      items={[createRoom, joinRoom]}
+                      size="small"
+                      className={HALLS_ADD}
+                    />
+                  }
+                >
+                  {halls.length > 0 ? (
+                    <ChatList
+                      chats={halls}
+                      rooms={props.rooms}
+                      selectedId={props.selectedChatId}
+                      onSelect={props.onSelectChat}
+                      onLeaveRoom={props.onLeaveRoom}
+                    />
+                  ) : (
+                    !needle && <p className={GROUP_EMPTY}>{text('sidebar.hallsEmpty')}</p>
+                  )}
+                </SidebarGroup>
+                <SidebarGroup id="letters" title={text('sidebar.letters')}>
+                  {letters.length > 0 ? (
+                    <ChatList
+                      chats={letters}
+                      contacts={props.contacts}
+                      selectedId={props.selectedChatId}
+                      onSelect={props.onSelectChat}
+                    />
+                  ) : (
+                    !needle && <p className={GROUP_EMPTY}>{text('sidebar.lettersEmpty')}</p>
+                  )}
+                </SidebarGroup>
+              </>
             )}
           </>
         ) : (

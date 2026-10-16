@@ -9,8 +9,11 @@ interface DialogProps {
   onClose: () => void;
   /** False while an action is in flight: Esc and the X are ignored. Default true. */
   closable?: boolean;
-  /** `large`: a window-like card (the settings), its children lay out the inside. Default small. */
-  size?: 'small' | 'large';
+  /**
+   * `medium` (480px): a form with a few groups (create a hall, invite people). `large`: a
+   * window-like card (the settings), its children lay out the inside. Default small (400px).
+   */
+  size?: 'small' | 'medium' | 'large';
   children: ReactNode;
 }
 
@@ -19,6 +22,7 @@ const BACKDROP =
   'fixed inset-0 z-dialog flex items-center justify-center bg-[rgb(0_0_0/0.35)] animate-[dialog-fade_var(--motion)_ease-out]';
 const CARD =
   'flex max-h-[calc(100%_-_var(--space-8))] w-[min(400px,calc(100%_-_var(--space-8)))] flex-col gap-4 overflow-y-auto rounded bg-paper-raised p-6 shadow-card';
+const MEDIUM = 'w-[min(480px,calc(100%_-_var(--space-8)))]';
 // A window inside the window: as wide as the settings need, never past the minimum window size.
 const LARGE =
   'h-[min(640px,calc(100%_-_var(--space-8)))] w-[min(880px,calc(100%_-_var(--space-8)))]';
@@ -83,7 +87,7 @@ export function Dialog({ title, onClose, closable = true, size = 'small', childr
     <div ref={backdrop} className={BACKDROP}>
       <div
         ref={card}
-        className={cn(CARD, size === 'large' && LARGE)}
+        className={cn(CARD, size === 'medium' && MEDIUM, size === 'large' && LARGE)}
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}

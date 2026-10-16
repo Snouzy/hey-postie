@@ -4,15 +4,7 @@ import { useLocale, useText } from '../core/CoreProvider';
 import type { RequestRow } from '../core/useRequests';
 import { formatRecent } from '../i18n/dates';
 import { moveWithArrows } from './ChatList';
-
-/** The same uppercase heading as the address book, but a button that folds the group. */
-const HEADING =
-  'flex w-full cursor-pointer items-center gap-1 rounded-sm border-none bg-transparent px-3 py-2 text-left font-text text-[12px] font-bold tracking-[0.04em] text-ink-muted uppercase hover:bg-fill-hover';
-/** The count on stamp yellow: a stranger at the door is worth a look. */
-const BADGE =
-  'min-w-5 shrink-0 rounded-full bg-yellow px-[6px] py-0 text-center text-[12px] leading-[20px] font-bold tracking-normal text-on-yellow';
-const ROW =
-  'flex w-full cursor-pointer flex-col gap-[2px] rounded-sm border-none bg-transparent px-3 py-2 text-left text-ink transition-[background-color] duration-(--motion-fast) hover:bg-fill-hover aria-[current=true]:bg-fill-chosen';
+import { GROUP_BADGE as BADGE, GROUP_HEADING as HEADING, GROUP_ROW as ROW } from './SidebarGroup';
 
 interface RequestListProps {
   rows: RequestRow[];

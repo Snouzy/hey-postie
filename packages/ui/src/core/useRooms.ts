@@ -6,23 +6,34 @@ import { useCoreEvent } from './useCoreEvent';
 /**
  * The halls as the service sorts them, re-read on every `room.updated` (a topic, a count, a join
  * or a leave from elsewhere). Same request counter as `useChats`: only the latest answer counts.
+ * A hall destroyed (`room.destroyed`) leaves the list for the session, whatever the engine still
+ * remembers of it; it comes back only once bookmarked again (joined or created anew).
  */
 export function useRooms(): { rooms: Room[]; refresh: () => Promise<void> } {
   const core = useCore();
   const [rooms, setRooms] = useState<Room[]>([]);
   const requests = useRef(0);
+  const destroyed = useRef(new Set<string>());
   const refresh = useCallback(async () => {
     requests.current += 1;
     const mine = requests.current;
     try {
       const list = await core.rooms.list();
-      if (mine === requests.current) setRooms(list.filter((r) => r.joined || r.bookmarked));
+      const kept = list.filter((r) => (r.joined || r.bookmarked) && !destroyed.current.has(r.jid));
+      if (mine === requests.current) setRooms(kept);
     } catch {
       if (mine === requests.current) setRooms([]);
     }
   }, [core]);
   useEffect(() => void refresh(), [refresh]);
-  useCoreEvent('room.updated', () => void refresh());
+  useCoreEvent('room.updated', (room) => {
+    if (room.bookmarked) destroyed.current.delete(room.jid);
+    void refresh();
+  });
+  useCoreEvent('room.destroyed', ({ jid }) => {
+    destroyed.current.add(jid);
+    void refresh();
+  });
   return { rooms, refresh };
 }
 

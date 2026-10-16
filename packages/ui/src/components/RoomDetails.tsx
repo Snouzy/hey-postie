@@ -1,5 +1,5 @@
 import type { Room, RoomMember, RoomNotify } from '@hey-postie/core';
-import { X } from 'lucide-react';
+import { UserPlus, X } from 'lucide-react';
 import { useState } from 'react';
 import { useCore, useText } from '../core/CoreProvider';
 import { useRoomMembers } from '../core/useRoomMembers';
@@ -18,6 +18,8 @@ interface RoomDetailsProps {
   onLeft: () => void;
   /** Counts the "Check their devices" requests; each new one focuses the Encryption section. */
   focusRequest?: number;
+  /** Opens the invite dialog on this hall (a first entry, until the hall panel is rebuilt). */
+  onInvite?: (() => void) | undefined;
 }
 
 const ROLES: readonly RoomMember['role'][] = ['moderator', 'participant', 'visitor'];
@@ -30,6 +32,7 @@ export function RoomDetails({
   onChanged,
   onLeft,
   focusRequest = 0,
+  onInvite,
 }: RoomDetailsProps) {
   const core = useCore();
   const text = useText();
@@ -59,6 +62,12 @@ export function RoomDetails({
       </header>
       <p className="m-0 wrap-anywhere">{room.topic || text('room.topicEmpty')}</p>
       <p className="m-0 font-mono text-[13px] text-ink-muted wrap-anywhere">{room.jid}</p>
+      {onInvite && room.joined && (
+        <Button onClick={onInvite}>
+          <UserPlus size={16} aria-hidden />
+          {text('room.invite')}
+        </Button>
+      )}
 
       <section className="flex flex-col gap-3" aria-label={text('room.members')}>
         {/* Postie keeps the door open: his voice, so the heading font. */}

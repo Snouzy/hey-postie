@@ -21,6 +21,7 @@ import { actionsFor, type MessageAction } from './MessageActions';
 import { MessageList } from './MessageList';
 import { PendingParcel } from './PendingParcel';
 import { PresenceDot } from './PresenceDot';
+import { RoomIntro } from './RoomIntro';
 import { SealToggle } from './SealToggle';
 
 interface ConversationProps {
@@ -41,6 +42,8 @@ interface ConversationProps {
   /** A letter Claude prepared for this chat, waiting to land in the composer. */
   draft?: string | undefined;
   onDraftTaken?: (() => void) | undefined;
+  /** "Invite people" from a new hall's intro. */
+  onInvite?: (() => void) | undefined;
 }
 
 /** The center column: header, messages, composer. Owns the messages of the open chat. */
@@ -56,6 +59,7 @@ export function Conversation({
   uploads,
   draft,
   onDraftTaken,
+  onInvite,
 }: ConversationProps) {
   const core = useCore();
   const text = useText();
@@ -198,14 +202,18 @@ export function Conversation({
         showSenders={chat.kind === 'room'}
         onShowDevices={hasDetails ? onOpenEncryption : undefined}
         empty={
-          letters.loaded && (
+          letters.loaded &&
+          (room ? (
+            // A hall's first page: where it starts, and who to bring in.
+            <RoomIntro room={room} onInvite={room.joined ? onInvite : undefined} />
+          ) : (
             <EmptyState
               size="full"
               illustration={<Postie mood="writing" label={text('postie.alt.writing')} size={120} />}
               title={text('conversation.empty')}
               sentence={text('conversation.emptyHint')}
             />
-          )
+          ))
         }
         // A parcel that landed is already in the list: its bubble is not drawn once more.
         footer={uploads.list

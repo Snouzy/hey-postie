@@ -19,6 +19,7 @@ const NOTIFY_PREVIEW_KEY = 'hey-postie:notify-preview';
 const WELCOMED_KEY = 'hey-postie:welcomed';
 const PANES_KEY = 'hey-postie:panes';
 const ASSISTANT_KEY = 'hey-postie:assistant';
+const FOLDED_GROUPS_KEY = 'hey-postie:folded-groups';
 
 /** The widths of the side columns of the main screen, and whether the sidebar is folded. */
 export interface PaneSizes {
@@ -137,9 +138,24 @@ export function writePaneSizes(sizes: PaneSizes) {
   write(PANES_KEY, JSON.stringify(sizes));
 }
 
+/** The groups of the sidebar's Chats tab ("Invitations", "Halls", "Letters") the viewer folded. */
+export function readFoldedGroups(): string[] {
+  return stringList(FOLDED_GROUPS_KEY);
+}
+
+export function writeFoldedGroup(group: string, folded: boolean) {
+  const others = readFoldedGroups().filter((name) => name !== group);
+  write(FOLDED_GROUPS_KEY, JSON.stringify(folded ? [...others, group] : others));
+}
+
 function welcomedAccounts(): string[] {
+  return stringList(WELCOMED_KEY);
+}
+
+/** A stored JSON list of strings; anything else reads as empty. */
+function stringList(key: string): string[] {
   try {
-    const parsed: unknown = JSON.parse(read(WELCOMED_KEY) ?? '[]');
+    const parsed: unknown = JSON.parse(read(key) ?? '[]');
     return Array.isArray(parsed) ? parsed.filter((item) => typeof item === 'string') : [];
   } catch {
     return [];
