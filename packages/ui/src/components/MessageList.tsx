@@ -1,13 +1,16 @@
 import type { Message } from '@hey-postie/core';
 import { type ReactNode, useEffect, useState } from 'react';
 import { useLocale, useText } from '../core/CoreProvider';
-import { readEmojiUsage } from '../core/settings';
+import { type Density, readEmojiUsage } from '../core/settings';
 import { favouriteEmojis } from '../data/emoji';
 import { dayKey, dayLabel } from '../i18n/dates';
+import { cn } from '../lib/cn';
 import type { SaveFile } from './Attachments';
 import { Avatar } from './Avatar';
+import { DENSITY_CLASSES } from './density';
 import type { MessageAction } from './MessageActions';
 import { MessageBubble } from './MessageBubble';
+import { MessageLine } from './MessageLine';
 import { NewDivider } from './NewDivider';
 import { NewLettersPill } from './NewLettersPill';
 import { replyAuthor } from './replies';
@@ -53,8 +56,14 @@ interface MessageListProps {
   /** My nick in a hall: the mention chip naming me stands out. */
   ownNick?: string | undefined;
   onSaveFile: SaveFile;
-  /** In a hall: the sender's nick above each run of incoming messages. */
+  /** In a hall: the sender's nick above each run of incoming messages, and on each line. */
   showSenders?: boolean;
+  /** Bubbles, or lines (Slack, Buzz): resolved from the setting by the conversation. */
+  layout?: 'bubbles' | 'lines';
+  /** The room between letters (Settings › Appearance). */
+  density?: Density;
+  /** My name on my lines in a direct chat (a hall shows my nick). */
+  ownName?: string;
   /** From a letter sealed for another device: opens the sender's devices. */
   onShowDevices?: (() => void) | undefined;
   /** Rendered after the last message, inside the scroller: the parcels on their way. */
@@ -94,6 +103,9 @@ export function MessageList({
   ownNick,
   onSaveFile,
   showSenders = false,
+  layout = 'bubbles',
+  density = 'comfortable',
+  ownName = '',
   onShowDevices,
   footer,
   empty,
@@ -132,6 +144,14 @@ export function MessageList({
 
   const loaded = new Set(messages.map((message) => message.id));
   const you = text('reply.you');
+  const lines = layout === 'lines';
+  const spacing = DENSITY_CLASSES[density];
+
+  /** Who wrote a letter, on its line: the nick in a hall, else the peer or me. */
+  function nameOf(message: Message): string {
+    if (showSenders) return senderOf(message);
+    return message.direction === 'out' ? ownName || you : peerName;
+  }
 
   async function act(message: Message, action: MessageAction) {
     if (action !== 'copy') return onAction?.(message, action);
@@ -156,46 +176,59 @@ export function MessageList({
       >
         {messages.length === 0 && empty}
         {groupByDay(messages, newFrom).map((day) => (
-          <section key={day.key} className="flex flex-col gap-3">
+          <section
+            key={day.key}
+            className={cn('flex flex-col', lines ? spacing.lineRuns : spacing.bubbleRuns)}
+          >
             <h3 className={SEPARATOR}>{dayLabel(locale, day.date, text)}</h3>
             {day.runs.map((run) => (
               // A run of messages from one sender: tight spacing inside, room between runs.
               <div
                 key={run.messages[0]?.id}
-                className="flex flex-col gap-1"
+                className={cn('flex flex-col', !lines && spacing.bubbles)}
                 data-from={run.fromJid}
               >
                 {run.isNew && <NewDivider />}
-                {showSenders && run.messages[0]?.direction === 'in' && (
+                {!lines && showSenders && run.messages[0]?.direction === 'in' && (
                   <span className={SENDER}>
                     <Avatar name={senderOf(run.messages[0])} jid={run.fromJid} size={20} />
                     {senderOf(run.messages[0])}
                   </span>
                 )}
-                {run.messages.map((message, index) => (
-                  <MessageBubble
-                    key={message.id}
-                    message={message}
-                    last={index === run.messages.length - 1}
-                    onRetry={onRetry}
-                    onOpenLink={onOpenLink}
-                    onReact={onReact}
-                    onAction={onAction && act}
-                    canModerate={canModerate}
-                    onSaveFile={onSaveFile}
-                    onShowDevices={onShowDevices}
-                    quickEmojis={quickEmojis}
-                    canReply={canReply}
-                    ownNick={ownNick}
-                    replyAuthor={message.replyTo && replyAuthor(message.replyTo, peerName, you)}
-                    onJumpToReply={
+                {run.messages.map((message, index) => {
+                  const letter = {
+                    message,
+                    last: index === run.messages.length - 1,
+                    onRetry,
+                    onOpenLink,
+                    onReact,
+                    onAction: onAction && act,
+                    canModerate,
+                    onSaveFile,
+                    onShowDevices,
+                    quickEmojis,
+                    canReply,
+                    ownNick,
+                    replyAuthor: message.replyTo && replyAuthor(message.replyTo, peerName, you),
+                    onJumpToReply:
                       message.replyTo && loaded.has(message.replyTo.id)
                         ? () => jumpTo(message.replyTo?.id ?? '')
-                        : undefined
-                    }
-                    highlighted={highlighted === message.id}
-                  />
-                ))}
+                        : undefined,
+                    highlighted: highlighted === message.id,
+                  };
+                  return lines ? (
+                    <MessageLine
+                      key={message.id}
+                      {...letter}
+                      first={index === 0}
+                      name={nameOf(message)}
+                      avatarJid={run.fromJid}
+                      spacing={spacing.line}
+                    />
+                  ) : (
+                    <MessageBubble key={message.id} {...letter} />
+                  );
+                })}
               </div>
             ))}
           </section>

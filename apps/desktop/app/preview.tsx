@@ -1,6 +1,7 @@
 /**
  * The interface on fakes, for screenshots (dev only, never in the app bundle). URL parameters:
- * `theme=dark|light`, `signin=1` to stay on the sign-in screen, `click=Bob|Settings…` to click,
+ * `theme=dark|light`, `layout=bubbles|lines`, `density=compact|spacious`, `signin=1` to stay on
+ * the sign-in screen, `click=Bob|Settings…` to click,
  * in order, the element named by each label (aria-label), else the deepest one whose text contains it.
  */
 import { createCore, createFakeDependencies } from '@hey-postie/core';
@@ -14,6 +15,15 @@ if (theme) {
   // The app applies the stored choice (core/useTheme.ts), so store it rather than set the attribute.
   localStorage.setItem('hey-postie:theme', theme);
   document.documentElement.dataset.theme = theme;
+}
+
+// The appearance choices the app reads from storage (core/settings.ts).
+for (const [param, key] of [
+  ['layout', 'hey-postie:letters-layout'],
+  ['density', 'hey-postie:density'],
+] as const) {
+  const value = params.get(param);
+  if (value) localStorage.setItem(key, value);
 }
 
 // Screenshots catch the final state: no transition half way, no blinking caret.
@@ -79,15 +89,41 @@ room.change({
   unreadCount: 3,
   mentionsCount: 1,
 });
-chat.receive({
-  chatId: 'hall@rooms.example.org',
-  kind: 'room',
-  fromJid: 'hall@rooms.example.org/carol',
-  fromNick: 'carol',
-  body: '@me can you check this?',
-  isMention: true,
-  sentAt: at(6),
+const hallLetter = (minute: number, nick: string, body: string, extra = {}) =>
+  chat.receive({
+    chatId: 'hall@rooms.example.org',
+    kind: 'room',
+    fromJid: `hall@rooms.example.org/${nick}`,
+    fromNick: nick,
+    body,
+    sentAt: at(minute),
+    ...extra,
+  });
+hallLetter(6, 'dan', 'Morning all! The *new* sorting machine is in, _finally_.');
+hallLetter(
+  7,
+  'dan',
+  'Notes from the visit:\n> it ~jams~ hums along\n```\nspeed: 4000 letters/h\n```',
+  {
+    reactions: [{ emoji: '🎉', fromJids: ['hall@rooms.example.org/me'], mine: true }],
+  },
+);
+hallLetter(8, 'me', 'Great, I will try `sort --fast` this afternoon.', {
+  direction: 'out',
+  status: 'delivered',
+  edited: true,
 });
+hallLetter(9, 'bob', 'Write-up here: https://example.org/sorting', {
+  linkPreviews: [
+    {
+      url: 'https://example.org/sorting',
+      title: 'How the new sorting machine works',
+      description: 'Four thousand letters an hour, and a gentle touch for parcels.',
+      siteName: 'Example Post',
+    },
+  ],
+});
+hallLetter(10, 'carol', '@me can you check this?', { isMention: true });
 
 const core = createCore(deps);
 const root = document.getElementById('root');

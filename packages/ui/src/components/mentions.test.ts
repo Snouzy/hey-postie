@@ -1,12 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import {
-  completeNick,
-  insertMention,
-  MENTION_LIMIT,
-  mentionAt,
-  mentionSegments,
-  rankMentions,
-} from './mentions';
+import { completeNick, insertMention, MENTION_LIMIT, mentionAt, rankMentions } from './mentions';
 
 describe('mentionAt', () => {
   it('finds an @ at a word start, with what follows up to the caret', () => {
@@ -60,17 +53,5 @@ describe('completeNick', () => {
     expect(completeNick('hi @bre', 7, nicks)).toEqual({ body: 'hi @brenda ', caret: 11 });
     expect(completeNick('hi zed', 6, nicks)).toBeNull();
     expect(completeNick('hi @', 4, nicks)).toBeNull();
-  });
-});
-
-describe('mentionSegments', () => {
-  it('cuts the body around the mentions, keeping their text', () => {
-    const mention = { begin: 3, end: 7, nick: 'anna' };
-    expect(mentionSegments('hi anna, ok', [mention])).toEqual([
-      { text: 'hi ' },
-      { text: 'anna', mention },
-      { text: ', ok' },
-    ]);
-    expect(mentionSegments('plain')).toEqual([{ text: 'plain' }]);
   });
 });

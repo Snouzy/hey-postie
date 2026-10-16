@@ -161,7 +161,7 @@ avatar, status sentence, logs) is left out rather than shown dead.
 |---|---|---|
 | General | Language as radios "System language" / "English" / "Français" (each language named in itself, whatever the current one). | The locale handed to `CoreProvider`; remembered in `localStorage` `hey-postie:locale`. |
 | Account | Display name and JID (read-only until a service can change them), whether the password is kept (`accounts.rememberedPassword`, nothing said until the keychain answers), "Sign out" and "Delete my account…" with a plain hint. | `accounts.signOut` through `Main`; delete opens `DeleteAccountDialog` **in place of** the window and comes back to it on close (focus on that button). |
-| Appearance | Radios "Follow the system" / "Light" / "Dark" (`fieldset` + `legend`). | `data-theme` on `<html>` (`'light'` / `'dark'`, removed for "system": the tokens then follow `prefers-color-scheme`), remembered in `localStorage` `hey-postie:theme`. |
+| Appearance | Radios "Follow the system" / "Light" / "Dark" (`fieldset` + `legend`); "Letters": "Automatic: bubbles in direct chats, lines in halls" (default), "Bubbles", "Lines, one under the other"; "Density": "Compact" / "Comfortable" (default) / "Spacious", with its hint "Only the space between letters changes." (`aria-describedby`). See [Letters as lines](#letters-as-lines). | Theme: `data-theme` on `<html>` (`'light'` / `'dark'`, removed for "system": the tokens then follow `prefers-color-scheme`), remembered in `localStorage` `hey-postie:theme`. Letters and density: `localStorage` `hey-postie:letters-layout` (`bubbles`, `lines`, absent for automatic) and `hey-postie:density` (`compact`, `spacious`, absent for comfortable), read by `App` like the theme and handed down through `SettingsProvider`; `Conversation` resolves "Automatic" from the chat's kind. |
 | Notifications | A checkbox "Show the letter in notifications" with its explanation, and a line saying a hall's bell is set in the hall's own pane. | `core.notifications.setShowPreview(value)`; remembered in `localStorage` `hey-postie:notify-preview` (`off`, or absent). |
 | Privacy and encryption | `OwnDevices` with this device's fingerprint stated above the list, then how trust works (spec 3.6: blind trust, verify after comparing, own devices follow the same rule), why a stranger's picture waits for a click, and the blocked contacts (`BlockedContacts`: one sentence on what blocking does, the JIDs in monospace with "Unblock" each, "Nobody is blocked." when the list is empty). First of all, **Read stamps**: a checkbox "Tell others when I have read their letters", on by default, with its hint (`aria-describedby`): off, nobody sees that you read their letters, they still see that a letter reached you. | The rules live in the core; the sentences only explain them. Read stamps: `core.chats.setSendReadMarkers(value)` (no XEP-0333 `displayed` marker leaves when off; delivery receipts still do), remembered in `localStorage` `hey-postie:read-markers` (`off`, or absent) and told to the core at the first render of `App`, like the notification preview. The blocklist is the server's: `contacts.blocked()`, refreshed on the `contacts.blocked` event, `contacts.unblock(jid)`. |
 | Claude | `AssistantSection` (added 2026-10-16, [spec](../specs/2026-10-16-mcp-design.md)): the access as four radios (Off, Read my chats, Read my chats and prepare letters that I send myself, Read, prepare and also send when I ask Claude) with the sentence that what Claude reads leaves the computer for Anthropic; "Let Claude read sealed chats too" (disabled while off); the port (saved on blur or Enter, Postie's sentence on `InvalidPort`); "Copy the Claude Code command" (disabled while off; the token is copied, never shown) and "New token" in `danger`. | `core.assistant` holds the rule; the choice is remembered in `localStorage` `hey-postie:assistant` (JSON) and told to the core at the first render of `App`. The token stays in the keychain. |
@@ -774,6 +774,88 @@ _Lot B, items 8 to 10, added 2026-10-17. Sources: `NewDivider.tsx`, `ReplyQuote.
   `--yellow` with `--on-yellow`, like the "mentions you" highlight, which stays. A letter without
   references (another client that sends plain `@nick`) stays plain text.
 
+_Lot B, items 11 to 13, added 2026-10-17. Sources: `styling.ts`, `StyledText.tsx`,
+`MessageText.tsx`, `composerText.ts`, `Composer.tsx`, `MessageBubble.tsx`, `MessageLine.tsx`,
+`MessageBody.tsx`, `MessageToolbar.tsx`, `messageParts.tsx`, `density.ts`, `MessageList.tsx`,
+`LinkPreviews.tsx`, `core/useAutoLoad.ts`, `core/settings.ts`, `settings/AppearanceSection.tsx`;
+tests in `styling.test.ts`, `Styling.test.tsx`, `composerText.test.ts`, `MessageLine.test.tsx`,
+`LinkPreviews.test.tsx`, `screens/Halls.test.tsx` ("Letters in a hall"), `theme/layout.test.ts`._
+
+### Text styling (XEP-0393)
+
+- **The parser** (`styling.ts`, pure, our own): the body is cut into blocks, then each line into
+  spans, by the rules of [XEP-0393](https://xmpp.org/extensions/xep-0393.html) §6 (version 1.1.1,
+  read 2026-10-17). Blocks: a line starting with ```` ``` ```` opens a preformatted block, closed by
+  a line that is only ```` ``` ```` or by the end of its parent block (the rest of the opening line is
+  a hint, kept but not parsed); lines starting with `>` make a quote, parsed again inside without the
+  `>` and the first whitespace after it (`>>` nests); every other line is a plain block. Spans, only
+  in plain lines: `*strong*`, `_emphasis_`, `~strike~`, `` `code` ``. An opening directive sits at
+  the start of the line (or right after another opening directive), or after a whitespace, and is
+  followed by neither a whitespace nor itself; the first same directive after some text, not after a
+  whitespace, closes it (lazy); nothing crosses a line; code holds plain text only. So `**`, `***`,
+  `snake_case`, `2*3*4` and `a * b *` stay plain, and `*strong*plain*` is "strong" then "plain*", as
+  the spec's examples say (all of them are in `styling.test.ts`). Offsets are UTF-16 indexes into
+  the body, like the mentions'.
+- **Drawn as elements, never HTML** (`StyledText.tsx`): `<strong>` (700), `<em>`, `<s>`, `<code>`
+  on a 10% wash of the bubble's own ink, `<pre>` (mono 13px, wrapped, same wash), `<blockquote>` (a
+  3px bar at 40% of the ink). The span directives stay visible at 50% opacity, as XEP-0393 §8
+  recommends ("displayed and formatted in the same manner as the text they apply to"), and so do the
+  ``` fences; the quote's `>` becomes its bar. Plain stretches go back to `MessageText`, which draws
+  the mention chips wholly inside them and hands the rest to `Linkify`. The text is a `<p>` as
+  before, or a `<div>` when a quote or a code block needs a box.
+- **`<unstyled/>`**: a letter carrying it (the sender said "plain", e.g. `> _ <`) is drawn as plain
+  text: `Message.unstyled`, see [converse.md](converse.md#message-styling-and-link-previews).
+- **Composer**: Cmd/Ctrl+B, I and E wrap the selection in `*`, `_` and `` ` `` (`formatMarker`,
+  `wrapSelection` in `composerText.ts`) and select it again; nothing selected puts the pair with the
+  caret between. Each line is wrapped on its own and its outer spaces stay outside (a span cannot
+  cross a line and its directives must touch text); code over several lines becomes a ```` ``` ````
+  block on lines of its own. The keys stop there: Cmd+B in the composer does not fold the sidebar.
+
+### Letters as lines
+
+The second layout of [decision 4](../specs/2026-10-16-buzz-ui-tailwind-design.md) (Buzz's
+`MessageRow`, layout only), chosen in Settings › Appearance ("Automatic" by default: bubbles in
+direct chats, lines in halls; `Conversation` resolves it from `chat.kind` and hands `layout` to
+`MessageList`).
+
+- **One letter, two drawings, shared parts.** `MessageBubble` and `MessageLine` take the same
+  props (`LetterProps`) and draw the same pieces: `MessageBody` (the quote answered, the text or why
+  there is none, the help for a letter sealed for another device, parcels, link previews,
+  reactions), `MessageToolbar` (quick emojis, React, Reply, "⋯"), and `messageParts.tsx` (the stamp,
+  the wax, the "mentions you" note, Retry, the hover rule). Both are `group/letter`, so the hover
+  and focus rules are written once.
+- **A line**: a row across the column, no background but `bg-fill-hover` under the pointer or the
+  focus, rising to `z-float` with its toolbar like a bubble. The first row of a run has the 36px
+  avatar in a 36px gutter, then the name (14px, 700) and the time (12px, muted); the following rows
+  of the run show their time in the gutter on hover or focus only (Buzz's continuation rows). The
+  name is the nick in a hall, the peer's name in a direct chat, and the account's display name on
+  mine. The toolbar floats inside the row at its top right (`-top-4 right-2`), so it never pokes
+  past the list's edge. At the row's bottom right: the drop of wax of a sealed letter of mine and
+  "edited" (always shown, as Slack does), then the stamp of mine (navy when read, red when it failed)
+  with the bubble's rule: always on the last row of a run, on failure or while pending, else on
+  hover. A mention is the same stamp-yellow wash and bar as a bubble's, on the page's paper; a
+  jumped-to original wears the same yellow ring. Day dividers, the "New" line and Retry are the
+  same. In a hall's lines, the "sender above the run" label of bubbles is not drawn (the line has
+  it).
+- **Density** (`density.ts`): spacing only. Bubbles: runs 6 / 12 / 20px apart, bubbles in a run
+  2 / 4 / 8px (the toolbar still covers only the padding of the bubble above); lines: runs 4 / 8 /
+  16px apart, rows padded 0 / 2 / 6px.
+
+### Link previews in halls
+
+Only the previews a hall itself attaches to a letter reach the screen (the room's own JID fastens
+Open Graph metadata to it; never a member's, never fetched by the reader, who would tell the site
+their address and reading time; see [converse.md](converse.md#message-styling-and-link-previews)).
+`LinkPreviews` draws each one (at most three, `MAX_LINK_PREVIEWS` in the core) under the letter's
+parcels: a card with a 3px bar and a 5% wash of the letter's ink, max 420px wide, the site name
+(12px, muted), the title as a link in navy routed through `onOpenLink` (the page's address when there
+is no title) and the description on two lines at most (`line-clamp-2`), in a `<ul aria-label="Link
+previews">`. The page's picture (64px square, decorative `alt=""`) is shown only where the letter's
+pictures load by themselves (`files.autoLoad`, through `useAutoLoad`, shared with `Attachments`: my
+letters, contacts in the roster; a hall's occupant whose real JID is hidden never is), fetched
+through `files.fetch` like a parcel (never a raw URL in an `<img>`), a skeleton meanwhile, nothing
+at all if it fails. Elsewhere there is no picture and no "Load image" either.
+
 ## Emoji
 
 _Added 2026-10-15. Sources: `scripts/trim-emoji.mjs`, `data/emoji.json`, `data/emoji.ts`,
@@ -875,7 +957,8 @@ Cmd/Ctrl+K opens "Go to…" (`QuickSwitcher`, the Slack way, 2026-10-16): a comb
 the chats and halls (unread first, then by last activity) and the contacts without a chat; arrows
 move, Enter opens, Esc closes. Cmd/Ctrl+N opens "New chat". Both are heard in `Main` and wait
 while another dialog is open. The sidebar's search field stays for filtering the list in place.
-Cmd/Ctrl+B folds and unfolds the sidebar (see [Panes](#panes)). `App` writes the effective locale on
+Cmd/Ctrl+B folds and unfolds the sidebar (see [Panes](#panes)), except in the composer, where
+Cmd/Ctrl+B, I and E style the selection (see [Text styling](#text-styling-xep-0393)). `App` writes the effective locale on
 `<html lang>`, so a screen reader changes voice with the dictionary. The "+" of the sidebar opens a menu
 (`AddMenu`, `role="menu"`): focus lands on the first item, arrow keys cycle, Esc, Tab out, a
 click outside or picking an item closes it. Picking an item puts the focus back on "+" before
@@ -909,7 +992,9 @@ punctuation is left out of the link); the click is prevented. A web link goes to
 which `App` receives as a prop (default: `window.open`); the desktop app will route it to the
 system browser. An `xmpp:` link stays in the app: `Linkify` emits `chat.requested` with the bare
 JID and `Main` opens that chat. Nothing else in a body becomes clickable,
-and bodies are always rendered as text (no HTML).
+and bodies are always rendered as text (no HTML). Links stay links inside styled text (`MessageText`
+hands each plain stretch to `Linkify`), but not inside code. A hall's own link previews: see
+[Link previews in halls](#link-previews-in-halls).
 
 ## Accessibility audit 2026-10-16
 

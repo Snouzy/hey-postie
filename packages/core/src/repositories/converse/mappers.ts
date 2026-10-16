@@ -7,6 +7,7 @@ import type {
   Presence,
   Reaction,
 } from '../../contracts/types';
+import { linkPreviewsOf } from './link-previews';
 import type { ChatModel, ContactModel, MessageModel, ModelLike } from './models';
 import { isRead } from './read-markers';
 import { mentionsOf, replyOf, withoutReplyFallback } from './replies';
@@ -72,6 +73,10 @@ export function toMessage(model: MessageModel, context: MessageContext): Message
   if (replyTo) message.replyTo = replyTo;
   const mentions = context.ownNick === undefined ? [] : mentionsOf(model.get('references'), cut);
   if (message.body && mentions.length > 0) message.mentions = mentions;
+  if (model.get('is_unstyled') === true) message.unstyled = true;
+  // Halls only: Converse takes a preview from the room's own JID, never from a member.
+  const previews = context.ownNick === undefined ? [] : linkPreviewsOf(model.get('ogp_metadata'));
+  if (!retracted && previews.length > 0) message.linkPreviews = previews;
   return nick ? { ...message, fromNick: nick } : message;
 }
 

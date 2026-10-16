@@ -1,6 +1,7 @@
 import type { Attachment, Message } from '@hey-postie/core';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useCore } from '../core/CoreProvider';
+import { useAutoLoad } from '../core/useAutoLoad';
 import { InlineImage } from './InlineImage';
 import { ParcelCard } from './ParcelCard';
 
@@ -19,23 +20,9 @@ interface AttachmentsProps {
  */
 export function Attachments({ message, onSaveFile }: AttachmentsProps) {
   const core = useCore();
-  const [auto, setAuto] = useState<boolean | null>(null);
   const [loaded, setLoaded] = useState<Set<string>>(new Set());
-  const { id, fromJid, direction, attachments } = message;
-
-  // biome-ignore lint/correctness/useExhaustiveDependencies: the answer depends on who sent the message, not on the object
-  useEffect(() => {
-    if (attachments.length === 0) return;
-    let cancelled = false;
-    setAuto(null);
-    core.files
-      .autoLoad(message)
-      .then((allowed) => !cancelled && setAuto(allowed))
-      .catch(() => !cancelled && setAuto(false));
-    return () => {
-      cancelled = true;
-    };
-  }, [core, id, fromJid, direction, attachments.length]);
+  const { attachments } = message;
+  const auto = useAutoLoad(message, attachments.length > 0);
 
   if (attachments.length === 0 || auto === null) return null;
 

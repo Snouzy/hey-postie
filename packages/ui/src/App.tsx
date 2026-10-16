@@ -7,11 +7,17 @@ import { downloadBlob } from './core/download';
 import { clearDrafts } from './core/drafts';
 import { SettingsProvider } from './core/SettingsProvider';
 import {
+  type Density,
+  type LettersLayout,
   type LocaleChoice,
   readAssistantSettings,
+  readDensity,
+  readLettersLayout,
   readLocaleChoice,
   readSendReadMarkers,
   readShowPreview,
+  writeDensity,
+  writeLettersLayout,
   writeLocaleChoice,
   writeSendReadMarkers,
   writeShowPreview,
@@ -39,8 +45,9 @@ interface AppProps {
 }
 
 /**
- * Owns the per-viewer choices (theme, language, notification preview, read markers): read from `localStorage`
- * on the first render, applied at once, and handed to the Settings dialog through
+ * Owns the per-viewer choices (theme, language, letters layout and density, notification preview,
+ * read markers): read from `localStorage` on the first render, applied at once, and handed to
+ * the Settings dialog (and the conversation) through
  * `SettingsProvider`. A language change swaps the dictionary and the whole tree re-renders.
  */
 export function App({ core, locale, onOpenLink, version, onSaveFile, devLabel }: AppProps) {
@@ -48,6 +55,8 @@ export function App({ core, locale, onOpenLink, version, onSaveFile, devLabel }:
   const [localeChoice, setLocaleChoice] = useState<LocaleChoice>(readLocaleChoice);
   const [showPreview, setShowPreviewState] = useState<boolean>(readShowPreview);
   const [sendReadMarkers, setSendReadMarkersState] = useState<boolean>(readSendReadMarkers);
+  const [lettersLayout, setLettersLayoutState] = useState<LettersLayout>(readLettersLayout);
+  const [density, setDensityState] = useState<Density>(readDensity);
   const effectiveLocale = localeChoice === 'system' ? locale : localeChoice;
 
   // Screen readers pick their voice from it; a language change must reach the document too.
@@ -67,6 +76,16 @@ export function App({ core, locale, onOpenLink, version, onSaveFile, devLabel }:
   function setLocale(choice: LocaleChoice) {
     writeLocaleChoice(choice);
     setLocaleChoice(choice);
+  }
+
+  function setLettersLayout(layout: LettersLayout) {
+    writeLettersLayout(layout);
+    setLettersLayoutState(layout);
+  }
+
+  function setDensity(value: Density) {
+    writeDensity(value);
+    setDensityState(value);
   }
 
   function setShowPreview(value: boolean) {
@@ -93,6 +112,10 @@ export function App({ core, locale, onOpenLink, version, onSaveFile, devLabel }:
           setShowPreview,
           sendReadMarkers,
           setSendReadMarkers,
+          lettersLayout,
+          setLettersLayout,
+          density,
+          setDensity,
           version: version ?? 'dev',
         }}
       >

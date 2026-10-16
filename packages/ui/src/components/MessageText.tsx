@@ -1,7 +1,9 @@
 import type { Mention } from '@hey-postie/core';
+import type { ReactNode } from 'react';
 import { cn } from '../lib/cn';
 import { Linkify } from './Linkify';
-import { mentionSegments } from './mentions';
+import { StyledBlocks } from './StyledText';
+import { hasBlocks, hasStyling, parseStyling, type Range } from './styling';
 
 // A member named in a letter: a soft navy chip on paper, a lighter one on a navy bubble.
 const CHIP = 'rounded-sm px-[3px] font-semibold';
@@ -18,30 +20,65 @@ interface MessageTextProps {
   ownNick?: string | undefined;
   /** On a navy bubble (mine). */
   outgoing: boolean;
+  /** XEP-0393 `<unstyled/>`: the sender asked for plain text. */
+  unstyled?: boolean | undefined;
   onOpenLink: (url: string) => void;
+  /** The paragraph's own classes (the bubble's or the line's). */
+  className?: string;
 }
 
-/** A letter's text: links clickable, mentions as `@nick` chips. Never HTML. */
-export function MessageText({ body, mentions, ownNick, outgoing, onOpenLink }: MessageTextProps) {
-  if (!mentions || mentions.length === 0) return <Linkify text={body} onOpenLink={onOpenLink} />;
+/**
+ * A letter's text: XEP-0393 styling (`styling.ts`), links clickable, mentions as `@nick` chips.
+ * A `<p>`, or a `<div>` when a quote or a preformatted block needs a box of its own. Never HTML.
+ */
+export function MessageText({
+  body,
+  mentions = [],
+  ownNick,
+  outgoing,
+  unstyled = false,
+  onOpenLink,
+  className,
+}: MessageTextProps) {
+  const blocks = unstyled ? [] : parseStyling(body);
+  const styled = hasStyling(blocks);
+  const Tag = styled && hasBlocks(blocks) ? 'div' : 'p';
+
+  /** Plain text between `start` and `end`: the mentions wholly inside it as chips, links. */
+  function plain({ start, end }: Range): ReactNode {
+    const parts: ReactNode[] = [];
+    let at = start;
+    for (const mention of mentions) {
+      if (mention.begin < at || mention.end > end) continue;
+      if (mention.begin > at) parts.push(link(at, mention.begin));
+      const me = ownNick !== undefined && mention.nick.toLowerCase() === ownNick.toLowerCase();
+      const named = body.slice(mention.begin, mention.end);
+      parts.push(
+        <span
+          key={`m${mention.begin}`}
+          className={cn(CHIP, me ? CHIP_ME : outgoing ? CHIP_OUT : CHIP_IN)}
+          data-mention={me ? 'me' : 'other'}
+        >
+          {named.startsWith('@') ? named : `@${named}`}
+        </span>,
+      );
+      at = mention.end;
+    }
+    if (at < end) parts.push(link(at, end));
+    return parts;
+  }
+
+  function link(start: number, end: number): ReactNode {
+    return <Linkify key={`l${start}`} text={body.slice(start, end)} onOpenLink={onOpenLink} />;
+  }
+
   return (
-    <>
-      {mentionSegments(body, mentions).map((segment, index) => {
-        const { mention } = segment;
-        // biome-ignore lint/suspicious/noArrayIndexKey: segments never move, they are cut once
-        if (!mention) return <Linkify key={index} text={segment.text} onOpenLink={onOpenLink} />;
-        const me = ownNick !== undefined && mention.nick.toLowerCase() === ownNick.toLowerCase();
-        return (
-          <span
-            // biome-ignore lint/suspicious/noArrayIndexKey: segments never move, they are cut once
-            key={index}
-            className={cn(CHIP, me ? CHIP_ME : outgoing ? CHIP_OUT : CHIP_IN)}
-            data-mention={me ? 'me' : 'other'}
-          >
-            {segment.text.startsWith('@') ? segment.text : `@${segment.text}`}
-          </span>
-        );
-      })}
-    </>
+    <Tag className={className}>
+      {styled ? (
+        <StyledBlocks body={body} blocks={blocks} plain={plain} />
+      ) : (
+        plain({ start: 0, end: body.length })
+      )}
+    </Tag>
   );
 }

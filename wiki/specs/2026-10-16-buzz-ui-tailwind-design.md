@@ -87,8 +87,8 @@ Each line is its own pull request with its own short spec section; order to be s
 
 | Item | From Buzz | For us |
 |---|---|---|
-| Message lines layout | `features/messages/ui/MessageRow.tsx` (layout only; the file is Nostr-bound and is rewritten) | Decision 4. Setting under Appearance: "Automatic" (default), "Bubbles", "Lines". Grouping, day dividers, reactions and stamps work in both. |
-| Density and text size | `shared/styles/globals/typography.css`: a type unit, ⌘+/− zoom, text size 13/14/15, density compact / comfortable / spacious | Appearance settings; tokens for message text and gaps. |
+| Message lines layout | `features/messages/ui/MessageRow.tsx` (layout only; the file is Nostr-bound and is rewritten) | Decision 4. Setting under Appearance: "Automatic" (default), "Bubbles", "Lines". Grouping, day dividers, reactions and stamps work in both. Built 2026-10-17, with the density choice: [ui.md](../development/ui.md#letters-as-lines). |
+| Density and text size | `shared/styles/globals/typography.css`: a type unit, ⌘+/− zoom, text size 13/14/15, density compact / comfortable / spacious | Appearance settings; tokens for message text and gaps. Density built 2026-10-17 (spacing classes in `density.ts`, no tokens); text size and zoom not yet. |
 | Quick switcher | `features/search/ui/TopbarSearch.tsx`, ⌘K | ⌘K over chats, halls and contacts, through existing services. |
 | Shortcuts | `shared/lib/keyboard-shortcuts.ts`: ⇧⌘K new chat, ⌘[ / ⌘] back and forward, Esc mark read, ⌘, settings, a shortcuts list in settings | Added to [ui.md](../development/ui.md#keyboard). |
 | Sidebar sections | `features/sidebar/ui/SidebarSection.tsx`: collapsible, unread dot or count, star, mute, context menu, "more unread" pill | Starred = bookmarks (XEP-0402); roster groups as sections. |

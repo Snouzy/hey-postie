@@ -2,7 +2,8 @@ import { DomainError } from '@hey-postie/core';
 import { fireEvent, screen, waitFor } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { CoreProvider } from '../core/CoreProvider';
-import { renderWithCore, setupCore } from '../test-utils';
+import { SettingsProvider } from '../core/SettingsProvider';
+import { defaultSettings, renderWithCore, setupCore } from '../test-utils';
 import { Composer } from './Composer';
 
 function renderComposer(onSend = vi.fn(async () => {})) {
@@ -102,12 +103,14 @@ describe('Composer drafts', () => {
     fireEvent.change(area, { target: { value: 'Hi Bob,' } });
     rerender(
       <CoreProvider core={core} locale="en">
-        <Composer
-          chatId="bob@x.org"
-          onSend={onSend}
-          draft="On my way"
-          onDraftTaken={onDraftTaken}
-        />
+        <SettingsProvider value={defaultSettings()}>
+          <Composer
+            chatId="bob@x.org"
+            onSend={onSend}
+            draft="On my way"
+            onDraftTaken={onDraftTaken}
+          />
+        </SettingsProvider>
       </CoreProvider>,
     );
     expect(area).toHaveValue('Hi Bob,\nOn my way');

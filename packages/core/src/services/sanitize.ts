@@ -1,12 +1,19 @@
-import type { Mention, Message, Reaction, ReplyTo } from '../contracts/types';
+import type { LinkPreview, Mention, Message, Reaction, ReplyTo } from '../contracts/types';
 import { stripControlCharacters } from './text';
 
 /** The longest excerpt of a replied letter that reaches the UI, in UTF-16 units. */
 export const EXCERPT_MAX_LENGTH = 140;
 
+/** Link previews shown under one letter, and the length of each of their lines. */
+export const MAX_LINK_PREVIEWS = 3;
+const PREVIEW_TITLE_MAX_LENGTH = 200;
+const PREVIEW_DESCRIPTION_MAX_LENGTH = 300;
+const PREVIEW_SITE_MAX_LENGTH = 80;
+
 /**
  * Incoming text is untrusted: the UI renders it as text, never as HTML. Control characters go;
- * a reply's excerpt becomes one bounded line; mentions that do not fit the body go.
+ * a reply's excerpt becomes one bounded line; mentions that do not fit the body go; link
+ * previews are few, and each of their texts one bounded line.
  */
 export function sanitize(message: Message): Message {
   const body = stripControlCharacters(message.body);
@@ -19,14 +26,18 @@ export function sanitize(message: Message): Message {
   // Offsets point into the received body: a body that lost characters cannot keep them.
   const mentions =
     message.mentions && body === message.body ? validMentions(body, message.mentions) : undefined;
+  const linkPreviews = message.linkPreviews && sanitizeLinkPreviews(message.linkPreviews);
   const same =
     body === message.body &&
     reactions === message.reactions &&
     !versions &&
     replyTo === message.replyTo &&
-    mentions === message.mentions;
+    mentions === message.mentions &&
+    !linkPreviews;
   if (same) return message;
   const clean: Message = { ...message, body, reactions };
+  if (linkPreviews && linkPreviews.length > 0) clean.linkPreviews = linkPreviews;
+  else delete clean.linkPreviews;
   if (replyTo) clean.replyTo = replyTo;
   if (versions) clean.versions = versions;
   if (mentions && mentions.length > 0) clean.mentions = mentions;
@@ -48,9 +59,24 @@ export function sanitizeReply(reply: ReplyTo): ReplyTo {
   return clean;
 }
 
-function oneLine(text: string): string {
+function oneLine(text: string, max = EXCERPT_MAX_LENGTH): string {
   const line = stripControlCharacters(text).replace(/\s+/g, ' ').trim();
-  return line.length > EXCERPT_MAX_LENGTH ? `${line.slice(0, EXCERPT_MAX_LENGTH - 1)}…` : line;
+  return line.length > max ? `${line.slice(0, max - 1)}…` : line;
+}
+
+/** At most `MAX_LINK_PREVIEWS`, each text one bounded line; empty texts go. */
+export function sanitizeLinkPreviews(previews: LinkPreview[]): LinkPreview[] {
+  return previews.slice(0, MAX_LINK_PREVIEWS).map((preview) => {
+    const clean: LinkPreview = { url: preview.url };
+    const title = oneLine(preview.title ?? '', PREVIEW_TITLE_MAX_LENGTH);
+    const description = oneLine(preview.description ?? '', PREVIEW_DESCRIPTION_MAX_LENGTH);
+    const siteName = oneLine(preview.siteName ?? '', PREVIEW_SITE_MAX_LENGTH);
+    if (title) clean.title = title;
+    if (description) clean.description = description;
+    if (siteName) clean.siteName = siteName;
+    if (preview.imageUrl) clean.imageUrl = preview.imageUrl;
+    return clean;
+  });
 }
 
 /**

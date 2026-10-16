@@ -27,6 +27,8 @@ const UPDATE_EVENTS = [
   'change:edited',
   'change:reactions',
   'change:body',
+  // A hall's link preview arrives after its letter (`handleMetadataFastening`).
+  'change:ogp_metadata',
 ];
 
 /**

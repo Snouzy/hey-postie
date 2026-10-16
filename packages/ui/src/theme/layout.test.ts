@@ -58,9 +58,8 @@ describe('what scrolls', () => {
     // Laid out even while invisible: anchored on the outer side, it pokes past the list's edge.
     const bubble = source(components, 'MessageBubble.tsx');
     expect(bubble).toMatch(/incoming \? 'left-2' : 'right-2'/);
-    expect(hasClasses('MessageBubble.tsx', 'absolute', 'top-[-10px]', 'whitespace-nowrap')).toBe(
-      true,
-    );
+    expect(hasClasses('MessageBubble.tsx', 'top-[-10px]')).toBe(true);
+    expect(hasClasses('MessageToolbar.tsx', 'absolute', 'whitespace-nowrap')).toBe(true);
     // A bubble keeps to its share of the column, and its pictures to the bubble.
     expect(hasClasses('MessageBubble.tsx', 'max-w-[min(70%,560px)]')).toBe(true);
     expect(hasClasses('Attachments.tsx', 'flex', 'min-w-0')).toBe(true);

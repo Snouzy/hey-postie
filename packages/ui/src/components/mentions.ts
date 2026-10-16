@@ -1,5 +1,3 @@
-import type { Mention } from '@hey-postie/core';
-
 /** `@` mentions in halls (spec 2026-10-17, Lot B item 10): pure rules, the components draw them. */
 
 /** Someone the composer can name: a hall member, present or away. */
@@ -84,21 +82,4 @@ export function completeNick(
     nicks.find((candidate) => candidate.toLowerCase() === typed) ??
     nicks.find((candidate) => candidate.toLowerCase().startsWith(typed));
   return nick ? insertMention(body, caret - word.length, caret, nick) : null;
-}
-
-/** A body cut into plain text and mentions, in order; a mention keeps the text it covers. */
-export function mentionSegments(
-  body: string,
-  mentions: Mention[] = [],
-): Array<{ text: string; mention?: Mention }> {
-  const segments: Array<{ text: string; mention?: Mention }> = [];
-  let at = 0;
-  for (const mention of mentions) {
-    if (mention.begin < at || mention.end > body.length) continue;
-    if (mention.begin > at) segments.push({ text: body.slice(at, mention.begin) });
-    segments.push({ text: body.slice(mention.begin, mention.end), mention });
-    at = mention.end;
-  }
-  if (at < body.length) segments.push({ text: body.slice(at) });
-  return segments;
 }

@@ -1,6 +1,8 @@
 import type { Chat, Contact, Message, Room } from '@hey-postie/core';
 import { useEffect, useState } from 'react';
 import { useCore, useText } from '../core/CoreProvider';
+import { useSettings } from '../core/SettingsProvider';
+import { useAccount } from '../core/useAccount';
 import { useEncryption } from '../core/useEncryption';
 import { useFileDrop } from '../core/useFileDrop';
 import { useMessages } from '../core/useMessages';
@@ -67,6 +69,11 @@ export function Conversation({
   const core = useCore();
   const text = useText();
   const letters = useMessages(chat);
+  const { lettersLayout, density } = useSettings();
+  const account = useAccount();
+  // "Automatic": bubbles read best one to one, lines scale better in a busy hall.
+  const layout =
+    lettersLayout === 'auto' ? (chat.kind === 'room' ? 'lines' : 'bubbles') : lettersLayout;
   const seal = useEncryption(chat);
   const members = useRoomMembers(room?.jid ?? '');
   const { people } = useRoomPeople(room?.jid ?? '');
@@ -209,6 +216,9 @@ export function Conversation({
         ownNick={room?.nick}
         onSaveFile={onSaveFile}
         showSenders={chat.kind === 'room'}
+        layout={layout}
+        density={density}
+        ownName={account?.displayName ?? ''}
         onShowDevices={hasDetails ? onOpenEncryption : undefined}
         empty={
           letters.loaded &&

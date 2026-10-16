@@ -1,5 +1,5 @@
 import { createContext, type ReactNode, useContext } from 'react';
-import type { LocaleChoice, Theme } from './settings';
+import type { Density, LettersLayout, LocaleChoice, Theme } from './settings';
 
 export interface SettingsValue {
   theme: Theme;
@@ -11,6 +11,11 @@ export interface SettingsValue {
   /** Whether others are told when I have read their letters (XEP-0333 `displayed`). */
   sendReadMarkers: boolean;
   setSendReadMarkers: (value: boolean) => void;
+  /** Bubbles, lines, or bubbles in direct chats and lines in halls. */
+  lettersLayout: LettersLayout;
+  setLettersLayout: (layout: LettersLayout) => void;
+  density: Density;
+  setDensity: (density: Density) => void;
   /** The app's version, from the desktop; "dev" when it did not say. */
   version: string;
 }

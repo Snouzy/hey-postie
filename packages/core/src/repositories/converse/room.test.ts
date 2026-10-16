@@ -249,6 +249,35 @@ describe('ConverseRoomRepository', () => {
     expect((await repositories.room.list())[0]).toMatchObject({ unreadCount: 2, mentionsCount: 1 });
   });
 
+  it('adds the link preview the hall fastens to a letter, and flags an unstyled one', async () => {
+    const { stx } = mock.converse.env;
+    const updated: Message[] = [];
+    repositories.chat.onMessageUpdate((message) => updated.push(message));
+    harness.inject(stx`<message from="${HALL}/juliet" to="${JID}/orchard" type="groupchat" id="g3" xmlns="jabber:client">
+      <body>&gt; _ &lt; see https://example.org/news</body>
+      <origin-id xmlns="urn:xmpp:sid:0" id="o3"/>
+      <unstyled xmlns="urn:xmpp:styling:0"/></message>`);
+    await until(() => received.some((m) => m.id === 'g3' || m.body.endsWith('news')), 'letter');
+    const letter = received.find((m) => m.body.endsWith('news'));
+    expect(letter?.unstyled).toBe(true);
+    expect(letter?.linkPreviews).toBeUndefined();
+
+    // A member cannot attach a preview: only the room's own JID can (Converse's rule).
+    const fasten = (from: string, title: string) =>
+      stx`<message from="${from}" to="${JID}/orchard" type="groupchat" id="${title}" xmlns="jabber:client">
+        <apply-to xmlns="urn:xmpp:fasten:0" id="o3">
+          <meta xmlns="http://www.w3.org/1999/xhtml" property="og:url" content="https://example.org/news"/>
+          <meta xmlns="http://www.w3.org/1999/xhtml" property="og:title" content="${title}"/>
+          <meta xmlns="http://www.w3.org/1999/xhtml" property="og:site_name" content="Example"/>
+        </apply-to></message>`;
+    harness.inject(fasten(`${HALL}/juliet`, 'Forged'));
+    harness.inject(fasten(HALL, 'News'));
+    await until(() => updated.some((m) => m.linkPreviews !== undefined), 'preview');
+    expect(updated.find((m) => m.linkPreviews)?.linkPreviews).toEqual([
+      { url: 'https://example.org/news', title: 'News', siteName: 'Example' },
+    ]);
+  });
+
   it('sends to the room and clears the counters on markRead', async () => {
     const { sizzle } = mock.converse.env;
     const conn = await harness.connection();
@@ -275,6 +304,7 @@ describe('ConverseRoomRepository', () => {
     expect((await repositories.chat.messages(HALL)).map((m) => m.body)).toEqual([
       'Romeo, wherefore art thou?',
       'anyone?',
+      '> _ < see https://example.org/news',
       'here',
     ]);
   });

@@ -6,7 +6,9 @@ reverse-engineering as for halls, inside a hall or a conversation". Lot A built 
 [ui.md](../development/ui.md#inside-a-conversation) and
 [converse.md](../development/converse.md#read-markers-xep-0333). Lot B items 8 to 10 built on
 2026-10-17: see the same ui.md section and
-[converse.md](../development/converse.md#replies-and-mentions). No new dependency._
+[converse.md](../development/converse.md#replies-and-mentions). Lot B items 11 to 13 built on
+2026-10-17: see [ui.md](../development/ui.md#text-styling-xep-0393) and
+[converse.md](../development/converse.md#message-styling-and-link-previews). No new dependency._
 
 ## 1. What the study found in Hey Postie
 

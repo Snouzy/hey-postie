@@ -379,3 +379,24 @@ describe('The sidebar at a glance', () => {
     expect(bob).toHaveAccessibleName(expect.stringMatching(/^bob, Online/));
   });
 });
+
+describe('Letters in a hall', () => {
+  it('draws them as lines by default ("Automatic"), each run under the sender’s nick', async () => {
+    await signedIn((deps) => {
+      deps.fakes.room.change(hall());
+      deps.fakes.chat.receive({
+        chatId: TEAM,
+        kind: 'room',
+        fromJid: `${TEAM}/bob`,
+        fromNick: 'bob',
+        body: 'Stand-up *now*',
+      });
+    });
+    fireEvent.click(await screen.findByRole('button', { name: /Team/ }));
+    const text = await screen.findByText('now', { selector: 'p *', exact: false });
+    const line = text.closest('[data-message-id]');
+    expect(line).not.toHaveClass('shadow-card');
+    expect(within(line as HTMLElement).getByText('bob')).toBeInTheDocument();
+    expect(text.closest('strong')).toHaveTextContent('*now*');
+  });
+});

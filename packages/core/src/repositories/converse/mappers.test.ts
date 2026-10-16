@@ -307,6 +307,28 @@ describe('toMessage in a room', () => {
     expect(toMessage(model({ ...groupchat, sender: 'me' }), room).isMention).toBe(false);
     expect(toMessage(model(groupchat), context).isMention).toBe(false);
   });
+
+  it('carries the link previews the hall attached, never for a direct chat or a deleted letter', () => {
+    const ogp_metadata = [
+      { 'og:url': 'https://x.org/news', 'og:title': 'News', 'og:site_name': 'X' },
+    ];
+    expect(toMessage(model({ ...groupchat, ogp_metadata }), room).linkPreviews).toEqual([
+      { url: 'https://x.org/news', title: 'News', siteName: 'X' },
+    ]);
+    expect(toMessage(model({ ...groupchat, ogp_metadata }), context).linkPreviews).toBeUndefined();
+    expect(
+      toMessage(model({ ...groupchat, ogp_metadata, retracted: '2026-10-15' }), room).linkPreviews,
+    ).toBeUndefined();
+    expect(toMessage(model(groupchat), room).linkPreviews).toBeUndefined();
+  });
+});
+
+describe('toMessage and message styling (XEP-0393)', () => {
+  it('flags a letter sent with <unstyled/>, and only that one', () => {
+    expect(toMessage(model({ ...incoming, is_unstyled: true }), context).unstyled).toBe(true);
+    expect(toMessage(model({ ...incoming, is_unstyled: false }), context).unstyled).toBeUndefined();
+    expect(toMessage(model(incoming), context).unstyled).toBeUndefined();
+  });
 });
 
 describe('isMention', () => {

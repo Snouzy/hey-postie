@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import type { Message } from '../contracts/types';
-import { EXCERPT_MAX_LENGTH, sanitize, sanitizeReactions, validMentions } from './sanitize';
+import {
+  EXCERPT_MAX_LENGTH,
+  MAX_LINK_PREVIEWS,
+  sanitize,
+  sanitizeReactions,
+  validMentions,
+} from './sanitize';
 
 const letter = (extra: Partial<Message> = {}): Message => ({
   id: 'm1',
@@ -89,5 +95,40 @@ describe('sanitizeReactions', () => {
   it('returns the same array when nothing changes', () => {
     const reactions = [r('👍', ['a@x.org'])];
     expect(sanitizeReactions(reactions)).toBe(reactions);
+  });
+});
+
+describe('link previews', () => {
+  const page = { url: 'https://x.org/a', title: 'A', description: 'About a', siteName: 'X' };
+
+  it('keeps a clean preview as it is', () => {
+    expect(sanitize(letter({ linkPreviews: [page] })).linkPreviews).toEqual([page]);
+  });
+
+  it('makes each text one bounded line without control characters, and drops empty ones', () => {
+    const [clean] =
+      sanitize(
+        letter({
+          linkPreviews: [
+            {
+              url: 'https://x.org/a',
+              title: 'Big\n\u0007news',
+              description: 'd'.repeat(400),
+              siteName: '   ',
+              imageUrl: 'https://x.org/a.png',
+            },
+          ],
+        }),
+      ).linkPreviews ?? [];
+    expect(clean?.title).toBe('Big news');
+    expect(clean?.description).toHaveLength(300);
+    expect(clean?.description?.endsWith('…')).toBe(true);
+    expect(clean?.siteName).toBeUndefined();
+    expect(clean?.imageUrl).toBe('https://x.org/a.png');
+  });
+
+  it('shows a few previews at most', () => {
+    const many = Array.from({ length: 6 }, (_, i) => ({ ...page, url: `https://x.org/${i}` }));
+    expect(sanitize(letter({ linkPreviews: many })).linkPreviews).toHaveLength(MAX_LINK_PREVIEWS);
   });
 });

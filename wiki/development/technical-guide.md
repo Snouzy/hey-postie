@@ -56,7 +56,7 @@ tasks/             agents' plans and lessons, untracked
 | `pnpm rust` | `cargo fmt --check`, `cargo clippy -D warnings`, `cargo test` in `apps/desktop/src-tauri`. |
 | `pnpm run licenses` | Regenerates `packages/ui/src/data/licenses.json` from the dependency trees (see [dependencies.md](dependencies.md)). `run` is needed: `pnpm licenses` alone is pnpm's own built-in command. |
 | `pnpm verify` | All of the above, then the Vite build. Must be green before a pull request. |
-| `pnpm --filter @hey-postie/desktop app:dev`, then `/preview.html` | The interface on fakes (`apps/desktop/app/preview.tsx`): a few contacts, chats and a hall, no network. `?theme=dark`, `?signin=1`, `?click=Add\|New chat` (clicks in order, by aria-label or text). Dev server only, never in the app bundle. |
+| `pnpm --filter @hey-postie/desktop app:dev`, then `/preview.html` | The interface on fakes (`apps/desktop/app/preview.tsx`): a few contacts, chats and a hall, no network. `?theme=dark`, `?layout=bubbles\|lines`, `?density=compact\|spacious`, `?signin=1`, `?click=Add\|New chat` (clicks in order, by aria-label or text). Dev server only, never in the app bundle. |
 | `apps/desktop/scripts/preview-shots.sh <port> <dir>` | Screenshots of the preview, light and dark, through headless Chrome: take a set before a UI change and one after, then compare (ImageMagick: `compare -metric AE a.png b.png null:`). |
 | `pnpm version:set <x.y.z>` | Writes the version in `tauri.conf.json`, `Cargo.toml`, `Cargo.lock` and the three `package.json` (`scripts/version-set.mjs`). |
 | `pnpm desktop:build` | `tauri build`: the installers and updater artifacts for the current platform; needs `TAURI_SIGNING_PRIVATE_KEY` (see [release.md](../product/release.md)). |

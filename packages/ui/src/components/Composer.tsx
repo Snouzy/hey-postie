@@ -15,7 +15,7 @@ import { AttachButton } from './AttachButton';
 import { Button } from './Button';
 import { ComposerBanner } from './ComposerBanner';
 import { ComposerSuggestions } from './ComposerSuggestions';
-import { grow, insertAt, pastedImages } from './composerText';
+import { formatMarker, grow, insertAt, pastedImages, wrapSelection } from './composerText';
 import { EmojiPicker } from './EmojiPicker';
 import { completeNick, type MentionCandidate } from './mentions';
 import { useComposerCompletions } from './useComposerCompletions';
@@ -54,7 +54,8 @@ interface ComposerProps {
 
 /**
  * Enter sends, Shift+Enter breaks the line. The textarea grows with the text. In a hall, `@` lists
- * the members and Tab completes the word before the caret into `@nick`; `:sm` offers emojis. The paperclip
+ * the members and Tab completes the word before the caret into `@nick`; `:sm` offers emojis.
+ * ⌘B / ⌘I / ⌘E wrap the selection in `*` / `_` / `` ` `` (XEP-0393). The paperclip
  * picks files, the smile opens the emoji picker, a pasted image leaves as a parcel. What is typed
  * is the chat's draft (`core/drafts.ts`), except the text of a letter being corrected.
  */
@@ -165,19 +166,29 @@ export function Composer({
     }
   }
 
-  /** Writes the new text and puts the caret where React will have left it. */
-  function replace(next: { body: string; caret: number }) {
+  /** Writes the new text and puts the caret (or a selection from `start`) where React will have left it. */
+  function replace(next: { body: string; caret: number; start?: number }) {
     write(next.body);
     setCaret(next.caret);
     requestAnimationFrame(() => {
       if (!area.current) return;
-      area.current.setSelectionRange(next.caret, next.caret);
+      area.current.setSelectionRange(next.start ?? next.caret, next.caret);
       grow(area.current);
     });
   }
 
   function onKeyDown(event: KeyboardEvent<HTMLTextAreaElement>) {
     if (completions.onKeyDown(event)) return;
+    const marker = formatMarker(event);
+    if (marker) {
+      // ⌘B styles here: it does not fold the sidebar (`Main`) while the composer has the focus.
+      event.preventDefault();
+      event.stopPropagation();
+      const { selectionStart, selectionEnd } = event.currentTarget;
+      const next = wrapSelection(body, selectionStart, selectionEnd, marker);
+      replace({ body: next.body, start: next.start, caret: next.end });
+      return;
+    }
     // While an IME composes (Japanese, Chinese...), Enter confirms the candidate, not the letter.
     if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) {
       event.preventDefault();

@@ -359,6 +359,42 @@ _Added 2026-10-17 (spec 2026-10-17-conversation-slack, Lot B items 8 to 10). Sou
   bob's letter. Bob replies to alice with a hand-written reply and fallback: alice's message has
   the answer alone and `replyTo` naming her letter by our id, `mine`, with its text.
 
+### Message styling and link previews
+
+_Added 2026-10-17 (spec 2026-10-17-conversation-slack, Lot B items 11 and 13). Sources:
+`mappers.ts`, `link-previews.ts`, `chat.ts`, `services/sanitize.ts`; tests `mappers.test.ts`,
+`link-previews.test.ts`, `room.test.ts` ("adds the link preview the hall fastens…"),
+`services/sanitize.test.ts`. Converse 14.0.0 read in `plugins/chat/parsers.js:120`,
+`plugins/muc/parsers.js:271`, `plugins/muc/muc.js:2384-2404` (`handleMetadataFastening`),
+`shared/parsers.js` (`getOpenGraphMetadata`), `shared/constants.js:28-45` (`METADATA_ATTRIBUTES`),
+`plugins/chat/plugin.js:32` (`allow_message_styling`)._
+
+- **Styling is ours.** Headless Converse does not style anything: `allow_message_styling`
+  (default `true`) is read by its view layer, which we do not use. It parses
+  `<unstyled xmlns="urn:xmpp:styling:0"/>` into `is_unstyled` (direct chats and halls);
+  `toMessage` maps `true` to `Message.unstyled` and leaves it out otherwise. The UI parses and
+  draws the styling (see [ui.md](ui.md#text-styling-xep-0393)). We do not send `<unstyled/>`, and
+  we do not announce `urn:xmpp:styling:0` in disco (Converse's own feature list is unchanged:
+  not checked).
+- **Link previews.** A hall may fasten Open Graph metadata to a letter (XEP-0422 `<apply-to
+  id="origin-id">` holding XHTML `<meta property="og:…" content="…">`). Converse accepts it
+  only from the room's own JID (`attrs.from !== this.get('jid')` → dropped; a member cannot forge
+  one), finds the letter by `origin_id`, and saves the list on it as `ogp_metadata` (one entry per
+  `og:url`). `chat.ts` now emits `onMessageUpdate` on `change:ogp_metadata`, since the preview
+  comes after its letter. `linkPreviewsOf` (pure) maps each entry, for halls only and not for a
+  deleted letter, to `LinkPreview { url, title?, description?, siteName?, imageUrl? }`: `og:url`
+  must be `http(s)://`, there must be a title or a description, `og:image` is kept only when
+  `https://` (the file repository fetches nothing else); texts trimmed; one per page, in order.
+  The service (`sanitizeLinkPreviews`) keeps three at most and makes each text one line without
+  control characters, bounded (title 200, description 300, site name 80 characters). Nothing is
+  ever fetched for a preview by the app, except its picture under the parcel rule (ui.md).
+- **The local test server has no `mod_ogp`** (`tools/xmpp-server/prosody.cfg.lua`, checked
+  2026-10-17: a community module, not enabled), so no preview arrives there. Tested instead with a
+  hand-written fastening stanza injected into the real Converse over its mock connection
+  (`room.test.ts`, which also checks that a member's forged preview is dropped) and a mapped
+  fixture (`link-previews.test.ts`). Points to check: the stanza a real `mod_ogp` sends (assumed to
+  be the one Converse parses).
+
 ### Contract test
 
 `contract.test.ts` (run with `pnpm --filter @hey-postie/core test:contract`, see

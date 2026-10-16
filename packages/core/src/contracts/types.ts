@@ -191,6 +191,20 @@ export interface Mention {
   nick: string;
 }
 
+/**
+ * A link preview a hall itself attached to a letter (Open Graph metadata fastened by the room's
+ * own JID, Converse's `ogp_metadata`). Never fetched by the reader. Untrusted text, like a body.
+ */
+export interface LinkPreview {
+  /** The page, `http(s)://` only. */
+  url: string;
+  title?: string;
+  description?: string;
+  siteName?: string;
+  /** The page's picture, `https://` only; shown only where the sender's pictures load by themselves. */
+  imageUrl?: string;
+}
+
 /** How a letter leaves (`ChatsService.send`). */
 export interface SendOptions {
   /** The `Message.id` of the letter this one answers (XEP-0461). */
@@ -231,6 +245,10 @@ export interface Message {
   replyTo?: ReplyTo;
   /** XEP-0372 mentions in `body`, in order, never overlapping. Halls only. */
   mentions?: Mention[];
+  /** XEP-0393: the sender asked for `body` to be shown as plain text (`<unstyled/>`). */
+  unstyled?: boolean;
+  /** Link previews the hall attached, in order, at most a few. Halls only. */
+  linkPreviews?: LinkPreview[];
 }
 
 export type Trust = 'untrusted' | 'trusted' | 'verified' | 'blocked';

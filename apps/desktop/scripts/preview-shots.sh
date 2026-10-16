@@ -18,6 +18,10 @@ scenes=(
   "settings|click=me|Settings…"
   "details|click=Perfect. Talk soon.|Details"
   "members|click=can you check this|Members"
+  "hall-bubbles|layout=bubbles&click=can you check this"
+  "hall-compact|density=compact&click=can you check this"
+  "chat-bob-lines|layout=lines&density=spacious&click=Perfect. Talk soon."
+  "appearance|click=me|Settings…|Appearance"
 )
 for scene in $scenes; do
   name=${scene%%|*}; query=${scene#*|}

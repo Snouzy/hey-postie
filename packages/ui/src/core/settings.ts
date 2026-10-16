@@ -11,6 +11,13 @@ export type Theme = 'system' | 'light' | 'dark';
 export type LocaleChoice = 'system' | Locale;
 
 export const THEMES: readonly Theme[] = ['system', 'light', 'dark'];
+
+/** How letters are drawn: `auto` is bubbles in direct chats, lines in halls (Buzz spec, decision 4). */
+export type LettersLayout = 'auto' | 'bubbles' | 'lines';
+/** The room between letters, and only that. */
+export type Density = 'compact' | 'comfortable' | 'spacious';
+export const LETTERS_LAYOUTS: readonly LettersLayout[] = ['auto', 'bubbles', 'lines'];
+export const DENSITIES: readonly Density[] = ['compact', 'comfortable', 'spacious'];
 export const LOCALE_CHOICES: readonly LocaleChoice[] = ['system', ...LOCALES];
 
 const THEME_KEY = 'hey-postie:theme';
@@ -22,6 +29,8 @@ const ASSISTANT_KEY = 'hey-postie:assistant';
 const FOLDED_GROUPS_KEY = 'hey-postie:folded-groups';
 const READ_MARKERS_KEY = 'hey-postie:read-markers';
 const EMOJI_USAGE_KEY = 'hey-postie:emoji-usage';
+const LETTERS_LAYOUT_KEY = 'hey-postie:letters-layout';
+const DENSITY_KEY = 'hey-postie:density';
 /** Enough to know the favourites; the rest is forgotten. */
 const EMOJI_USAGE_KEPT = 24;
 
@@ -58,6 +67,24 @@ export function readLocaleChoice(): LocaleChoice {
 
 export function writeLocaleChoice(choice: LocaleChoice) {
   write(LOCALE_KEY, choice === 'system' ? null : choice);
+}
+
+export function readLettersLayout(): LettersLayout {
+  const stored = read(LETTERS_LAYOUT_KEY);
+  return stored === 'bubbles' || stored === 'lines' ? stored : 'auto';
+}
+
+export function writeLettersLayout(layout: LettersLayout) {
+  write(LETTERS_LAYOUT_KEY, layout === 'auto' ? null : layout);
+}
+
+export function readDensity(): Density {
+  const stored = read(DENSITY_KEY);
+  return stored === 'compact' || stored === 'spacious' ? stored : 'comfortable';
+}
+
+export function writeDensity(density: Density) {
+  write(DENSITY_KEY, density === 'comfortable' ? null : density);
 }
 
 /** On unless the user turned it off. */
