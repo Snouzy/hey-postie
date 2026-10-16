@@ -71,13 +71,25 @@ lose nothing (the domain is kept too); "Back" from "Where?" goes to Welcome.
 ## Account menu
 
 The account row of the sidebar (`components/AccountMenu.tsx`) is a button
-(`aria-haspopup="menu"`) that opens a small card: the JID (outside the menu, it is not an item)
-and a `role="menu"` with "Sign out", "My devices…" (see Encryption), "Settings…" (see
-[Settings](#settings)) and "Delete my account…". The first item takes the focus,
+(`aria-haspopup="menu"`) showing the account's `Avatar`, its `PresenceDot` (the chosen
+`Account.presence.show`, or offline while not online) and the display name. It opens a small
+card: the JID (outside the menu, it is not an item), the **presence picker** and the **status
+sentence** (added 2026-10-16), and a `role="menu"` with "Sign out", "My devices…" (see
+Encryption), "Settings…" (see [Settings](#settings)) and "Delete my account…". The first item takes the focus,
 arrows move and wrap (from outside the items, Down goes first and Up goes last), Esc, Tab out or a
 click outside closes it and the focus returns to the row. Picking an item puts the focus back on
 the row **before** acting, so the dialog it opens gives the focus back to the row when it closes.
 Deleting the account is therefore two clicks away, as App Store rule 5.1.1(v) asks.
+
+The picker is a `fieldset` of three radios, "Available" / "Away" / "Do not disturb", each with
+its dot; a change calls `accounts.setPresence({ show, status })` at once with the sentence in the
+field. The sentence field saves on Enter with the chosen show; a counter beside it reads
+`n/140` (`STATUS_MAX_LENGTH`, a mirror of the service's `MAX_STATUS_LENGTH`) and turns red past
+the limit; the service's `StatusTooLong` shows as Postie's sentence under the field through
+`errorKey`. Both are disabled while the account is not online (the service refuses then). The
+row is fed by `useAccount()`, so the dot and the checked radio follow the `account.changed` the
+service emits. Contacts have no status sentence in the contract (`Contact` carries only
+`presence`), so the lists and the chat header show their dot alone.
 
 "Delete my account…" opens `components/DeleteAccountDialog.tsx` from `Main`: a plain sentence
 (no joke; it is permanent on the server), a field where the user types their own JID
@@ -183,6 +195,36 @@ failure), `loadOlder` and `react` (`chats.toggleReaction`), so `Conversation` is
 was first before the load (`data-message-id`) and restoring its offset once something sits above
 it; a letter arriving at the bottom meanwhile does not consume the anchor. `useChats` numbers its requests so an older `list()` answer never
 overwrites a newer one.
+
+## Typing (XEP-0085)
+
+_Added 2026-10-16. Sources: `components/Composer.tsx`, `core/useTyping.ts`,
+`components/Conversation.tsx`, `core/useTyping.test.tsx`, `components/Composer.test.tsx`,
+`screens/Main.test.tsx`._
+
+Out: the `Composer` takes `onComposing(composing)` and calls it with `true` on every change that
+leaves text, `false` once the draft is empty or the letter is sent; `Conversation` routes it to
+`chats.setComposing(chat.id, composing)`, and the service does the throttling (one `composing`
+per `COMPOSING_REPEAT_MS`, `paused` after `PAUSED_AFTER_MS`).
+
+In: `useTyping(chatId)` collects the senders of `chat.typing` events for this chat, in the order
+they started, and drops each one on `typing: false` or after `TYPING_STALE_MS` (10 s) without a
+new event, so a lost `paused` never leaves the line forever (every `composing` restarts that
+clock). `Conversation` writes the line just above the composer in a `<p aria-live="polite">` that
+keeps its height when empty: "Bob is typing…" with the contact's name (or the chat's title) in a
+direct chat, the nick (`room@service/nick`) in a hall, several names joined with a comma under
+`typing.many`.
+
+## Avatars
+
+_Added 2026-10-16. Sources: `components/Avatar.tsx`, `components/Avatar.test.tsx`._
+
+`Avatar` shows `avatarUrl` when there is one, else initials on a colour from the JID (see
+[design-system.md](design-system.md#components)). It sits in the account row (`Account.avatarUrl`),
+`ContactList` and `ChatList` rows (`ChatList` takes `contacts` to find a direct chat's picture;
+a hall gets its title's initials), the `Conversation` header, `Details` (`contact` is threaded
+from `Main` through `DetailsPane`) and the sender line of a hall's runs in `MessageList`. There is
+no avatar upload: the contract has none.
 
 ## Rooms (halls)
 
@@ -470,7 +512,11 @@ field type never from the server, CAPTCHA only from a data URL, errors clear on 
 password never appears in the document, values kept across Back, only the current form's fields
 sent),
 `AccountMenu.test.tsx` (JID outside the menu, arrows incl. Up from outside, Esc, Tab out, click
-outside, focus back on the row before acting), `settings/SettingsWindow.test.tsx` (six tabs with the
+outside, focus back on the row before acting, presence radios and the status sentence sent to
+the fake, counter and `StatusTooLong` sentence, picker off while offline), `Avatar.test.tsx`
+(picture with empty alt, initials hidden from readers on the JID's tone, two initials at most),
+`core/useTyping.test.tsx` (only this chat's senders, gone on paused, gone after 10 s with the
+clock restarted by each event, fake timers), `settings/SettingsWindow.test.tsx` (six tabs with the
 focus on General, arrows / Home / End move and select with one Tab stop, Esc back to the row,
 account name and JID with the password line, sign out from the window, delete dialog in place and
 back with the focus on its button, own devices with this device's fingerprint and a removal,

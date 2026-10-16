@@ -3,6 +3,7 @@ import { type ReactNode, useLayoutEffect, useRef, useState } from 'react';
 import { useLocale, useText } from '../core/CoreProvider';
 import { dayKey, dayLabel } from '../i18n/dates';
 import type { SaveFile } from './Attachments';
+import { Avatar } from './Avatar';
 import { Button } from './Button';
 import { MessageBubble } from './MessageBubble';
 import styles from './MessageList.module.css';
@@ -124,7 +125,10 @@ export function MessageList({
           {day.runs.map((run) => (
             <div key={run.messages[0]?.id} className={styles.run} data-from={run.fromJid}>
               {showSenders && run.messages[0]?.direction === 'in' && (
-                <span className={styles.sender}>{senderOf(run.messages[0])}</span>
+                <span className={styles.sender}>
+                  <Avatar name={senderOf(run.messages[0])} jid={run.fromJid} size={20} />
+                  {senderOf(run.messages[0])}
+                </span>
               )}
               {run.messages.map((message, index) => (
                 <MessageBubble

@@ -47,6 +47,10 @@ export const en = {
   'accountMenu.devices': 'My devices…',
   'accountMenu.settings': 'Settings…',
   'accountMenu.delete': 'Delete my account…',
+  'accountMenu.presence': 'Show me as',
+  'accountMenu.available': 'Available',
+  'accountMenu.status': 'Status',
+  'accountMenu.statusPlaceholder': 'A word for the door…',
   'deleteAccount.title': 'Delete my account',
   'deleteAccount.explain':
     'This closes your account on the server for good. Your address, your contacts and your history there are gone, and I cannot bring them back.',
@@ -195,6 +199,8 @@ export const en = {
   'message.undecryptableHelp': 'Ask them to send it again, or check their devices.',
   'message.checkDevices': 'Check their devices',
   'composer.placeholderSealed': 'Write a sealed letter…',
+  'typing.one': '{name} is typing…',
+  'typing.many': '{names} are typing…',
 
   'settings.title': 'Settings',
   'settings.theme': 'Theme',

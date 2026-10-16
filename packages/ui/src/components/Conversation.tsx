@@ -6,9 +6,11 @@ import { useEncryption } from '../core/useEncryption';
 import { useFileDrop } from '../core/useFileDrop';
 import { useMessages } from '../core/useMessages';
 import { useRoomMembers } from '../core/useRoomMembers';
+import { useTyping } from '../core/useTyping';
 import type { ChatUploads } from '../core/useUploads';
 import { errorKey } from '../i18n/errors';
 import type { SaveFile } from './Attachments';
+import { Avatar } from './Avatar';
 import { Button } from './Button';
 import { Composer } from './Composer';
 import styles from './Conversation.module.css';
@@ -52,6 +54,10 @@ export function Conversation({
   const letters = useMessages(chat);
   const seal = useEncryption(chat);
   const members = useRoomMembers(room?.jid ?? '');
+  const typing = useTyping(chat.id);
+  const typingNames = typing.map((fromJid) =>
+    chat.kind === 'room' ? nickOf(fromJid) : (contact?.name ?? chat.title),
+  );
   const nicks = room
     ? members.map((member) => member.nick).filter((nick) => nick !== room.nick)
     : [];
@@ -85,6 +91,7 @@ export function Conversation({
       {drop.dragging && <DropOverlay />}
       <header className={styles.header}>
         <div className={styles.peer}>
+          <Avatar name={chat.title} jid={chat.peerJid} avatarUrl={contact?.avatarUrl} />
           {contact && <PresenceDot presence={contact.presence} />}
           <h2 className={styles.title}>{chat.title}</h2>
           {room && (
@@ -149,13 +156,28 @@ export function Conversation({
           {text(letters.error)}
         </p>
       )}
+      <p className={styles.typing} aria-live="polite">
+        {typingNames.length > 0 && typingLine(text, typingNames)}
+      </p>
       <Composer
         onSend={letters.send}
         onAttach={uploads.add}
         nicks={nicks}
         disabled={outside}
         sealed={seal.encrypted}
+        onComposing={(composing) => core.chats.setComposing(chat.id, composing)}
       />
     </section>
   );
+}
+
+/** "Bob is typing…", or "Ann, Bob are typing…" in a hall. */
+function typingLine(text: (key: 'typing.one' | 'typing.many') => string, names: string[]): string {
+  if (names.length === 1) return text('typing.one').replace('{name}', names[0] ?? '');
+  return text('typing.many').replace('{names}', names.join(', '));
+}
+
+/** A hall occupant's JID is `room@service/nick`. */
+function nickOf(fromJid: string): string {
+  return fromJid.split('/')[1] ?? fromJid;
 }

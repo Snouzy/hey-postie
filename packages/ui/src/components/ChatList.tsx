@@ -1,8 +1,9 @@
-import type { Chat, Room } from '@hey-postie/core';
+import type { Chat, Contact, Room } from '@hey-postie/core';
 import { Users } from 'lucide-react';
 import { type KeyboardEvent, useState } from 'react';
 import { useLocale, useText } from '../core/CoreProvider';
 import { formatRecent } from '../i18n/dates';
+import { Avatar } from './Avatar';
 import styles from './ChatList.module.css';
 import { RoomRowMenu } from './RoomRowMenu';
 
@@ -10,6 +11,8 @@ interface ChatListProps {
   chats: Chat[];
   /** The halls, for their mentions count. */
   rooms?: Room[];
+  /** The address book, for the avatars of direct chats. */
+  contacts?: Contact[];
   selectedId: string | null;
   onSelect: (chat: Chat) => void;
   /** "Leave the hall…" from a room row's menu; without it, rows have no menu. */
@@ -20,11 +23,22 @@ interface ChatListProps {
  * The sidebar list. Arrow keys move between rows; Enter or a click opens one. A hall the app has
  * a record of gets a "⋯" (hover or focus) and a right-click menu, both with "Leave the hall…".
  */
-export function ChatList({ chats, rooms = [], selectedId, onSelect, onLeaveRoom }: ChatListProps) {
+export function ChatList({
+  chats,
+  rooms = [],
+  contacts = [],
+  selectedId,
+  onSelect,
+  onLeaveRoom,
+}: ChatListProps) {
   const text = useText();
   const locale = useLocale();
   const [menuFor, setMenuFor] = useState<string | null>(null);
   const roomOf = (chat: Chat) => rooms.find((room) => room.jid === chat.id);
+  const avatarOf = (chat: Chat) =>
+    chat.kind === 'direct'
+      ? contacts.find((contact) => contact.jid === chat.peerJid)?.avatarUrl
+      : undefined;
 
   if (chats.length === 0) return <p className={styles.empty}>{text('chatList.empty')}</p>;
 
@@ -49,27 +63,30 @@ export function ChatList({ chats, rooms = [], selectedId, onSelect, onLeaveRoom 
                   : undefined
               }
             >
-              <span className={styles.top}>
-                {chat.kind === 'room' && (
-                  <>
-                    <Users size={14} className={styles.hall} aria-hidden />
-                    <span className={styles.srOnly}>{text('chatList.room')} </span>
-                  </>
-                )}
-                <span className={styles.title}>{chat.title}</span>
-                {chat.lastMessage && (
-                  <time className={styles.time} dateTime={chat.lastMessage.sentAt.toISOString()}>
-                    {formatRecent(locale, chat.lastMessage.sentAt)}
-                  </time>
-                )}
-              </span>
-              <span className={styles.bottom}>
-                <span className={styles.preview}>
-                  {chat.lastMessage?.encryption === 'undecryptable'
-                    ? text('chatList.undecryptablePreview')
-                    : (chat.lastMessage?.body ?? '')}
+              <Avatar name={chat.title} jid={chat.peerJid} avatarUrl={avatarOf(chat)} size={36} />
+              <span className={styles.lines}>
+                <span className={styles.top}>
+                  {chat.kind === 'room' && (
+                    <>
+                      <Users size={14} className={styles.hall} aria-hidden />
+                      <span className={styles.srOnly}>{text('chatList.room')} </span>
+                    </>
+                  )}
+                  <span className={styles.title}>{chat.title}</span>
+                  {chat.lastMessage && (
+                    <time className={styles.time} dateTime={chat.lastMessage.sentAt.toISOString()}>
+                      {formatRecent(locale, chat.lastMessage.sentAt)}
+                    </time>
+                  )}
                 </span>
-                <Badge mentions={roomOf(chat)?.mentionsCount ?? 0} unread={chat.unreadCount} />
+                <span className={styles.bottom}>
+                  <span className={styles.preview}>
+                    {chat.lastMessage?.encryption === 'undecryptable'
+                      ? text('chatList.undecryptablePreview')
+                      : (chat.lastMessage?.body ?? '')}
+                  </span>
+                  <Badge mentions={roomOf(chat)?.mentionsCount ?? 0} unread={chat.unreadCount} />
+                </span>
               </span>
             </button>
             {room && onLeaveRoom && (

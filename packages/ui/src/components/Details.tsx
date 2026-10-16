@@ -1,9 +1,10 @@
-import type { Chat } from '@hey-postie/core';
+import type { Chat, Contact } from '@hey-postie/core';
 import { X } from 'lucide-react';
 import { useState } from 'react';
 import { useCore, useText } from '../core/CoreProvider';
 import type { MessageKey } from '../i18n';
 import { errorKey } from '../i18n/errors';
+import { Avatar } from './Avatar';
 import { Button } from './Button';
 import styles from './Details.module.css';
 import { Dialog } from './Dialog';
@@ -11,13 +12,15 @@ import { EncryptionSection } from './EncryptionSection';
 
 interface DetailsProps {
   chat: Chat;
+  /** The contact behind the chat, when it is in the address book: gives the avatar. */
+  contact?: Contact | undefined;
   onClose: () => void;
   /** Counts the "Check their devices" requests; each new one focuses the Encryption section. */
   focusRequest?: number;
 }
 
 /** The right pane: who the peer is, their devices, and the one destructive action. */
-export function Details({ chat, onClose, focusRequest = 0 }: DetailsProps) {
+export function Details({ chat, contact, onClose, focusRequest = 0 }: DetailsProps) {
   const core = useCore();
   const text = useText();
   const [confirming, setConfirming] = useState(false);
@@ -36,6 +39,7 @@ export function Details({ chat, onClose, focusRequest = 0 }: DetailsProps) {
   return (
     <aside className={styles.details} aria-label={text('main.details')}>
       <header className={styles.header}>
+        <Avatar name={chat.title} jid={chat.peerJid} avatarUrl={contact?.avatarUrl} size={40} />
         <h2 className={styles.title}>{chat.title}</h2>
         <Button variant="ghost" onClick={onClose} aria-label={text('main.closeDetails')}>
           <X size={18} aria-hidden />

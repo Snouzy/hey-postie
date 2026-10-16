@@ -198,6 +198,7 @@ export function Main({ account, onOpenLink, onSaveFile, onLeave }: MainProps) {
       {chat && detailsOpen && (
         <DetailsPane
           chat={chat}
+          contact={contact}
           room={room}
           focusRequest={encryptionFocus}
           onClose={() => setDetailsOpen(false)}

@@ -1,16 +1,17 @@
-import { fireEvent, screen } from '@testing-library/react';
+import { act, fireEvent, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
+import { useAccount } from '../core/useAccount';
 import { renderWithCore, setupCore } from '../test-utils';
 import { AccountMenu } from './AccountMenu';
 
-function openMenu() {
+function openMenu(state: 'online' | 'offline' = 'online') {
   const { core } = setupCore();
   const onSignOut = vi.fn();
   const onMyDevices = vi.fn();
   const onDeleteAccount = vi.fn();
   renderWithCore(
     <AccountMenu
-      account={{ jid: 'alice@x.org', displayName: 'alice', state: 'online' }}
+      account={{ jid: 'alice@x.org', displayName: 'alice', state }}
       onSignOut={onSignOut}
       onMyDevices={onMyDevices}
       onSettings={() => {}}
@@ -97,5 +98,57 @@ describe('AccountMenu', () => {
     fireEvent.click(screen.getByRole('button', { name: 'alice' }));
     fireEvent.click(screen.getByRole('menuitem', { name: 'Sign out' }));
     expect(onSignOut).toHaveBeenCalledOnce();
+  });
+
+  /** The row as the sidebar mounts it: fed by `useAccount`, so a new presence reaches it. */
+  function Row() {
+    const account = useAccount();
+    if (!account) return null;
+    return (
+      <AccountMenu
+        account={account}
+        onSignOut={() => {}}
+        onMyDevices={() => {}}
+        onSettings={() => {}}
+        onDeleteAccount={() => {}}
+      />
+    );
+  }
+
+  /** A signed-in account, so the service accepts a presence. */
+  async function openOnline() {
+    const { deps, core } = setupCore();
+    await core.accounts.signIn({ jid: 'alice@x.org', password: 'pw', remember: false });
+    renderWithCore(<Row />, core);
+    fireEvent.click(screen.getByRole('button', { name: 'alice' }));
+    return { deps, core };
+  }
+
+  it('sends the chosen presence with the status sentence', async () => {
+    const { deps } = await openOnline();
+    expect(screen.getByRole('radio', { name: /Available/ })).toBeChecked();
+    await act(() => fireEvent.click(screen.getByRole('radio', { name: /Away/ })));
+    expect(deps.fakes.xmpp.presences.at(-1)).toEqual({ show: 'away' });
+    const status = screen.getByRole('textbox', { name: 'Status' });
+    fireEvent.change(status, { target: { value: ' On the road ' } });
+    expect(screen.getByText('13/140')).toBeInTheDocument();
+    await act(() => fireEvent.keyDown(status, { key: 'Enter' }));
+    expect(deps.fakes.xmpp.presences.at(-1)).toEqual({ show: 'away', status: 'On the road' });
+  });
+
+  it("shows Postie's sentence when the status is too long, and the counter in the red", async () => {
+    const { deps } = await openOnline();
+    const status = screen.getByRole('textbox', { name: 'Status' });
+    fireEvent.change(status, { target: { value: 'x'.repeat(141) } });
+    expect(screen.getByText('141/140')).toHaveAttribute('data-over');
+    await act(() => fireEvent.keyDown(status, { key: 'Enter' }));
+    expect(screen.getByRole('alert')).toHaveTextContent('too long');
+    expect(deps.fakes.xmpp.presences).toHaveLength(0);
+  });
+
+  it('keeps the picker off while the account is not online', () => {
+    openMenu('offline');
+    expect(screen.getByRole('radio', { name: /Available/ })).toBeDisabled();
+    expect(screen.getByRole('textbox', { name: 'Status' })).toBeDisabled();
   });
 });
