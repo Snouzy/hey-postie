@@ -1,5 +1,5 @@
 import type { Core } from '@hey-postie/core';
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { SaveFile } from './components/Attachments';
 import { CoreProvider } from './core/CoreProvider';
 import { downloadBlob } from './core/download';
@@ -40,6 +40,12 @@ export function App({ core, locale, onOpenLink, version, onSaveFile }: AppProps)
   const [theme, setTheme] = useTheme();
   const [localeChoice, setLocaleChoice] = useState<LocaleChoice>(readLocaleChoice);
   const [showPreview, setShowPreviewState] = useState<boolean>(readShowPreview);
+  const effectiveLocale = localeChoice === 'system' ? locale : localeChoice;
+
+  // Screen readers pick their voice from it; a language change must reach the document too.
+  useEffect(() => {
+    document.documentElement.lang = effectiveLocale;
+  }, [effectiveLocale]);
 
   // Synchronously, on the first render: a letter may arrive before any effect runs.
   const told = useRef(false);
@@ -60,7 +66,7 @@ export function App({ core, locale, onOpenLink, version, onSaveFile }: AppProps)
   }
 
   return (
-    <CoreProvider core={core} locale={localeChoice === 'system' ? locale : localeChoice}>
+    <CoreProvider core={core} locale={effectiveLocale}>
       <SettingsProvider
         value={{
           theme,

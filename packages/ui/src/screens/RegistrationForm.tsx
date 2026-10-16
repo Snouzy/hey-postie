@@ -36,6 +36,7 @@ export function RegistrationForm(props: RegistrationFormProps) {
   const text = useText();
   const account = useAccount();
   const passwordHelpId = useId();
+  const messageId = useId();
   const formElement = useRef<HTMLFormElement>(null);
   const [error, setError] = useState<MessageKey | null>(null);
   const [busy, setBusy] = useState(false);
@@ -52,8 +53,9 @@ export function RegistrationForm(props: RegistrationFormProps) {
     event.preventDefault();
     if (busy) return;
     const { username = '', password = '', repeat = '' } = values;
-    if (password.length < MIN_PASSWORD_LENGTH) return setError('createAccount.passwordTooShort');
-    if (password !== repeat) return setError('createAccount.passwordMismatch');
+    if (password.length < MIN_PASSWORD_LENGTH)
+      return refuse('createAccount.passwordTooShort', 'password');
+    if (password !== repeat) return refuse('createAccount.passwordMismatch', 'repeat');
     setError(null);
     setBusy(true);
     try {
@@ -72,8 +74,25 @@ export function RegistrationForm(props: RegistrationFormProps) {
   }
 
   function focusUsername() {
-    const input = formElement.current?.elements.namedItem('username');
+    focusField('username');
+  }
+
+  function focusField(name: string) {
+    const input = formElement.current?.elements.namedItem(name);
     if (input instanceof HTMLInputElement) input.focus();
+  }
+
+  // A rule broken before anything leaves: the sentence, and the focus on the field at fault.
+  function refuse(key: MessageKey, field: 'password' | 'repeat') {
+    setError(key);
+    focusField(field);
+  }
+
+  function describedBy(name: string): string | undefined {
+    if (name === 'password')
+      return passwordInvalid ? `${passwordHelpId} ${messageId}` : passwordHelpId;
+    if (name === 'username' && usernameInvalid) return messageId;
+    return undefined;
   }
 
   // Our own words for the two fields every server asks; the server's label for the rest.
@@ -84,6 +103,9 @@ export function RegistrationForm(props: RegistrationFormProps) {
   }
 
   const mood = creating ? 'delivering' : error ? 'oops' : 'sealed';
+  const passwordInvalid = error === 'createAccount.passwordTooShort';
+  const repeatInvalid = error === 'createAccount.passwordMismatch';
+  const usernameInvalid = error === 'error.AccountConflict';
 
   return (
     <main className={layout.screen}>
@@ -103,7 +125,12 @@ export function RegistrationForm(props: RegistrationFormProps) {
             name={field.name}
             autoComplete={field.name === 'password' ? 'new-password' : 'off'}
             autoCapitalize="none"
-            aria-describedby={field.name === 'password' ? passwordHelpId : undefined}
+            aria-describedby={describedBy(field.name)}
+            aria-invalid={
+              (field.name === 'password' && passwordInvalid) ||
+              (field.name === 'username' && usernameInvalid) ||
+              undefined
+            }
             value={values[field.name] ?? ''}
             onChange={(e) => set(field.name, e.target.value)}
             disabled={creating}
@@ -123,6 +150,8 @@ export function RegistrationForm(props: RegistrationFormProps) {
           onChange={(e) => set('repeat', e.target.value)}
           disabled={creating}
           required
+          aria-invalid={repeatInvalid || undefined}
+          aria-describedby={repeatInvalid ? messageId : undefined}
         />
         {captcha && (
           <>
@@ -143,7 +172,7 @@ export function RegistrationForm(props: RegistrationFormProps) {
             />
           </>
         )}
-        <p className={layout.message} role={error ? 'alert' : 'status'}>
+        <p id={messageId} className={layout.message} role={error ? 'alert' : 'status'}>
           {creating ? text('createAccount.creating') : error ? text(error) : ''}
         </p>
         <div className={layout.actions}>

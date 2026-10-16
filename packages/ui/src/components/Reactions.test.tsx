@@ -83,4 +83,11 @@ describe('Reactions', () => {
     await signedInConversation([{ emoji: '🙏', fromJids: ['bob@example.org'], mine: false }]);
     expect(screen.getByRole('list', { name: 'Reactions' })).toBeInTheDocument();
   });
+
+  it('describes a pill with the names behind it, not only in the tooltip', async () => {
+    await signedInConversation([
+      { emoji: '❤️', fromJids: ['bob@example.org', 'alice@x.org'], mine: true },
+    ]);
+    expect(screen.getByRole('button', { name: '❤️ 2' })).toHaveAccessibleDescription('bob, alice');
+  });
 });

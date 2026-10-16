@@ -123,6 +123,8 @@ export function Composer({
               className={styles.fileInput}
               type="file"
               multiple
+              // The paperclip is the Tab stop; the input stays in the tree for its own name.
+              tabIndex={-1}
               aria-label={text('composer.attach')}
               disabled={disabled}
               onChange={(event) => {

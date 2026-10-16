@@ -115,5 +115,5 @@
 /* Unread letters without a mention: the count, without the stamp. */
 .muted {
   background: var(--line);
-  color: var(--ink-muted);
+  color: var(--ink);
 }

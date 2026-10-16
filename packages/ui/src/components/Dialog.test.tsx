@@ -65,4 +65,12 @@ describe('Dialog', () => {
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     expect(opener).toHaveFocus();
   });
+
+  it('makes everything outside the card inert while open, and frees it on close', () => {
+    const opener = openDialog();
+    expect(opener).toHaveAttribute('inert');
+    expect(screen.getByRole('dialog')).not.toHaveAttribute('inert');
+    fireEvent.keyDown(window, { key: 'Escape' });
+    expect(opener).not.toHaveAttribute('inert');
+  });
 });

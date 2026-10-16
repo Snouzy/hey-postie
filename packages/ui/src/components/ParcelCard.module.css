@@ -14,7 +14,7 @@
 
 .icon {
   flex-shrink: 0;
-  color: var(--kraft);
+  color: var(--kraft-ink);
 }
 
 .about {
@@ -37,7 +37,7 @@
 
 .lock {
   flex-shrink: 0;
-  color: var(--kraft);
+  color: var(--kraft-ink);
 }
 
 .size {

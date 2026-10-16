@@ -151,4 +151,13 @@ describe('AccountMenu', () => {
     expect(screen.getByRole('radio', { name: /Available/ })).toBeDisabled();
     expect(screen.getByRole('textbox', { name: 'Status' })).toBeDisabled();
   });
+
+  it('closes on Esc from the status field too, with the focus back on the row', () => {
+    const { trigger } = openMenu();
+    const status = screen.getByRole('textbox', { name: 'Status' });
+    status.focus();
+    fireEvent.keyDown(status, { key: 'Escape' });
+    expect(screen.queryByRole('menu')).not.toBeInTheDocument();
+    expect(trigger).toHaveFocus();
+  });
 });

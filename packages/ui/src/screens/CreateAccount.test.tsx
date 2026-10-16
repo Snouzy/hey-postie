@@ -262,4 +262,23 @@ describe('CreateAccount', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Back' }));
     expect(screen.getByRole('button', { name: 'Sign in' })).toBeInTheDocument();
   });
+
+  it('marks and focuses the field at fault when a password rule breaks', async () => {
+    const { deps } = openCreateAccount();
+    deps.fakes.registration.forms.set('b.org', FORM);
+    await askServer();
+    fillWho('alice', 'longenough', 'different');
+    const alert = await screen.findByRole('alert');
+    const repeat = screen.getByLabelText('Repeat password');
+    expect(repeat).toHaveFocus();
+    expect(repeat).toHaveAttribute('aria-invalid', 'true');
+    expect(repeat).toHaveAttribute('aria-describedby', alert.id);
+
+    fillWho('alice', 'short');
+    const password = screen.getByLabelText('Password');
+    expect(password).toHaveFocus();
+    expect(password).toHaveAttribute('aria-invalid', 'true');
+    expect(password.getAttribute('aria-describedby')).toContain(alert.id);
+    expect(repeat).not.toHaveAttribute('aria-invalid');
+  });
 });

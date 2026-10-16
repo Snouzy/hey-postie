@@ -3,7 +3,8 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
+  /* "safe": taller than the window (200% zoom), the top stays reachable instead of clipped. */
+  justify-content: safe center;
   gap: var(--space-3);
   padding: var(--space-12) var(--space-6);
 }

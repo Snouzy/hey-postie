@@ -88,4 +88,24 @@ describe('SignIn', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Back' }));
     expect(screen.getByRole('button', { name: 'Create an account' })).toBeInTheDocument();
   });
+
+  it('marks the address invalid and described by the sentence when it is malformed', async () => {
+    openSignIn();
+    fill('not-an-address', 'secret');
+    const alert = await screen.findByRole('alert');
+    const address = screen.getByLabelText('Address');
+    expect(address).toHaveAttribute('aria-invalid', 'true');
+    expect(address).toHaveAttribute('aria-describedby', alert.id);
+    expect(screen.getByLabelText('Password')).not.toHaveAttribute('aria-invalid');
+  });
+
+  it('marks the password invalid when the server rejects it', async () => {
+    const { deps } = openSignIn();
+    deps.fakes.xmpp.failWith = new DomainError('InvalidCredentials');
+    fill('alice@example.org', 'wrong');
+    const alert = await screen.findByRole('alert');
+    expect(screen.getByLabelText('Password')).toHaveAttribute('aria-describedby', alert.id);
+    expect(screen.getByLabelText('Password')).toHaveAttribute('aria-invalid', 'true');
+    expect(screen.getByLabelText('Address')).not.toHaveAttribute('aria-invalid');
+  });
 });

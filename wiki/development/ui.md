@@ -559,7 +559,8 @@ _Added 2026-10-15. Sources: `components/ReactionBar.tsx`, `Reactions.tsx`, `core
 
 ## Keyboard
 
-Cmd/Ctrl+K focuses the search (listener in `Main`). The "+" of the sidebar opens a menu
+Cmd/Ctrl+K focuses the search (listener in `Main`). `App` writes the effective locale on
+`<html lang>`, so a screen reader changes voice with the dictionary. The "+" of the sidebar opens a menu
 (`AddMenu`, `role="menu"`): focus lands on the first item, arrow keys cycle, Esc, Tab out, a
 click outside or picking an item closes it. Picking an item puts the focus back on "+" before
 the dialog opens, so the dialog gives the focus back to "+" when it closes. The account row opens
@@ -587,6 +588,47 @@ which `App` receives as a prop (default: `window.open`); the desktop app will ro
 system browser. An `xmpp:` link stays in the app: `Linkify` emits `chat.requested` with the bare
 JID and `Main` opens that chat. Nothing else in a body becomes clickable,
 and bodies are always rendered as text (no HTML).
+
+## Accessibility audit 2026-10-16
+
+_Keyboard and screen-reader walk of every screen as of that night (sign-in, registration, the main
+screen, the request screen, the conversation, the panes, the settings window, every dialog and
+menu, the empty states), against WCAG 2.2 AA. Contrast ratios computed from the tokens
+(`theme/tokens.css`) with the WCAG formula, in both themes. Verified in jsdom through the tests
+named below; the pixel checks (focus ring on every stop, 200% zoom in a 900 × 600 window) were
+reasoned from the stylesheets, not run in a browser: **not verified on screen**._
+
+| Severity | Where | What | Fixed |
+|---|---|---|---|
+| HIGH | `tokens.css`, dark | `--success` / `--warning` kept their light values: 3.1:1 and 2.9:1 on `--paper-raised` (1.4.3 for the trust stamps and "This device", 1.4.11 for the away dot). | Yes: dark values `#62C489` / `#E6A04C` (7.2:1, 7.0:1). |
+| HIGH | `tokens.css`, light | `--kraft` as text or icon: 2.8:1 on paper, 2.4:1 on `--kraft-soft` (affiliation hints, parcel icons, the lock badge on an inline image, the kraft avatar tone). | Yes: new `--kraft-ink` (4.8:1) for ink and icons; `--kraft` stays for fills, so Postie's satchel does not change. |
+| HIGH | `tokens.css`, light | `--red` on `--kraft-soft` (offline banner, the request card's error): 4.2:1. | Yes: `#B82B16` (4.8:1 there, 5.5:1 on paper). |
+| HIGH | `Welcome`, `SignIn`, `CreateAccount` | Columns centred with `justify-content: center`: taller than the window (200% zoom), the top of the form is pushed above the viewport and cannot be scrolled to (1.4.4, 1.4.10). | Yes: `safe center` (falls back to the top on an engine without it). |
+| HIGH | `Main`, `Details`, `RoomDetails`, `DetailsPane` | `.main` clipped its overflow; at 200% the fixed sidebar and the shrinking pane left the conversation at zero width and the pane squashed. | Yes: the columns keep their width (`flex-shrink: 0`, the centre at least 320px) and `.main` scrolls sideways instead. 300 + 320 + 280 is the 900 minimum window at 100%, so nothing scrolls there. |
+| HIGH | `Dialog` | A card taller than the window was clipped both ways (the backdrop centres it). | Yes: `max-height` and `overflow-y: auto` on the card. |
+| MEDIUM | `Dialog` | Nothing outside the card was `inert`: Tab was trapped, but a screen reader's cursor could read and act behind the modal. | Yes: every sibling on the way up to `body` gets `inert` while the card is open (`inertOutside`), removed on close. `Dialog.test.tsx`. |
+| MEDIUM | `tokens.css`, inputs | Text-field borders in `--line` (12% ink): 1.3:1 against their paper, under the 3:1 of 1.4.11; the label and the raised fill were the only cues. | Yes: `--line-strong` (3.1:1 light, 3.3:1 dark) on `Field`, the composer, both search fields and the status field. |
+| MEDIUM | `Sidebar` search | `outline: none` on the input, replaced by a 1px border change on the pill: too thin to count as a focus indicator (2.4.7). | Yes: the pill wears the 2px ring on `:focus-within`. |
+| MEDIUM | `AccountMenu` | Esc and Tab-out were heard by the `role="menu"` part only: from the presence radios or the status field, Esc did nothing and Shift+Tab left the card open. | Yes: both handlers moved to the card; arrows stay on the menu. `AccountMenu.test.tsx`. |
+| MEDIUM | `SignIn`, `RegistrationForm`, `NewChat`, `AddContact`, `JoinRoom` | Errors were announced (`role="alert"`) but never tied to the field at fault: no `aria-invalid`, no `aria-describedby`, and a broken password rule left the focus on the button (3.3.1). | Yes: the field at fault is `aria-invalid`, described by the sentence, and the registration rules focus it. `SignIn.test.tsx`, `CreateAccount.test.tsx`. |
+| MEDIUM | `Composer` | The visually hidden file input and the paperclip were two Tab stops with the same name, "Attach a parcel". | Yes: the input is `tabindex="-1"` (still in the tree for its name); the paperclip is the stop. `Composer.test.tsx`. |
+| MEDIUM | `App` | `<html lang>` stayed `en` whatever the dictionary: a French interface read with an English voice (3.1.1). | Yes: `App` writes the effective locale on the document. `App.test.tsx`. |
+| MEDIUM | `Main` | No `main` landmark once signed in (the sidebar is a `nav`, the conversation a labelled `section`). | Yes: the centre column is a `<main>`. `Main.test.tsx`. |
+| LOW | `ChatList` | The muted unread chip, `--ink-muted` on `--line`: 4.35:1 in light. | Yes: the chip's text is `--ink`; the chip keeps its quiet background. |
+| LOW | `Reactions` | Who reacted lived in `title` only, out of reach without a pointer. | Yes: a hidden span with the names, `aria-describedby` from the pill. `Reactions.test.tsx`. |
+| LOW | `SignIn`, `CreateAccount`, `RegistrationForm`, `DeleteAccountDialog` | One `<p>` whose role swaps between `status` and `alert` as the text changes; a stable region per role is the safer pattern (some readers miss a role that changes on the same node). | No: the tests of three screens assert the absence of an alert element; two stable regions would change what they check. Left for a lane that owns those screens. |
+| LOW | `Avatar` | Initials on the 24% wash: `--success` / `--warning` / `--red` tones read at 3.6–3.7:1 in light. | Partly: the kraft tone now uses `--kraft-ink` (3.8:1) and the dark success / warning tones follow the new tokens (4.3:1+). The initials are hidden from readers and the name is always written beside; a lighter wash would change the look, so the rest is left. |
+| LOW | `CreateAccount`, `NewChat`, `AddContact`, `JoinRoom`, `RoomBrowser` | Submit buttons disabled until the field has text (the skill asks to validate on submit instead). | No: a behaviour the tests pin ("Continue" asleep until a domain is typed); `required` already guards the submit. |
+| LOW | `Conversation` | A hall's topic is one line with the full text in `title` only. | No: the full topic is in the details pane, one click away; left as is. |
+
+Checked and found right (no change): every control is a native `button`, `input`, `a` or
+`textarea`; every icon-only button has an `aria-label`; every animation runs on `--motion` /
+`--motion-fast` (0 ms under `prefers-reduced-motion`) and the image skeleton stops its shimmer
+there; the typing line is one stable `aria-live="polite"` region and the message list a
+`role="log"`, so a new letter and a typing notice are each announced once; menus trap arrows and
+give the focus back; the settings `tablist` follows the APG key map; hit areas are 24px or more
+(the small pills come to 25px). Not verified: the rendered focus ring at every stop, and the real
+200% zoom in the desktop window.
 
 ## Adding a screen
 
