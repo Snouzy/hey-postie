@@ -1,6 +1,5 @@
 import type { Account, Chat, Contact, Draft, Room, RoomInvitation } from '@hey-postie/core';
 import { type CSSProperties, useCallback, useEffect, useRef, useState } from 'react';
-import { flushSync } from 'react-dom';
 import { AddContact } from '../components/AddContact';
 import type { SaveFile } from '../components/Attachments';
 import { Conversation } from '../components/Conversation';
@@ -17,6 +16,7 @@ import { MessageRequest } from '../components/MessageRequest';
 import { MyDevices } from '../components/MyDevices';
 import { NewChat } from '../components/NewChat';
 import { PaneResizer } from '../components/PaneResizer';
+import { QuickSwitcher } from '../components/QuickSwitcher';
 import { Sidebar } from '../components/Sidebar';
 import { SettingsWindow } from '../components/settings/SettingsWindow';
 import type { SettingsSection } from '../components/settings/sections';
@@ -52,6 +52,7 @@ interface MainProps {
 }
 
 type OpenDialog =
+  | 'switcher'
   | 'newChat'
   | 'createRoom'
   | 'joinRoom'
@@ -90,7 +91,6 @@ export function Main({ account, onOpenLink, onSaveFile, onLeave }: MainProps) {
   const [draft, setDraft] = useState<Draft | null>(null);
   // The first-launch card: once per account, and only for an empty address book.
   const [welcoming, setWelcoming] = useState(false);
-  const searchRef = useRef<HTMLInputElement>(null);
   const mainRef = useRef<HTMLDivElement>(null);
   const panes = usePaneSizes();
   const { sidebarCollapsed } = panes.sizes;
@@ -148,10 +148,12 @@ export function Main({ account, onOpenLink, onSaveFile, onLeave }: MainProps) {
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
       if ((event.metaKey || event.ctrlKey) && event.key === 'k') {
+        // "Go to…", the Slack way; another dialog keeps the keys.
         event.preventDefault();
-        // A folded sidebar opens first: the field has to be on screen to take the focus.
-        if (sidebarCollapsed) flushSync(() => panes.update({ sidebarCollapsed: false }));
-        searchRef.current?.focus({ preventScroll: true });
+        if (!dialog) setDialog('switcher');
+      } else if ((event.metaKey || event.ctrlKey) && event.key === 'n') {
+        event.preventDefault();
+        if (!dialog) setDialog('newChat');
       } else if ((event.metaKey || event.ctrlKey) && event.key === 'b') {
         event.preventDefault();
         panes.update({ sidebarCollapsed: !sidebarCollapsed });
@@ -282,7 +284,6 @@ export function Main({ account, onOpenLink, onSaveFile, onLeave }: MainProps) {
         selectedChatId={chat?.id ?? null}
         selectedRequestJid={request?.jid ?? null}
         selectedInvitationJid={invitation?.roomJid ?? null}
-        searchRef={searchRef}
         error={dialog ? null : error}
         onSelectChat={select}
         onSelectContact={(c: Contact) => void openWith(c.jid)}
@@ -426,6 +427,18 @@ export function Main({ account, onOpenLink, onSaveFile, onLeave }: MainProps) {
               setDetailsOpen(false);
             }
             setLeavingRoom(null);
+          }}
+        />
+      )}
+      {dialog === 'switcher' && (
+        <QuickSwitcher
+          chats={chats}
+          contacts={contacts}
+          onClose={closeDialog}
+          onPick={(row) => {
+            closeDialog();
+            if (row.kind === 'chat') select(row.chat);
+            else void openWith(row.contact.jid);
           }}
         />
       )}

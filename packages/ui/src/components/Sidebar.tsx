@@ -8,7 +8,7 @@ import {
   SquarePlus,
   UserPlus,
 } from 'lucide-react';
-import { type RefObject, useState } from 'react';
+import { useState } from 'react';
 import { useText } from '../core/CoreProvider';
 import { inviterName } from '../core/useInvitations';
 import { isRequest, type RequestRow } from '../core/useRequests';
@@ -64,7 +64,6 @@ interface SidebarProps {
   selectedChatId: string | null;
   selectedRequestJid: string | null;
   selectedInvitationJid: string | null;
-  searchRef: RefObject<HTMLInputElement | null>;
   /** A failed background action (sign out, opening a chat), in Postie's words. */
   error: MessageKey | null;
   onSelectChat: (chat: Chat) => void;
@@ -180,7 +179,6 @@ export function Sidebar(props: SidebarProps) {
         <label className={SEARCH}>
           <Search size={16} aria-hidden />
           <input
-            ref={props.searchRef}
             className={SEARCH_INPUT}
             type="search"
             value={query}

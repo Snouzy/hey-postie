@@ -765,7 +765,10 @@ follows the chat). Tests: `PaneResizer.test.tsx`, `screens/Panes.test.tsx`, `lay
 
 ## Keyboard
 
-Cmd/Ctrl+K focuses the search (listener in `Main`; it opens a folded sidebar first).
+Cmd/Ctrl+K opens "Go to…" (`QuickSwitcher`, the Slack way, 2026-10-16): a combobox that filters
+the chats and halls (unread first, then by last activity) and the contacts without a chat; arrows
+move, Enter opens, Esc closes. Cmd/Ctrl+N opens "New chat". Both are heard in `Main` and wait
+while another dialog is open. The sidebar's search field stays for filtering the list in place.
 Cmd/Ctrl+B folds and unfolds the sidebar (see [Panes](#panes)). `App` writes the effective locale on
 `<html lang>`, so a screen reader changes voice with the dictionary. The "+" of the sidebar opens a menu
 (`AddMenu`, `role="menu"`): focus lands on the first item, arrow keys cycle, Esc, Tab out, a

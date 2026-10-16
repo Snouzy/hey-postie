@@ -44,7 +44,7 @@ describe('the panes of the main screen', () => {
     expect(screen.getByRole('navigation')).toHaveAttribute('id', 'sidebar');
   });
 
-  it('folds and unfolds the sidebar with Cmd/Ctrl+B, and Cmd+K opens it for the search', async () => {
+  it('folds and unfolds the sidebar with Cmd/Ctrl+B', async () => {
     await signedIn();
     const sidebar = screen.getByRole('navigation');
     fireEvent.keyDown(window, { key: 'b', metaKey: true });
@@ -61,9 +61,7 @@ describe('the panes of the main screen', () => {
     expect(readPaneSizes().sidebarCollapsed).toBe(false);
 
     fireEvent.keyDown(window, { key: 'b', metaKey: true });
-    fireEvent.keyDown(window, { key: 'k', metaKey: true });
-    expect(sidebar).toBeVisible();
-    expect(screen.getByRole('searchbox', { name: 'Search chats' })).toHaveFocus();
+    expect(sidebar).not.toBeVisible();
   });
 
   it('resizes the details pane from its own separator and closes it when dragged shut', async () => {

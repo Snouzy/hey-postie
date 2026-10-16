@@ -397,6 +397,13 @@ export const en = {
   'sidebar.hallsFirst': 'Create your first hall',
   'sidebar.lettersFirst': 'Write to someone',
   'sidebar.unreadChats': 'chats with unread letters',
+  'switcher.title': 'Go to…',
+  'switcher.search': 'Chat, hall or contact',
+  'switcher.placeholder': 'Type a name',
+  'switcher.nothing': 'Nothing by that name in my satchel.',
+  'switcher.hint': '↑ ↓ to move, Enter to open, Esc to close. ⌘N writes a new letter.',
+  'switcher.newChat': 'New chat',
+  'switcher.unread': '{count} unread',
 
   'createRoom.title': 'Create a hall',
   'createRoom.intro':

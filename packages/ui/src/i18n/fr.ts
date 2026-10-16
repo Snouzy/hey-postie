@@ -411,6 +411,14 @@ export const fr: Record<MessageKey, string> = {
   'sidebar.hallsFirst': 'Crée ton premier salon',
   'sidebar.lettersFirst': 'Écris à quelqu’un',
   'sidebar.unreadChats': 'discussions avec des lettres non lues',
+  'switcher.title': 'Aller à…',
+  'switcher.search': 'Discussion, salon ou contact',
+  'switcher.placeholder': 'Tape un nom',
+  'switcher.nothing': 'Rien à ce nom dans ma sacoche.',
+  'switcher.hint':
+    '↑ ↓ pour te déplacer, Entrée pour ouvrir, Échap pour fermer. ⌘N écrit une nouvelle lettre.',
+  'switcher.newChat': 'Nouvelle discussion',
+  'switcher.unread': '{count} non lus',
 
   'createRoom.title': 'Créer un salon',
   'createRoom.intro':
