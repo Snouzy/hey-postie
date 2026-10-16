@@ -116,11 +116,11 @@ the code on 2026-10-15.
 |---|---|
 | `relay/mod.rs` | `start()`: binds `127.0.0.1:0` (a free port), draws a 32-byte random token, serves on Tauri's async runtime. `RelayError`: the three close reasons. The `RELAY_DEBUG` logger. |
 | `relay/server.rs` | Accepts WebSockets: a path other than `/xmpp/<token>` is answered `404` and dropped; the handshake has 10 s; at most 8 sessions at a time; frames are capped at 8 MiB. |
-| `relay/bridge.rs` | Session setup: waits for the client's `<open/>` (10 s), resolves, connects while still watching the WebSocket (a webview that leaves aborts the attempts), then hands over to `pump`. |
+| `relay/bridge.rs` | Session setup: waits for the client's `<open/>` (10 s), checks that its `to` is a domain TLS can verify (`tls::server_name`: an ASCII host name or an IP literal, else `StreamError` before any DNS or TCP work; unicode domains must be given in punycode, decision of 2026-10-16: no `idna` dependency in version 1), resolves, connects while still watching the WebSocket (a webview that leaves aborts the attempts), then hands over to `pump`. |
 | `relay/connect.rs` | Tries the candidates in order (10 s each); STARTTLS negotiation; then `tls`. |
 | `relay/pump.rs` | The two directions as two futures polled together, so a slow peer on one side never blocks reads from the other. Gates stream restarts behind `<success/>`; reports `<stream:error>` as `StreamError`. |
 | `relay/framing.rs` | WS ↔ stream translation: `<open/>` ↔ `<stream:stream>` (carrying `to`, `version`, `xml:lang`), `<close/>` ↔ `</stream:stream>`; each server element becomes a stand-alone document (`xmlns="jabber:client"` or `xmlns:stream` declared when missing). Refuses client frames that contain stream-level markup. |
-| `relay/framing/splitter.rs` | Cuts the TCP bytes into top-level elements, tolerant of elements split across reads. A hand-written state machine (tags with a name stack, quotes, comments, CDATA, PI), not a full parser: the bytes are forwarded untouched. |
+| `relay/framing/splitter.rs` | Cuts the TCP bytes into top-level elements, tolerant of elements split across reads. A hand-written state machine (tags with a name stack, quotes, comments, CDATA, PI), not a full parser: the bytes are forwarded untouched. Its contract, checked by property tests (`splitter/property_tests.rs`, 2026-10-16): what comes out never depends on where the reads were cut, including the 8 MiB limit (counted per element, not per read) and the position of an error (after the elements completed before it). |
 | `relay/resolve.rs` | SRV lookup (5 s) and RFC 2782 ordering (priority, then weighted random). |
 | `relay/tls.rs` | `rustls` client with the OS root store; SNI and verification use the XMPP domain. |
 | `relay/test_support.rs` | A scripted TCP server standing in for an XMPP server in the tests. |
@@ -166,11 +166,7 @@ It expects an `<open/>` frame then a `<stream:features>` frame. Verified on 2026
 `jabber.org` (SRV, STARTTLS on 5222) and `conversations.im` (SRV, direct TLS on 443). The other
 tests need no network: `pump/tests.rs` and `connect/tests.rs` run a full WebSocket session,
 STARTTLS negotiations and a self-signed certificate rejection against local fake servers.
-- Content Security Policy (`tauri.conf.json`, `app.security.csp`): `script-src 'self'
-  'wasm-unsafe-eval'` and `worker-src 'self'` because `@converse/headless` loads libomemo as a
-  lazy chunk plus a WebAssembly module (`/curve25519_compiled.wasm`); `connect-src` allows the
-  local relay (`ws://127.0.0.1:*`) and `https:` for HTTP upload hosts (XEP-0363); the desktop
-  app always connects through the relay, so no `wss://`. No `unsafe-inline` for scripts, no `unsafe-eval`.
+- The Content Security Policy is described in its own section below.
 - The webview reaches Rust through the repositories in `apps/desktop/app/repositories/` and the
   small modules in `apps/desktop/app/`, started once by `app/desktop.ts` when the page runs inside
   Tauri (`isTauri()`); in a plain browser (`pnpm app:dev`) none of this runs.
@@ -178,6 +174,46 @@ STARTTLS negotiations and a self-signed certificate rejection against local fake
   relay and no keychain there. `TauriTransport` answers `ServerUnreachable` and `TauriKeychain`
   `KeychainUnavailable` at once (observed on 2026-10-15: before that guard, the failed `invoke`
   read as `Unknown`, "Something went wrong on my round"). Use the Tauri window (`pnpm desktop:dev`).
+
+### Content Security Policy (`src-tauri/tauri.conf.json`, `app.security.csp`)
+
+_Reviewed on 2026-10-16 against the code of `apps/desktop`, `packages/ui` and `packages/core`._
+Tauri applies the policy to every page it serves and adds its own nonces to `script-src` and
+`style-src` for what it injects (`tauri` 2.12.4, `src/manager/mod.rs`, `replace_csp_nonce`), so
+the list below is the whole policy. Each source and why it is there:
+
+| Directive | Source | Why |
+|---|---|---|
+| `default-src` | `'self'` | The fallback for every directive not listed: only the bundle. |
+| `script-src` | `'self'` `'wasm-unsafe-eval'` | The Vite bundle, `/theme.js` and the lazy libomemo chunk; the WebAssembly flag for `/curve25519_compiled.wasm` (OMEMO). No `'unsafe-inline'`, no `'unsafe-eval'`: nothing in the code needs them (checked: no `eval`, no `new Function`, no inline script in `index.html`). |
+| `worker-src` | `'self'` | No worker today; kept so that one from the bundle would work and one from a `blob:` would not. |
+| `style-src` | `'self'` `'unsafe-inline'` | The bundled stylesheets. See the proposals for `'unsafe-inline'`. |
+| `img-src` | `'self'` `data:` `blob:` | `data:` for the registration captcha image and the avatars (`accounts.ts`, `IMAGE_DATA_URL`); `blob:` for attachments shown from a fetched `Blob` (`useAttachment.ts`). Remote images are never loaded directly: `files.fetch` downloads them, so no `https:` here. |
+| `font-src` | `'self'` | Fraunces and Figtree are bundled (`packages/ui/src/theme/fonts.css`). |
+| `connect-src` | `'self'` `ipc:` `http://ipc.localhost` `ws://127.0.0.1:*` `https:` | `ipc:` (macOS, Linux) and `http://ipc.localhost` (Windows) are Tauri's command channel; `ws://127.0.0.1:*` is the relay, whose port changes at every launch (the token in the path is the real guard, see above); `https:` is HTTP upload and download (XEP-0363) to whatever host the server names. In development `'self'` also covers Vite's HMR socket on `localhost:1420` (CSP level 3: `'self'` matches `ws:` on the same host). No `wss://`: the desktop app always goes through the relay. |
+| `object-src` | `'none'` | No plugin content, ever. Added 2026-10-16. |
+| `frame-src` | `'none'` | No iframe in the interface (checked). Added 2026-10-16. |
+| `base-uri` | `'none'` | No `<base>` tag; refusing one closes a classic way of redirecting relative script URLs. Added 2026-10-16. |
+
+Tightened on 2026-10-16: `object-src`, `frame-src` and `base-uri` were added; they forbid things
+the interface does not do, so nothing changes for the user. Not verified by launching the app on
+that day: the checks were made against the code.
+
+**Proposals, not applied** (each needs a run of the app on the three platforms to confirm):
+
+- `style-src 'self'` without `'unsafe-inline'`: React sets inline styles through the CSSOM
+  (`PendingParcel.tsx`, `Popover.tsx`), which CSP does not block, so the flag may only be there
+  for Tauri's own injected styles. Tauri adds hashes for those when `'unsafe-inline'` is absent;
+  to be confirmed on WebKit (macOS, Linux) and WebView2.
+- `connect-src https:` narrowed to the upload host: not possible statically, the host is what
+  the user's server announces (XEP-0363 `get`/`put` URLs). An alternative is to download through
+  Rust (`reqwest` is already in the tree for the updater) and keep the webview offline except
+  for the relay; a bigger change, for a later version.
+- `form-action 'none'`: every form in the interface prevents its default submit; the directive
+  would turn a forgotten `preventDefault` into a blocked navigation instead of a reload. Harmless
+  in theory, unverified in practice.
+- `media-src`: not set, so `default-src 'self'` applies; audio or video attachments played from a
+  `blob:` URL would need `media-src 'self' blob:` the day the interface plays them.
 
 ### End-to-end smoke sign-in (`src-tauri/src/smoke.rs`, `app/smoke.ts`)
 

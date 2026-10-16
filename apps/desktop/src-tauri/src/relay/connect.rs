@@ -97,8 +97,8 @@ async fn next_element(tcp: &mut TcpStream, splitter: &mut Splitter) -> Result<Ve
                 "closed during STARTTLS".into(),
             ));
         }
-        for item in splitter.push(&chunk[..count]).map_err(stream_error)? {
-            match item {
+        for item in splitter.push(&chunk[..count]) {
+            match item.map_err(stream_error)? {
                 Item::Header(_) => {}
                 Item::Element(element) => return Ok(element),
                 Item::Close => {

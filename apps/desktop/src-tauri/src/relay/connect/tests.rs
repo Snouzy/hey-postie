@@ -88,6 +88,33 @@ fn has_child_matches_whole_names_only() {
     assert!(!has_child(b"<f>starttls</f>", b"starttls"));
 }
 
+mod has_child_properties {
+    use super::*;
+    use proptest::prelude::*;
+
+    proptest! {
+        #[test]
+        fn never_panics(element in prop::collection::vec(any::<u8>(), 0..64), name in "[a-z]{0,8}") {
+            let _ = has_child(&element, name.as_bytes());
+        }
+
+        #[test]
+        fn finds_a_whole_name_and_not_a_longer_one(
+            name in "[a-z]{1,8}",
+            tail in prop::sample::select(vec!["/>", ">", " x='1'/>", "\n/>"]),
+            suffix in "[a-z0-9]{1,3}",
+        ) {
+            // The wrapper is named `_`, which the name strategy never draws.
+            let present = format!("<_><{name}{tail}</_>");
+            prop_assert!(has_child(present.as_bytes(), name.as_bytes()));
+            let longer = format!("<_><{name}{suffix}{tail}</_>");
+            prop_assert!(!has_child(longer.as_bytes(), name.as_bytes()));
+            let text = format!("<_>{name}</_>");
+            prop_assert!(!has_child(text.as_bytes(), name.as_bytes()));
+        }
+    }
+}
+
 // --- certificates ---------------------------------------------------------------------------
 
 /// A TLS server with a self-signed certificate: no OS root trusts it.

@@ -64,7 +64,12 @@ TypeScript 6, Biome 2, Vitest 5, Vite 8, `@vitejs/plugin-react`, Testing Library
 Apache-2.0.
 
 Rust, `[dev-dependencies]`: `rcgen` 0.14.10 (MIT or Apache-2.0), a self-signed certificate for the
-relay's certificate-rejection test.
+relay's certificate-rejection test; `proptest` 1.12.0 (MIT or Apache-2.0; pulls `rusty-fork`,
+`bit-set`, `unarray`, `wait-timeout`, `rand_xorshift`, all MIT or Apache-2.0), property-based
+tests of the relay's parsing (`relay/framing/property_tests.rs`, `relay/framing/splitter/property_tests.rs`,
+`relay/resolve/property_tests.rs`, and the `properties` modules of `relay/server.rs`,
+`relay/tls.rs`, `relay/connect/tests.rs`). Added 2026-10-16. Failing cases are saved under
+`apps/desktop/src-tauri/proptest-regressions/`, committed so that every run replays them.
 
 ### Local XMPP test server (`tools/xmpp-server/`, dev only, never shipped)
 

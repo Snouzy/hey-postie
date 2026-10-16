@@ -16,11 +16,20 @@ use tokio_rustls::TlsConnector;
 
 use super::RelayError;
 
+/// The domain as TLS will check it: an ASCII host name (RFC 1123 labels, underscores tolerated)
+/// or an IP literal. Checked before any DNS or TCP work, so that a domain TLS could never
+/// verify (a space, a unicode label, an empty label) is refused at once. A unicode domain must
+/// be given in its punycode form; the relay does no IDNA conversion (decision of 2026-10-16:
+/// no `idna` dependency for version 1, the servers in use have ASCII names).
+pub fn server_name(domain: &str) -> Result<ServerName<'static>, RelayError> {
+    ServerName::try_from(domain.to_owned())
+        .map_err(|_| RelayError::StreamError("domain is not a valid server name".into()))
+}
+
 /// Secures `tcp` for `domain`: SNI and certificate check both use the XMPP domain, not the SRV
 /// target, as RFC 6120 section 13.7.2 requires.
 pub async fn connect(tcp: TcpStream, domain: &str) -> Result<TlsStream<TcpStream>, RelayError> {
-    let name = ServerName::try_from(domain.to_owned())
-        .map_err(|_| RelayError::StreamError("domain is not a valid server name".into()))?;
+    let name = server_name(domain)?;
     TlsConnector::from(config()?)
         .connect(name, tcp)
         .await
@@ -91,6 +100,75 @@ mod tests {
         assert!(matches!(error, RelayError::CertificateInvalid));
         let error = classify(io(Error::NoCertificatesPresented));
         assert!(matches!(error, RelayError::CertificateInvalid));
+    }
+
+    #[test]
+    fn a_domain_is_a_host_name_or_an_ip_literal() {
+        for valid in [
+            "example.org",
+            "localhost",
+            "xn--mnchen-3ya.de",
+            "127.0.0.1",
+            "::1",
+        ] {
+            assert!(server_name(valid).is_ok(), "{valid}");
+        }
+        for invalid in [
+            "",
+            " ",
+            "münchen.de",
+            "example.org:5222",
+            "a b.org",
+            "[::1]",
+        ] {
+            assert!(server_name(invalid).is_err(), "{invalid:?}");
+        }
+    }
+
+    mod properties {
+        use super::*;
+        use proptest::prelude::*;
+
+        fn host_name() -> impl Strategy<Value = String> {
+            prop::collection::vec("[a-z]([a-z0-9-]{0,10}[a-z0-9])?", 1..4)
+                .prop_map(|labels| labels.join("."))
+        }
+
+        proptest! {
+            #[test]
+            fn never_panics(domain in ".{0,300}") {
+                let _ = server_name(&domain);
+            }
+
+            #[test]
+            fn plain_host_names_and_ip_literals_are_accepted(
+                host in host_name(),
+                ip in any::<std::net::IpAddr>(),
+            ) {
+                prop_assert!(server_name(&host).is_ok(), "{host}");
+                prop_assert!(server_name(&ip.to_string()).is_ok(), "{ip}");
+            }
+
+            #[test]
+            fn anything_outside_the_dns_alphabet_is_refused(
+                host in host_name(),
+                at in 0..32usize,
+                stray in "[^a-zA-Z0-9._-]",
+            ) {
+                let mut spoiled = host.clone();
+                spoiled.insert_str(at.min(host.len()), &stray);
+                prop_assert!(server_name(&spoiled).is_err(), "{spoiled:?}");
+            }
+
+            #[test]
+            fn a_label_over_63_or_a_name_over_253_bytes_is_refused(extra in 0..20usize) {
+                let long_label = format!("{}.org", "a".repeat(64 + extra));
+                let long_name = ["abcdefghij"; 26].join(".");
+                prop_assert!(long_name.len() > 253);
+                let refused = server_name(&long_label).is_err() && server_name(&long_name).is_err();
+                prop_assert!(refused);
+            }
+        }
     }
 
     #[test]

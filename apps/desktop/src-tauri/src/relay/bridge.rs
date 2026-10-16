@@ -9,7 +9,7 @@ use tokio_rustls::client::TlsStream;
 use tokio_tungstenite::tungstenite::Message;
 
 use super::framing::{self, OpenFrame};
-use super::{connect, pump, resolve, RelayError, Ws};
+use super::{connect, pump, resolve, tls, RelayError, Ws};
 
 /// How long the client has to send its `<open/>` after the WebSocket handshake.
 const OPEN_TIMEOUT: Duration = Duration::from_secs(10);
@@ -30,6 +30,8 @@ async fn setup(ws: &mut Ws) -> Result<(OpenFrame, TlsStream<TcpStream>), RelayEr
         .ok_or(RelayError::StreamError("closed before <open/>".into()))?;
     let open = framing::parse_open(&first).map_err(pump::stream_error)?;
     log::debug!("session opens for a domain of {} characters", open.to.len());
+    // What TLS cannot verify is not worth a DNS lookup or a connection.
+    tls::server_name(&open.to)?;
 
     let candidates = resolve::candidates(&open.to).await?;
     // Connecting can take several timeouts in a row; keep reading the WebSocket meanwhile so
