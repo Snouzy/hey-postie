@@ -11,8 +11,12 @@ import type {
   RegistrationForm,
   Room,
   RoomInfo,
+  RoomInvitation,
   RoomMember,
   RoomNotify,
+  RoomPerson,
+  RoomSettings,
+  RoomVisibility,
 } from './types';
 
 export interface AccountsService {
@@ -113,6 +117,43 @@ export interface RoomsService {
    * reason is trimmed, at most 140 characters (`StatusTooLong` past it).
    */
   moderate(jid: string, messageId: string, reason?: string): Promise<void>;
+  /**
+   * Creates a hall on the account's hall service: name 1–64 characters; the address is derived
+   * from the name unless given (`suggestAddress`); `RoomExists` when taken. Persistent, the creator
+   * owner, bookmarked. Private: members only, by invitation. Public: open and listed.
+   */
+  create(input: {
+    name: string;
+    address?: string;
+    description?: string;
+    visibility: RoomVisibility;
+  }): Promise<Room>;
+  /** `Release notes` → `release-notes`: lowercase, dashes, what an address accepts. */
+  suggestAddress(name: string): string;
+  settings(jid: string): Promise<RoomSettings>;
+  /** Owner only (`NotAllowed`). The name is trimmed, 1–64 characters. */
+  configure(jid: string, change: Partial<RoomSettings>): Promise<void>;
+  setTopic(jid: string, topic: string): Promise<void>;
+  /** Invites each address (validated as a JID); stops at the first refusal. */
+  invite(jid: string, jids: string[]): Promise<void>;
+  /** Who is in the hall now, then the members who are away; owners and admins first. */
+  people(jid: string): Promise<RoomPerson[]>;
+  /**
+   * Make admin or member (owner only), remove (kick if present, then no membership) or ban (admin
+   * and up). Never on oneself (`NotAllowed`).
+   */
+  setRole(
+    jid: string,
+    person: RoomPerson,
+    change: 'admin' | 'member' | 'remove' | 'ban',
+  ): Promise<void>;
+  /** Owner only. The hall leaves the list and its bookmark goes. */
+  destroy(jid: string, reason?: string): Promise<void>;
+  /** Invitations waiting for an answer, newest first. */
+  invitations(): RoomInvitation[];
+  /** Joins (with the invitation's password, if any) and bookmarks; the invitation goes. */
+  acceptInvitation(roomJid: string): Promise<Room>;
+  declineInvitation(roomJid: string): Promise<void>;
 }
 
 /**

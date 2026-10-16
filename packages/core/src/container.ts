@@ -6,6 +6,8 @@ import type {
   KeychainRepository,
   Notifier,
   RegistrationRepository,
+  RoomAdminRepository,
+  RoomInvitationRepository,
   RoomRepository,
   RosterRepository,
   TransportRepository,
@@ -29,6 +31,8 @@ export interface CoreDependencies {
   roster: RosterRepository;
   chat: ChatRepository;
   room: RoomRepository;
+  roomAdmin: RoomAdminRepository;
+  invitations: RoomInvitationRepository;
   crypto: CryptoRepository;
   registration: RegistrationRepository;
   file: FileRepository;

@@ -11,9 +11,13 @@ import type {
   Message,
   RegistrationForm,
   Room,
+  RoomAffiliate,
+  RoomAffiliation,
   RoomInfo,
+  RoomInvitation,
   RoomMember,
   RoomNotify,
+  RoomSettings,
   Trust,
 } from './types';
 
@@ -169,4 +173,33 @@ export interface Notifier {
 export interface HiddenMessagesRepository {
   list(account: string): Promise<string[]>;
   add(account: string, messageId: string): Promise<void>;
+}
+
+/** Managing halls as their owner or admin (XEP-0045 §8-10): a small interface of its own. */
+export interface RoomAdminRepository {
+  /** Creates and configures the room in one go (never open with defaults); `RoomExists` if taken. */
+  create(input: {
+    service: string;
+    localpart: string;
+    nick: string;
+    settings: RoomSettings;
+  }): Promise<Room>;
+  settings(jid: string): Promise<RoomSettings>;
+  configure(jid: string, change: Partial<RoomSettings>): Promise<void>;
+  setTopic(jid: string, topic: string): Promise<void>;
+  /** A mediated invitation: the server checks the right and grants membership in a private hall. */
+  invite(jid: string, inviteeJid: string): Promise<void>;
+  setAffiliation(jid: string, userJid: string, affiliation: RoomAffiliation): Promise<void>;
+  kick(jid: string, nick: string): Promise<void>;
+  /** Owners, admins and members (and the banned, for admins), present or not. */
+  affiliations(jid: string): Promise<RoomAffiliate[]>;
+  destroy(jid: string, reason?: string): Promise<void>;
+  /** A hall destroyed while we were in it or had it bookmarked. */
+  onDestroyed(handler: (jid: string, reason?: string) => void): () => void;
+}
+
+/** Invitations to halls (XEP-0249 and XEP-0045 §7.8), as they arrive. */
+export interface RoomInvitationRepository {
+  onInvitation(handler: (invitation: RoomInvitation) => void): () => void;
+  decline(invitation: RoomInvitation): Promise<void>;
 }

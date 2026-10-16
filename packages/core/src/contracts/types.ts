@@ -55,6 +55,44 @@ export interface Room {
   notify: RoomNotify;
   unreadCount: number;
   mentionsCount: number;
+  /** Private: members only, by invitation. Public: open and listed. Unknown until the room says. */
+  visibility?: RoomVisibility;
+  /** My standing in the hall. */
+  affiliation?: RoomAffiliation;
+}
+
+export type RoomVisibility = 'private' | 'public';
+export type RoomAffiliation = 'owner' | 'admin' | 'member' | 'outcast' | 'none';
+
+/** What an owner sets on a hall (XEP-0045 room configuration). */
+export interface RoomSettings {
+  name: string;
+  description: string;
+  visibility: RoomVisibility;
+}
+
+/** Someone with a standing in a hall, present or not (owner, admin, member, banned). */
+export interface RoomAffiliate {
+  jid: string;
+  nick?: string;
+  affiliation: RoomAffiliation;
+}
+
+/** A person of a hall as the panel shows them: present now, or a member who is away. */
+export interface RoomPerson {
+  nick?: string;
+  jid?: string;
+  role?: RoomMember['role'];
+  affiliation: RoomAffiliation;
+  present: boolean;
+}
+
+/** An invitation to a hall, waiting for the user's answer. Untrusted text in `reason`. */
+export interface RoomInvitation {
+  roomJid: string;
+  fromJid: string;
+  reason?: string;
+  password?: string;
 }
 
 export interface RoomMember {

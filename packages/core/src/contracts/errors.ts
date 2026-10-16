@@ -21,6 +21,8 @@ export type ErrorCode =
   | 'AssistantNotAllowed'
   | 'NotAllowed'
   | 'NotRetractable'
+  | 'RoomExists'
+  | 'InvalidRoomName'
   | 'InvalidPort'
   | 'Unknown';
 

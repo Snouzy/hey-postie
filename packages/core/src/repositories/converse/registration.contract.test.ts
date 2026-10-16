@@ -11,6 +11,8 @@ import {
   FakeKeychain,
   FakeNotifier,
   FakeRoom,
+  FakeRoomAdmin,
+  FakeRoomInvitations,
 } from '../../fakes';
 import { createConverseRepositories } from './index';
 import { restoreNodeEvent, serveHeadlessAssets } from './test-support/realSocket';
@@ -63,11 +65,14 @@ describe.skipIf(!SERVER)('Converse registration against the XMPP test server', (
   beforeAll(async () => {
     await restoreNodeEvent();
     await serveHeadlessAssets();
+    const room = new FakeRoom();
     core = createCore({
       ...repositories,
       keychain: new FakeKeychain(),
       transport: { websocketUrlFor: async () => SERVER ?? '' },
-      room: new FakeRoom(),
+      room,
+      roomAdmin: new FakeRoomAdmin(room),
+      invitations: new FakeRoomInvitations(),
       crypto: new FakeCrypto(),
       file: new FakeFile(),
       hidden: new FakeHiddenMessages(),

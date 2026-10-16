@@ -7,6 +7,7 @@ import { FakeKeychain } from './keychain';
 import { FakeNotifier } from './notifier';
 import { FakeRegistration } from './registration';
 import { FakeRoom } from './room';
+import { FakeRoomAdmin, FakeRoomInvitations } from './roomAdmin';
 import { FakeRoster } from './roster';
 import { FakeTransport } from './transport';
 import { FakeXmpp } from './xmpp';
@@ -20,6 +21,8 @@ export {
   FakeNotifier,
   FakeRegistration,
   FakeRoom,
+  FakeRoomAdmin,
+  FakeRoomInvitations,
   FakeRoster,
   FakeTransport,
   FakeXmpp,
@@ -34,6 +37,8 @@ export interface FakeDependencies extends CoreDependencies {
     roster: FakeRoster;
     chat: FakeChat;
     room: FakeRoom;
+    roomAdmin: FakeRoomAdmin;
+    invitations: FakeRoomInvitations;
     crypto: FakeCrypto;
     registration: FakeRegistration;
     file: FakeFile;
@@ -43,13 +48,16 @@ export interface FakeDependencies extends CoreDependencies {
 }
 
 export function createFakeDependencies(): FakeDependencies {
+  const room = new FakeRoom();
   const fakes = {
     keychain: new FakeKeychain(),
     transport: new FakeTransport(),
     xmpp: new FakeXmpp(),
     roster: new FakeRoster(),
     chat: new FakeChat(),
-    room: new FakeRoom(),
+    room,
+    roomAdmin: new FakeRoomAdmin(room),
+    invitations: new FakeRoomInvitations(),
     crypto: new FakeCrypto(),
     registration: new FakeRegistration(),
     file: new FakeFile(),

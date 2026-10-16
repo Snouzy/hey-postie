@@ -3,19 +3,21 @@ import { DomainError } from '../contracts/errors';
 import type { EventBus } from '../contracts/events';
 import type { RoomsService } from '../contracts/services';
 import { normalizeJid } from './jid';
+import { createRoomAdmin } from './roomAdmin';
 
 const DOMAIN = /^[a-z0-9-]+(\.[a-z0-9-]+)*$/;
 /** The longest moderation reason sent; the UI shows the same limit. */
 export const MAX_REASON_LENGTH = 140;
 
 export function createRoomsService(
-  deps: Pick<CoreDependencies, 'room'>,
+  deps: Pick<CoreDependencies, 'room' | 'roomAdmin' | 'invitations' | 'chat' | 'roster'>,
   events: EventBus,
 ): RoomsService {
   deps.room.onChange((room) => events.emit('room.updated', room));
   deps.room.onMembersChange((jid, members) => events.emit('room.members', { jid, members }));
 
   return {
+    ...createRoomAdmin(deps, events),
     async list() {
       const rooms = await deps.room.list();
       return rooms.sort((a, b) => a.name.localeCompare(b.name));

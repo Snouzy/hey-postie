@@ -7,6 +7,7 @@ import type {
   Device,
   Message,
   Room,
+  RoomInvitation,
   RoomMember,
 } from './types';
 
@@ -25,6 +26,10 @@ export interface CoreEvents {
   /** The peer of a direct chat started or stopped typing (XEP-0085). */
   'chat.typing': { chatId: string; fromJid: string; typing: boolean };
   'room.updated': Room;
+  /** Someone invites the user to a hall: it waits in `rooms.invitations()` until answered. */
+  'room.invited': RoomInvitation;
+  /** A hall was destroyed; it left the list. */
+  'room.destroyed': { jid: string; reason?: string };
   'room.members': { jid: string; members: RoomMember[] };
   'devices.changed': { jid: string; devices: Device[] };
   /** The UI asks to show a chat (a click on a notification, an `xmpp:` link). */
