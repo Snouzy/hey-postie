@@ -26,7 +26,6 @@ thiserror = "2"
 tokio = { version = "1.53.3", features = ["rt-multi-thread", "net", "io-util", "time", "macros", "sync"] }
 tokio-tungstenite = "0.30.0"
 tokio-rustls = { version = "0.26.6", default-features = false, features = ["ring", "tls12", "logging"] }
-rustls-native-certs = "0.8.5"
 hickory-resolver = "0.26.3"
 quick-xml = "0.42.0"
 rand = "0.10.3"
@@ -40,6 +39,7 @@ tauri-plugin-single-instance = { version = "2", features = ["deep-link"] }
 percent-encoding = "2"
 tauri-plugin-updater = "2"
 tauri-plugin-process = "2"
+rustls-platform-verifier = "0.7.1"
 
 [dev-dependencies]
 proptest = "1.12.0"

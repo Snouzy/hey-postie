@@ -1,17 +1,21 @@
-//! TLS towards the XMPP server with `rustls`, trusting the operating system's root store.
+//! TLS towards the XMPP server with `rustls`, the certificate checked by the operating system.
 //!
-//! `rustls-native-certs` loads the OS roots once and `rustls`/`webpki` does the verification.
-//! Decision of 2026-10-15: preferred over `rustls-platform-verifier` because it is a plain Rust
-//! code path, identical on the three desktop platforms and in tests, with no extra native layer
-//! to sandbox for the App Store. The price is no OS-level revocation check; acceptable for a
-//! version 1 that only connects to the user's own server.
+//! `rustls-platform-verifier` hands the chain to the OS verifier (Security framework on macOS,
+//! CryptoAPI on Windows), so the app trusts exactly what the system and its browsers trust,
+//! including a missing intermediate fetched from the certificate's AIA address. Decision of
+//! 2026-10-16, reversing the one of 2026-10-15 (plain `rustls-native-certs` + webpki): a real
+//! server sends its leaf without its CA's intermediate certificate; Gajim and macOS
+//! accept it, webpki refused it with `UnknownIssuer`. The crate was already in the tree through
+//! `reqwest` (the updater). On Linux it falls back to webpki with the system roots, so such a
+//! server still fails there. The OS also brings revocation checks.
 
 use std::sync::{Arc, OnceLock};
 
+use rustls_platform_verifier::ConfigVerifierExt;
 use tokio::net::TcpStream;
 use tokio_rustls::client::TlsStream;
 use tokio_rustls::rustls::pki_types::ServerName;
-use tokio_rustls::rustls::{ClientConfig, RootCertStore};
+use tokio_rustls::rustls::ClientConfig;
 use tokio_rustls::TlsConnector;
 
 use super::RelayError;
@@ -36,30 +40,17 @@ pub async fn connect(tcp: TcpStream, domain: &str) -> Result<TlsStream<TcpStream
         .map_err(classify)
 }
 
-/// The client configuration, built on first use: reading the OS store costs a few milliseconds
-/// and never changes while the app runs.
+/// The client configuration, built on first use and shared by every session.
 fn config() -> Result<Arc<ClientConfig>, RelayError> {
     static CONFIG: OnceLock<Arc<ClientConfig>> = OnceLock::new();
     if let Some(config) = CONFIG.get() {
         return Ok(config.clone());
     }
-    let loaded = rustls_native_certs::load_native_certs();
-    let mut roots = RootCertStore::empty();
-    let (added, ignored) = roots.add_parsable_certificates(loaded.certs);
-    log::debug!(
-        "{added} root certificate(s) loaded, {ignored} ignored, {} load error(s)",
-        loaded.errors.len()
-    );
-    if added == 0 {
-        // Without roots every certificate would be "invalid"; say what is really wrong.
-        return Err(RelayError::StreamError("no root certificate found".into()));
-    }
-    let config = Arc::new(
-        ClientConfig::builder()
-            .with_root_certificates(roots)
-            .with_no_client_auth(),
-    );
-    Ok(CONFIG.get_or_init(|| config).clone())
+    let config = ClientConfig::with_platform_verifier().map_err(|error| {
+        log::debug!("platform verifier unavailable: {error}");
+        RelayError::StreamError("the system certificate verifier is unavailable".into())
+    })?;
+    Ok(CONFIG.get_or_init(|| Arc::new(config)).clone())
 }
 
 /// Anything wrong with the certificate chain is the one failure the user must hear about

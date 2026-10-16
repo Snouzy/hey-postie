@@ -1809,7 +1809,7 @@ dependencies = [
  "quick-xml",
  "rand 0.10.3",
  "rcgen",
- "rustls-native-certs",
+ "rustls-platform-verifier",
  "serde",
  "serde_json",
  "sys-locale",

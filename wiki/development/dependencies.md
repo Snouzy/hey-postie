@@ -35,7 +35,7 @@ listed at the end. Checked on 2026-10-15.
 | `tokio` | 1.53.3 | MIT | Async runtime pieces the relay needs (`net`, `io-util`, `time`, `sync`, `macros`, `rt-multi-thread`); the runtime itself is Tauri's. |
 | `tokio-tungstenite` | 0.30.0 | MIT | WebSocket server side of the relay (client side in tests). |
 | `tokio-rustls` | 0.26.6 | MIT or Apache-2.0 | TLS towards the XMPP server, over `rustls` 0.23 with the `ring` provider (ISC and OpenSSL-style licenses; no C toolchain needed, unlike the default `aws-lc-rs`). |
-| `rustls-native-certs` | 0.8.5 | MIT or Apache-2.0 or ISC | Loads the OS root certificates. Chosen over `rustls-platform-verifier`: pure Rust, same behaviour on every platform; no OS revocation checks (decision of 2026-10-15, `relay/tls.rs`). |
+| `rustls-platform-verifier` | 0.7.1 | MIT or Apache-2.0 | Hands the server's certificate chain to the OS verifier (Security framework, CryptoAPI), so the relay trusts what the system trusts, fetches a missing intermediate from the AIA address, and gets OS revocation checks. Replaced `rustls-native-certs` on 2026-10-16: a real server sends its leaf without its CA's intermediate certificate, webpki refused it (`UnknownIssuer`) while macOS and Gajim accept it. Already in the tree through `reqwest` (updater). Linux falls back to webpki with the system roots (`relay/tls.rs`). |
 | `hickory-resolver` | 0.26.3 | MIT or Apache-2.0 | SRV lookups with the system's DNS configuration. |
 | `quick-xml` | 0.42.0 | MIT | Attribute parsing of `<open/>` and `<stream:stream>`. |
 | `futures-util` | 0.3.34 | MIT or Apache-2.0 | `Stream`/`Sink` extension traits for the WebSocket. Already pulled by `tokio-tungstenite`. |
