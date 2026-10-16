@@ -1,8 +1,9 @@
 import { useText } from '../core/CoreProvider';
 import type { Emoji } from '../data/emoji';
 
+// Centred in its square by flex: an emoji glyph sits off-centre on a text baseline.
 const EMOJI =
-  'size-7 cursor-pointer rounded-sm border border-line bg-paper-raised text-[16px] leading-none shadow-card hover:bg-paper focus-visible:bg-paper';
+  'inline-flex size-7 cursor-pointer items-center justify-center rounded-sm border-none bg-transparent p-0 text-[16px] leading-none hover:bg-paper focus-visible:bg-paper';
 
 /** The viewer's favourite emojis in a letter's hover toolbar, one click each, before "React". */
 export function QuickReactions({

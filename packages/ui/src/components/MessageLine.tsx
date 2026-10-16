@@ -31,7 +31,8 @@ const GUTTER_TIME = `pt-[3px] text-[11px] leading-[1.4] text-ink-muted ${SHOWN_O
 const NAME = 'm-0 flex items-baseline gap-2 leading-[1.3]';
 const META = 'flex shrink-0 items-center gap-2 self-end pb-[2px] text-[11px] text-ink-muted';
 // Inside the row, at its top right: it never pokes past the list's edge.
-const TOOLS = '-top-4 right-2';
+// As in Slack: the pill straddles the row's top edge, over the padding, clear of the name and text.
+const TOOLS = 'top-[-28px] right-2';
 
 interface MessageLineProps extends LetterProps {
   /** The first row of a run carries the avatar, the name and the time. */

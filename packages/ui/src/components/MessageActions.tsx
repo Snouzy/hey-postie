@@ -86,7 +86,7 @@ export function MessageActions({
       <Button
         ref={trigger}
         variant="ghost"
-        className="border border-line bg-paper-raised p-1 shadow-card"
+        className="size-7 border-none p-0"
         aria-label={text('message.actions')}
         aria-haspopup="menu"
         aria-expanded={open}

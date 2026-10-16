@@ -30,7 +30,8 @@ const META = `flex items-center justify-end gap-2 text-[11px] ${SHOWN_ON_HOVER}`
 // Straddling the top edge, on the side that faces the column: it grows towards the middle, never
 // past the list's edge (laid out even while invisible, it would make the list scroll sideways),
 // and covers only the padding of the letter above (runs are 4px apart, bubbles have 8px).
-const TOOLS = 'top-[-10px]';
+// The pill (34px) rests on the bubble's top edge and dips 6px into its padding (8px): never on text.
+const TOOLS = 'top-[-28px]';
 
 /** A letter as a bubble: mine on the right in navy, the others' on the left on cream paper. */
 export function MessageBubble({

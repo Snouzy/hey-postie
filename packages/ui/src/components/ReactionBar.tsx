@@ -43,7 +43,7 @@ export function ReactionBar({ onReact }: ReactionBarProps) {
       <Button
         ref={trigger}
         variant="ghost"
-        className="border border-line bg-paper-raised p-1 shadow-card"
+        className="size-7 border-none p-0"
         aria-label={text('reaction.add')}
         aria-haspopup="dialog"
         aria-expanded={open !== null}

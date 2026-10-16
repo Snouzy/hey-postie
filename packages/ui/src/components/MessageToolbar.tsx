@@ -12,8 +12,10 @@ import { ReactionBar } from './ReactionBar';
 
 // `z-float`: above the letter's own positioned parts (its reply quote, its pictures), which come
 // after the toolbar in the page and would otherwise be drawn over it.
-const TOOLS = `absolute z-float flex gap-1 whitespace-nowrap ${SHOWN_ON_HOVER}`;
-const TOOL = 'border border-line bg-paper-raised p-1 shadow-card';
+// One pill holding every button (Slack's way), 34px tall: placed by the caller so that it overlaps
+// only the letter's padding, never its text.
+const TOOLS = `absolute z-float flex items-center gap-[2px] whitespace-nowrap rounded-sm border border-line bg-paper-raised p-[2px] shadow-card ${SHOWN_ON_HOVER}`;
+const TOOL = 'size-7 border-none p-0';
 
 interface MessageToolbarProps {
   message: Message;
