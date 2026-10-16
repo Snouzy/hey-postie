@@ -2,6 +2,8 @@
   position: relative; /* the drop overlay covers the column */
   flex: 1;
   min-width: 0;
+  /* Without it the column grows to its messages' height instead of letting the list scroll. */
+  min-height: 0;
   display: flex;
   flex-direction: column;
   background: var(--paper);

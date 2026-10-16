@@ -542,7 +542,9 @@ _Added 2026-10-15. Sources: `scripts/trim-emoji.mjs`, `data/emoji.json`, `data/e
   buttons (`aria-pressed`, hidden while searching), then a grid of `<button>`s whose content is
   the emoji and whose accessible name is the shortname. The grid is one Tab stop (roving
   `tabindex`: the active cell at 0, the others at -1); arrows move in the grid by one or by
-  `COLUMNS` (8, matching the stylesheet); Down from the search enters the grid; Esc closes. The
+  `COLUMNS` (8, matching the stylesheet's `repeat(8, minmax(0, 1fr))`: a wide glyph never widens
+  its column, the grid never scrolls sideways; `layout.test.ts`); Down from the search enters
+  the grid; Esc closes. The
   smile button of the `Composer` opens it; a pick runs `insertAt` on the textarea's selection,
   closes the picker and focuses the text with the caret after the emoji (the same
   `requestAnimationFrame` dance as the nick completion). `:short` autocompletion is not built.
@@ -642,6 +644,23 @@ there; the typing line is one stable `aria-live="polite"` region and the message
 give the focus back; the settings `tablist` follows the APG key map; hit areas are 24px or more
 (the small pills come to 25px). Not verified: the rendered focus ring at every stop, and the real
 200% zoom in the desktop window.
+
+## What scrolls
+
+_Decision of 2026-10-16, after the main screen shifted up "sometimes" (`layout.test.ts`)._
+
+Signed in, the screen is exactly the window: `html`, `body`, `#root` and `.main` are 100% tall
+and **never scroll up or down**. Only the lists do: the chat and contact lists (the sidebar's
+`.body`), the message list (`MessageList`'s scroller), the details panes, a dialog's card, the
+emoji grid. The 200% zoom scroll of `.main` is sideways only (`overflow-x: auto;
+overflow-y: hidden`). For that to hold, every `flex: 1` column between `.main` and a scroller
+has `min-height: 0` (`.conversation`, `.request`, the scroller itself): without it the column
+grows to its content, the window gains vertical slack, and the next programmatic `focus()` or
+`scrollIntoView()` scrolls the whole screen (that was the shift). Focus moved to something
+already on screen passes `{ preventScroll: true }` (the composer, the Cmd+K search, the
+picker's search field); a scroll to a section uses `block: 'nearest'`, which moves the pane
+and nothing above it. The welcome, sign-in and registration screens are the exception: they
+are `min-height: 100%` and let the window scroll when the zoom makes them taller than it.
 
 ## Adding a screen
 

@@ -42,6 +42,17 @@ describe('Composer', () => {
     expect(onSend).not.toHaveBeenCalled();
   });
 
+  it('focuses the text again after a send without scrolling anything', async () => {
+    const focus = vi.spyOn(HTMLElement.prototype, 'focus');
+    const { area } = renderComposer();
+    fireEvent.change(area, { target: { value: 'hello' } });
+    fireEvent.keyDown(area, { key: 'Enter' });
+    await waitFor(() => expect(area).toHaveValue(''));
+    // The textarea is on screen already: the browser must not scroll an ancestor to show it.
+    expect(focus).toHaveBeenLastCalledWith({ preventScroll: true });
+    focus.mockRestore();
+  });
+
   it('shows the error from the service inline and keeps the text', async () => {
     const onSend = vi.fn(async () => {
       throw new DomainError('Unknown');

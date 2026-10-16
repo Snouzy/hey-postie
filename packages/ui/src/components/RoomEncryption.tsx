@@ -29,7 +29,8 @@ export function RoomEncryption({ members, focusRequest = 0 }: RoomEncryptionProp
   useEffect(() => {
     if (focusRequest === 0) return;
     section.current?.focus();
-    section.current?.scrollIntoView?.({ block: 'start' });
+    // 'nearest': the pane scrolls to the section; nothing above the pane moves.
+    section.current?.scrollIntoView?.({ block: 'nearest' });
   }, [focusRequest]);
 
   return (

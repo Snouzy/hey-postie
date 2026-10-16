@@ -23,7 +23,8 @@ export function EncryptionSection({ jid, focusRequest = 0 }: EncryptionSectionPr
   useEffect(() => {
     if (focusRequest === 0) return;
     section.current?.focus();
-    section.current?.scrollIntoView?.({ block: 'start' });
+    // 'nearest': the pane scrolls to the section; nothing above the pane moves.
+    section.current?.scrollIntoView?.({ block: 'nearest' });
   }, [focusRequest]);
 
   return (

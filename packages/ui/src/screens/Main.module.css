@@ -1,8 +1,13 @@
 .main {
   height: 100%;
   display: flex;
-  /* Zoomed past the minimum window, the columns scroll sideways rather than squash or clip. */
-  overflow: auto;
+  /*
+   * Zoomed past the minimum window, the columns scroll sideways rather than squash or clip.
+   * Never up or down: only the lists scroll that way (ui.md, "What scrolls"). A column that
+   * outgrew the window would otherwise let a focus() or a scrollIntoView() shift the whole screen.
+   */
+  overflow-x: auto;
+  overflow-y: hidden;
 }
 
 .center {

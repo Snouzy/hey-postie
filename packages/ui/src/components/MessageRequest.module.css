@@ -1,6 +1,7 @@
 .request {
   flex: 1;
   min-width: 0;
+  min-height: 0; /* the column never outgrows the window (see Conversation) */
   display: flex;
   flex-direction: column;
   background: var(--paper);

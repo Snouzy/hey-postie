@@ -120,7 +120,7 @@ export function Main({ account, onOpenLink, onSaveFile, onLeave }: MainProps) {
     function onKeyDown(event: KeyboardEvent) {
       if ((event.metaKey || event.ctrlKey) && event.key === 'k') {
         event.preventDefault();
-        searchRef.current?.focus();
+        searchRef.current?.focus({ preventScroll: true });
       } else if (event.key === 'Escape' && !dialog) {
         // An open dialog takes Esc for itself (see Dialog).
         setDetailsOpen(false);

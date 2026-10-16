@@ -59,7 +59,8 @@ export function Composer({
       setError(errorKey(caught));
     } finally {
       setSending(false);
-      area.current?.focus();
+      // Already on screen: a focus that scrolled an ancestor would shift the whole column.
+      area.current?.focus({ preventScroll: true });
     }
   }
 
@@ -100,12 +101,12 @@ export function Composer({
     const end = element?.selectionEnd ?? body.length;
     replace(insertAt(body, start, end, emoji));
     setPickerOpen(false);
-    element?.focus();
+    element?.focus({ preventScroll: true });
   }
 
   function closePicker() {
     setPickerOpen(false);
-    emojiButton.current?.focus();
+    emojiButton.current?.focus({ preventScroll: true });
   }
 
   return (

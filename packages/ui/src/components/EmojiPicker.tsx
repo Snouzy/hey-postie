@@ -40,7 +40,7 @@ export function EmojiPicker({ anchor, onPick, onClose }: EmojiPickerProps) {
   const current = Math.min(active, Math.max(0, shown.length - 1));
 
   // The search field takes the focus: typing is the fastest way to an emoji.
-  useEffect(() => search.current?.focus(), []);
+  useEffect(() => search.current?.focus({ preventScroll: true }), []);
 
   function focusCell(index: number) {
     const bounded = Math.max(0, Math.min(index, shown.length - 1));
