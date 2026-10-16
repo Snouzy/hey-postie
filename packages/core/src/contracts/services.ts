@@ -172,7 +172,7 @@ export interface AssistantService {
   setSettings(change: Partial<AssistantSettings>): AssistantSettings;
   /** The bearer token clients send, made and kept in the keychain the first time. */
   token(): Promise<string>;
-  /** Replaces the token: the old one stops working. */
+  /** Replaces the token and emits `assistant.changed`: the old one stops working. */
   newToken(): Promise<string>;
   /** Whether Claude may see this chat at all (mode not off; sealed chats only when included). */
   canRead(chat: Chat): boolean;

@@ -31,7 +31,7 @@ afterEach(() => {
 });
 
 describe('Settings window: navigation', () => {
-  it('opens on General with the focus on its tab, and lists the six sections', async () => {
+  it('opens on General with the focus on its tab, and lists the seven sections', async () => {
     await openSettings();
     const tabs = screen.getAllByRole('tab').map((tab) => tab.textContent);
     expect(tabs).toEqual([
@@ -40,6 +40,7 @@ describe('Settings window: navigation', () => {
       'Appearance',
       'Notifications',
       'Privacy and encryption',
+      'Claude',
       'Advanced',
     ]);
     expect(screen.getByRole('tab', { name: 'General' })).toHaveAttribute('aria-selected', 'true');
@@ -58,7 +59,7 @@ describe('Settings window: navigation', () => {
     fireEvent.keyDown(list, { key: 'ArrowDown' });
     expect(screen.getByRole('tab', { name: 'Advanced' })).toHaveFocus();
     fireEvent.keyDown(list, { key: 'ArrowUp' });
-    expect(screen.getByRole('tabpanel', { name: 'Privacy and encryption' })).toBeInTheDocument();
+    expect(screen.getByRole('tabpanel', { name: 'Claude' })).toBeInTheDocument();
     fireEvent.keyDown(list, { key: 'Home' });
     expect(screen.getByRole('tab', { name: 'General' })).toHaveFocus();
     // One Tab stop: only the selected tab is reachable by Tab.

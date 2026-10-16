@@ -1,4 +1,13 @@
-import { Bell, type LucideIcon, Palette, ShieldCheck, Sliders, User, Wrench } from 'lucide-react';
+import {
+  Bell,
+  Bot,
+  type LucideIcon,
+  Palette,
+  ShieldCheck,
+  Sliders,
+  User,
+  Wrench,
+} from 'lucide-react';
 import type { KeyboardEvent } from 'react';
 import { useText } from '../../core/CoreProvider';
 import { SETTINGS_SECTIONS, type SettingsSection, sectionTitleKey } from './sections';
@@ -26,6 +35,7 @@ const ICONS: Record<SettingsSection, LucideIcon> = {
   appearance: Palette,
   notifications: Bell,
   privacy: ShieldCheck,
+  assistant: Bot,
   advanced: Wrench,
 };
 

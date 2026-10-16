@@ -2,11 +2,13 @@ import type { Core } from '@hey-postie/core';
 import { useEffect, useRef, useState } from 'react';
 import type { SaveFile } from './components/Attachments';
 import { DevRibbon } from './components/DevRibbon';
+import { SendApproval } from './components/SendApproval';
 import { CoreProvider } from './core/CoreProvider';
 import { downloadBlob } from './core/download';
 import { SettingsProvider } from './core/SettingsProvider';
 import {
   type LocaleChoice,
+  readAssistantSettings,
   readLocaleChoice,
   readShowPreview,
   writeLocaleChoice,
@@ -55,6 +57,7 @@ export function App({ core, locale, onOpenLink, version, onSaveFile, devLabel }:
   if (!told.current) {
     told.current = true;
     core.notifications.setShowPreview(showPreview);
+    core.assistant.setSettings(readAssistantSettings());
   }
 
   function setLocale(choice: LocaleChoice) {
@@ -85,6 +88,7 @@ export function App({ core, locale, onOpenLink, version, onSaveFile, devLabel }:
           onOpenLink={onOpenLink ?? openInNewWindow}
           onSaveFile={onSaveFile ?? downloadBlob}
         />
+        <SendApproval />
         {devLabel && <DevRibbon label={devLabel} />}
       </SettingsProvider>
     </CoreProvider>

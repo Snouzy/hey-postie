@@ -33,6 +33,8 @@ export function createAssistantService(
   async function newToken(): Promise<string> {
     const token = randomToken();
     await deps.keychain.set(ASSISTANT_TOKEN_KEY, token);
+    // The listener reads the token when the settings are announced: announce them again.
+    events.emit('assistant.changed', settings);
     return token;
   }
 

@@ -167,7 +167,7 @@ an MCPB bundle on the site later. Neither ships in the App Store build.
 3. Rust listener and bridge, `mcp_reply` command, entitlement
    `com.apple.security.network.server` (the relay needs it too): done (technical-guide, "The MCP
    endpoint").
-4. Settings section and the approval `Dialog`; texts in `en.ts` and `fr.ts`.
+4. Settings section and the approval `Dialog`; texts in `en.ts` and `fr.ts`: done (ui.md, "Claude").
 5. Try it in this repository's Claude Code against a `pnpm desktop:dev` window; then docs
    (technical-guide, ui.md, dependencies, release.md: entitlement and privacy).
 

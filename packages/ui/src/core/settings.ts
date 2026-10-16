@@ -1,3 +1,4 @@
+import { ASSISTANT_DEFAULT_PORT, type AssistantSettings } from '@hey-postie/core';
 import { LOCALES, type Locale } from '../i18n';
 
 /**
@@ -17,6 +18,7 @@ const LOCALE_KEY = 'hey-postie:locale';
 const NOTIFY_PREVIEW_KEY = 'hey-postie:notify-preview';
 const WELCOMED_KEY = 'hey-postie:welcomed';
 const PANES_KEY = 'hey-postie:panes';
+const ASSISTANT_KEY = 'hey-postie:assistant';
 
 /** The widths of the side columns of the main screen, and whether the sidebar is folded. */
 export interface PaneSizes {
@@ -70,6 +72,35 @@ export function readWelcomed(jid: string): boolean {
 export function writeWelcomed(jid: string) {
   if (readWelcomed(jid)) return;
   write(WELCOMED_KEY, JSON.stringify([...welcomedAccounts(), jid]));
+}
+
+/**
+ * The user's choice for Claude's access (the core holds the rule, as for the preview). Anything
+ * missing or odd reads as the default: off, sealed chats excluded, the default port.
+ */
+export function readAssistantSettings(): AssistantSettings {
+  let stored: Record<string, unknown> = {};
+  try {
+    const parsed: unknown = JSON.parse(read(ASSISTANT_KEY) ?? '{}');
+    if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+      stored = parsed as Record<string, unknown>;
+    }
+  } catch {
+    // A truncated value: the defaults.
+  }
+  const port = stored.port;
+  return {
+    mode: stored.mode === 'read' || stored.mode === 'readAndSend' ? stored.mode : 'off',
+    includeSealed: stored.includeSealed === true,
+    port:
+      typeof port === 'number' && Number.isInteger(port) && port >= 1024 && port <= 65535
+        ? port
+        : ASSISTANT_DEFAULT_PORT,
+  };
+}
+
+export function writeAssistantSettings(settings: AssistantSettings) {
+  write(ASSISTANT_KEY, JSON.stringify(settings));
 }
 
 export function clampPane(bounds: PaneBounds, width: unknown): number {

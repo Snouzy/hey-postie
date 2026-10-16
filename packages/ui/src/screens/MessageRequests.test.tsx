@@ -154,7 +154,9 @@ describe('Letters from strangers', () => {
     act(() => {
       deps.fakes.chat.receive({ chatId: 'grace@x.org', fromJid: 'grace@x.org', body: 'hi back' });
     });
-    expect(await screen.findByRole('button', { name: /grace/ })).toHaveTextContent('hi back');
+    // The row shows up with the user's own letter first: wait for the answer to reach its preview.
+    const row = await screen.findByRole('button', { name: /grace/ });
+    await waitFor(() => expect(row).toHaveTextContent('hi back'));
     expect(
       screen.queryByRole('button', { name: /Letters from strangers/ }),
     ).not.toBeInTheDocument();

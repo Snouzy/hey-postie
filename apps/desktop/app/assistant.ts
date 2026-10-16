@@ -2,6 +2,7 @@ import type { AssistantSettings, Core } from '@hey-postie/core';
 import { createMcpFetch } from '@hey-postie/mcp';
 import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
+import { focusMainWindow } from './window';
 
 /** A request the Rust listener checked and handed over (`src-tauri/src/mcp/`). */
 export interface Forwarded {
@@ -59,6 +60,12 @@ export async function serveAssistant(core: Core, version: string): Promise<void>
       console.warn('[mcp] cannot apply the settings', error),
     );
   core.events.on('assistant.changed', follow);
+  // The approval dialog is in the window: bring it up, even from the tray.
+  core.events.on('assistant.sendRequested', () => {
+    focusMainWindow().catch((error: unknown) =>
+      console.warn('[mcp] cannot show the window', error),
+    );
+  });
   await follow(core.assistant.getSettings());
 }
 

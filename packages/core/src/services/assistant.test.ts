@@ -76,8 +76,11 @@ describe('the token', () => {
     expect(first).toMatch(/^[A-Za-z0-9_-]{43}$/);
     expect(await deps.keychain.get(ASSISTANT_TOKEN_KEY)).toBe(first);
     expect(await core.assistant.token()).toBe(first);
+    const changes: unknown[] = [];
+    core.events.on('assistant.changed', (settings) => changes.push(settings));
     const second = await core.assistant.newToken();
     expect(second).not.toBe(first);
+    expect(changes).toHaveLength(1);
     expect(await core.assistant.token()).toBe(second);
   });
 });

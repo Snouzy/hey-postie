@@ -27,7 +27,10 @@ export interface CoreEvents {
   'devices.changed': { jid: string; devices: Device[] };
   /** The UI asks to show a chat (a click on a notification, an `xmpp:` link). */
   'chat.requested': { chatId: string };
-  /** The Claude (MCP) settings changed; the desktop app starts, stops or moves its listener. */
+  /**
+   * The Claude (MCP) settings or the token changed; the desktop app starts, stops, moves or
+   * restarts its listener.
+   */
   'assistant.changed': AssistantSettings;
   /** Claude wants to send a message: the UI asks the user (`assistant.answerSend`). */
   'assistant.sendRequested': SendRequest;

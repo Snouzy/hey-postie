@@ -5,6 +5,7 @@ import { Dialog } from '../Dialog';
 import { AccountSection } from './AccountSection';
 import { AdvancedSection } from './AdvancedSection';
 import { AppearanceSection } from './AppearanceSection';
+import { AssistantSection } from './AssistantSection';
 import { GeneralSection } from './GeneralSection';
 import { NotificationsSection } from './NotificationsSection';
 import { PrivacySection } from './PrivacySection';
@@ -79,6 +80,7 @@ export function SettingsWindow({
           {section === 'appearance' && <AppearanceSection titleId={titleId} />}
           {section === 'notifications' && <NotificationsSection titleId={titleId} />}
           {section === 'privacy' && <PrivacySection titleId={titleId} />}
+          {section === 'assistant' && <AssistantSection titleId={titleId} />}
           {section === 'advanced' && (
             <AdvancedSection
               titleId={titleId}

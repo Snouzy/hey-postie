@@ -7,6 +7,7 @@ export type SettingsSection =
   | 'appearance'
   | 'notifications'
   | 'privacy'
+  | 'assistant'
   | 'advanced';
 
 export const SETTINGS_SECTIONS: readonly SettingsSection[] = [
@@ -15,6 +16,7 @@ export const SETTINGS_SECTIONS: readonly SettingsSection[] = [
   'appearance',
   'notifications',
   'privacy',
+  'assistant',
   'advanced',
 ];
 

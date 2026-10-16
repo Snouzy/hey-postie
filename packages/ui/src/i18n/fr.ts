@@ -278,6 +278,33 @@ export const fr: Record<MessageKey, string> = {
   'settings.section.notifications': 'Notifications',
   'settings.section.privacy': 'Confidentialité et chiffrement',
   'settings.section.advanced': 'Avancé',
+  'settings.section.assistant': 'Claude',
+  'assistant.intro':
+    'Laisse Claude, l’assistant d’Anthropic, lire tes lettres et agir pour toi via MCP, tant que je suis ouvert.',
+  'assistant.access': 'Accès',
+  'assistant.mode.off': 'Désactivé',
+  'assistant.mode.read': 'Lire mes discussions',
+  'assistant.mode.readAndSend':
+    'Lire mes discussions et envoyer des lettres, chacune avec mon accord',
+  'assistant.privacy':
+    'Ce que Claude lit quitte cet ordinateur pour Anthropic, hors du sceau du chiffrement de bout en bout.',
+  'assistant.sealedHeading': 'Discussions scellées',
+  'assistant.includeSealed': 'Laisser Claude lire aussi les discussions scellées',
+  'assistant.includeSealedHint':
+    'Désactivé : les discussions scellées restent hors de tout ce que voit Claude.',
+  'assistant.connect': 'Brancher Claude',
+  'assistant.port': 'Port',
+  'assistant.copyCommand': 'Copier la commande Claude Code',
+  'assistant.newToken': 'Nouveau jeton',
+  'assistant.connectHint':
+    'Colle la commande dans un terminal. Un nouveau jeton coupe tous les Claude branchés : recopie la commande.',
+  'assistant.copied': 'Copié. Colle-la dans un terminal.',
+  'assistant.tokenReplaced': 'Nouveau jeton créé. Recopie la commande.',
+  'assistant.approval.title': 'Claude veut envoyer une lettre',
+  'assistant.approval.to': 'À {name}',
+  'assistant.approval.hint': 'Rien ne part sans ton accord. Deux minutes de silence valent un non.',
+  'assistant.approval.decline': 'Ne pas envoyer',
+  'assistant.approval.send': 'Envoyer',
   'settings.account.identity': 'Qui tu es',
   'settings.account.password': 'Mot de passe',
   'settings.account.remembered':
