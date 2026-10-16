@@ -21,6 +21,7 @@ Needs Node 24+, pnpm 12, Rust stable. Linux: `libwebkit2gtk-4.1-dev libappindica
 
 - One branch per task. Never commit on `main`.
 - Keep pull requests small and rebased on `main`.
+- Delete your branch once it is merged.
 - A code change updates its wiki page in the same commit.
 - Every service has unit tests against fake repositories (`packages/core/src/fakes/`).
 - Run `pnpm verify` before opening a pull request. There is no CI yet: the local run is the gate.

@@ -91,6 +91,11 @@ When SOLID and KISS disagree, KISS wins outside the boundaries of section 2.
 - **Dependencies one at a time.** Only one session at a time adds or upgrades dependencies, to avoid
   lockfile conflicts.
 - **Small pull requests**, rebased on `main` often.
+- **Delete a branch once it is merged.** As soon as it is in `main`, delete it on GitHub and locally,
+  with its worktree. First check that it is in `main`: `git merge-base --is-ancestor <branch>
+  origin/main`. Then `git push origin --delete <branch>`, `git worktree remove <path>` and
+  `git branch -D <branch>` (`-d` compares with the branch checked out, not with `main`, so it refuses
+  a merged branch). Only the session that owns the branch deletes it.
 - **Verified before done.** `pnpm verify` (types, lint, tests, build) passes locally before a task is
   called finished. Every service has unit tests against fake repositories. There is no CI for now
   (decision of 2026-10-15: speed first); the local run is the gate.
