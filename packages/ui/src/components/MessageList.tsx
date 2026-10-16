@@ -1,15 +1,16 @@
 import type { Message } from '@hey-postie/core';
-import { type ReactNode, useLayoutEffect, useRef, useState } from 'react';
+import { type ReactNode, useEffect, useState } from 'react';
 import { useLocale, useText } from '../core/CoreProvider';
+import { readEmojiUsage } from '../core/settings';
+import { favouriteEmojis } from '../data/emoji';
 import { dayKey, dayLabel } from '../i18n/dates';
 import type { SaveFile } from './Attachments';
 import { Avatar } from './Avatar';
-import { Button } from './Button';
 import type { MessageAction } from './MessageActions';
 import { MessageBubble } from './MessageBubble';
+import { NewLettersPill } from './NewLettersPill';
+import { useMessageScroll } from './useMessageScroll';
 
-// `leading-[1.3]` again: cn drops the button's line height when a text size is given.
-const OLDER = 'mx-0 my-3 self-center px-3 py-1 text-[13px] leading-[1.3]';
 const SCROLLER = 'flex min-h-0 flex-1 flex-col overflow-y-auto px-4 pb-4';
 // Sticky so the reader always knows which day they are in.
 const SEPARATOR =
@@ -17,6 +18,15 @@ const SEPARATOR =
 // Who speaks, in a hall: above the run, in the sender's column.
 const SENDER =
   'inline-flex items-center gap-1 self-start px-3 text-[12px] font-semibold text-ink-muted';
+// Floats over the top of the list rather than pushing the letters down while the page loads.
+const LOADING =
+  'pointer-events-none absolute inset-x-0 top-10 z-float m-0 flex justify-center text-[13px] text-ink-muted italic';
+// Over the bottom of the list: the copy confirmation and the way back down.
+const OVERLAY =
+  'pointer-events-none absolute inset-x-0 bottom-3 z-float flex flex-col items-center gap-2';
+const CHIP = 'm-0 rounded-full bg-paper-raised px-3 py-1 shadow-card';
+const COPIED = 'm-0 rounded-full bg-ink px-3 py-1 text-[13px] text-paper shadow-card';
+const COPIED_FOR_MS = 2000;
 
 interface MessageListProps {
   messages: Message[];
@@ -26,7 +36,8 @@ interface MessageListProps {
   onRetry: (message: Message) => void;
   onOpenLink: (url: string) => void;
   onReact: (message: Message, emoji: string) => void;
-  onAction?: ((message: Message, action: MessageAction) => void) | undefined;
+  /** Edit and delete: the conversation acts on them. "Copy text" is done here. */
+  onAction?: ((message: Message, action: Exclude<MessageAction, 'copy'>) => void) | undefined;
   /** In a hall the user moderates. */
   canModerate?: boolean;
   onSaveFile: SaveFile;
@@ -50,18 +61,9 @@ interface Day {
   runs: Run[];
 }
 
-const BOTTOM_TOLERANCE = 8;
-
-/** The oldest message on screen when older ones were asked for, and where it sat. */
-interface Anchor {
-  id: string;
-  top: number;
-}
-
 /**
- * Messages grouped by day, then by consecutive sender. Stays glued to the bottom while the user
- * is there; keeps the viewport still when older messages are prepended, by holding the message
- * that was first before the load at the same place on screen.
+ * Messages grouped by day, then into runs of one sender. The scroll rules (glued to the bottom,
+ * arrivals counted while scrolled up, older pages near the top) are `useMessageScroll`'s.
  */
 export function MessageList({
   messages,
@@ -80,111 +82,87 @@ export function MessageList({
 }: MessageListProps) {
   const text = useText();
   const locale = useLocale();
-  const scroller = useRef<HTMLDivElement>(null);
-  const atBottom = useRef(true);
-  const anchor = useRef<Anchor | null>(null);
-  const [loading, setLoading] = useState(false);
+  const scroll = useMessageScroll({ messages, footer, hasOlder, onLoadOlder });
+  const [copied, setCopied] = useState(false);
+  // Read once per render of the list, not once per bubble.
+  const quickEmojis = favouriteEmojis(readEmojiUsage());
 
-  // biome-ignore lint/correctness/useExhaustiveDependencies: re-pins the scroll after every change of the list or its footer
-  useLayoutEffect(() => {
-    const element = scroller.current;
-    if (!element) return;
-    const held = anchor.current;
-    // Only once something sits above the anchor: a letter arriving meanwhile does not consume it.
-    if (held && messages[0]?.id !== held.id) {
-      const bubble = bubbleOf(element, held.id);
-      if (bubble) element.scrollTop += topOf(element, bubble) - held.top;
-      anchor.current = null;
-    } else if (!held && atBottom.current) {
-      element.scrollTop = element.scrollHeight;
-    }
-  }, [messages, footer]);
+  useEffect(() => {
+    if (!copied) return;
+    const timer = setTimeout(() => setCopied(false), COPIED_FOR_MS);
+    return () => clearTimeout(timer);
+  }, [copied]);
 
-  function onScroll() {
-    const element = scroller.current;
-    if (!element) return;
-    const distance = element.scrollHeight - element.scrollTop - element.clientHeight;
-    atBottom.current = distance < BOTTOM_TOLERANCE;
-  }
-
-  async function loadOlder() {
-    const element = scroller.current;
-    const first = messages[0];
-    const bubble = element && first ? bubbleOf(element, first.id) : null;
-    anchor.current =
-      first && element && bubble ? { id: first.id, top: topOf(element, bubble) } : null;
-    setLoading(true);
+  async function act(message: Message, action: MessageAction) {
+    if (action !== 'copy') return onAction?.(message, action);
     try {
-      // Nothing prepended: nothing to hold.
-      if (!(await onLoadOlder())) anchor.current = null;
-    } finally {
-      setLoading(false);
+      await navigator.clipboard.writeText(message.body);
+      setCopied(true);
+    } catch {
+      // No clipboard (a denied permission): the text stays selectable in the bubble.
     }
   }
 
   return (
-    <div
-      ref={scroller}
-      className={SCROLLER}
-      onScroll={onScroll}
-      role="log"
-      aria-label={text('conversation.log')}
-      // biome-ignore lint/a11y/noNoninteractiveTabindex: a scrollable region must be focusable to scroll with the keyboard
-      tabIndex={0}
-    >
-      {hasOlder && (
-        <Button className={OLDER} onClick={() => void loadOlder()} disabled={loading}>
-          {text('message.loadOlder')}
-        </Button>
+    <div className="relative flex min-h-0 flex-1 flex-col">
+      <div
+        ref={scroll.scroller}
+        className={SCROLLER}
+        onScroll={scroll.onScroll}
+        role="log"
+        aria-label={text('conversation.log')}
+        // biome-ignore lint/a11y/noNoninteractiveTabindex: a scrollable region must be focusable to scroll with the keyboard
+        tabIndex={0}
+      >
+        {messages.length === 0 && empty}
+        {groupByDay(messages).map((day) => (
+          <section key={day.key} className="flex flex-col gap-3">
+            <h3 className={SEPARATOR}>{dayLabel(locale, day.date, text)}</h3>
+            {day.runs.map((run) => (
+              // A run of messages from one sender: tight spacing inside, room between runs.
+              <div
+                key={run.messages[0]?.id}
+                className="flex flex-col gap-[2px]"
+                data-from={run.fromJid}
+              >
+                {showSenders && run.messages[0]?.direction === 'in' && (
+                  <span className={SENDER}>
+                    <Avatar name={senderOf(run.messages[0])} jid={run.fromJid} size={20} />
+                    {senderOf(run.messages[0])}
+                  </span>
+                )}
+                {run.messages.map((message, index) => (
+                  <MessageBubble
+                    key={message.id}
+                    message={message}
+                    last={index === run.messages.length - 1}
+                    onRetry={onRetry}
+                    onOpenLink={onOpenLink}
+                    onReact={onReact}
+                    onAction={onAction && act}
+                    canModerate={canModerate}
+                    onSaveFile={onSaveFile}
+                    onShowDevices={onShowDevices}
+                    quickEmojis={quickEmojis}
+                  />
+                ))}
+              </div>
+            ))}
+          </section>
+        ))}
+        {footer}
+      </div>
+      {scroll.loading && (
+        <p className={LOADING}>
+          <span className={CHIP}>{text('conversation.loadingOlder')}</span>
+        </p>
       )}
-      {messages.length === 0 && empty}
-      {groupByDay(messages).map((day) => (
-        <section key={day.key} className="flex flex-col gap-3">
-          <h3 className={SEPARATOR}>{dayLabel(locale, day.date, text)}</h3>
-          {day.runs.map((run) => (
-            // A run of messages from one sender: tight spacing inside, room between runs.
-            <div
-              key={run.messages[0]?.id}
-              className="flex flex-col gap-[2px]"
-              data-from={run.fromJid}
-            >
-              {showSenders && run.messages[0]?.direction === 'in' && (
-                <span className={SENDER}>
-                  <Avatar name={senderOf(run.messages[0])} jid={run.fromJid} size={20} />
-                  {senderOf(run.messages[0])}
-                </span>
-              )}
-              {run.messages.map((message, index) => (
-                <MessageBubble
-                  key={message.id}
-                  message={message}
-                  last={index === run.messages.length - 1}
-                  onRetry={onRetry}
-                  onOpenLink={onOpenLink}
-                  onReact={onReact}
-                  onAction={onAction}
-                  canModerate={canModerate}
-                  onSaveFile={onSaveFile}
-                  onShowDevices={onShowDevices}
-                />
-              ))}
-            </div>
-          ))}
-        </section>
-      ))}
-      {footer}
+      <div className={OVERLAY}>
+        {/* Always there, so that the sentence put in it is announced. */}
+        <div aria-live="polite">{copied && <p className={COPIED}>{text('message.copied')}</p>}</div>
+        {scroll.away && <NewLettersPill unseen={scroll.unseen} onClick={scroll.jumpToLatest} />}
+      </div>
     </div>
-  );
-}
-
-function bubbleOf(scroller: HTMLElement, id: string): HTMLElement | null {
-  return scroller.querySelector<HTMLElement>(`[data-message-id="${CSS.escape(id)}"]`);
-}
-
-/** Where a bubble sits relative to the top of the scroller's content. */
-function topOf(scroller: HTMLElement, bubble: HTMLElement): number {
-  return (
-    bubble.getBoundingClientRect().top - scroller.getBoundingClientRect().top + scroller.scrollTop
   );
 }
 
@@ -192,6 +170,10 @@ function senderOf(message: Message): string {
   return message.fromNick ?? message.fromJid.split('/')[1] ?? message.fromJid;
 }
 
+/** A sender's letters further apart than this start a new run, with their name again. */
+export const RUN_GAP_MS = 10 * 60 * 1000;
+
+/** Grouped by calendar day, then into runs: one sender, each letter within `RUN_GAP_MS` of the last. */
 export function groupByDay(messages: Message[]): Day[] {
   const days: Day[] = [];
   for (const message of messages) {
@@ -202,7 +184,9 @@ export function groupByDay(messages: Message[]): Day[] {
       days.push(day);
     }
     let run = day.runs[day.runs.length - 1];
-    if (!run || run.fromJid !== message.fromJid) {
+    const previous = run?.messages[run.messages.length - 1];
+    const gap = previous ? message.sentAt.getTime() - previous.sentAt.getTime() : 0;
+    if (!run || run.fromJid !== message.fromJid || gap > RUN_GAP_MS) {
       run = { fromJid: message.fromJid, messages: [] };
       day.runs.push(run);
     }

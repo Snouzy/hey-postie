@@ -1,5 +1,5 @@
 import type { Message } from '@hey-postie/core';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { CoreProvider } from '../core/CoreProvider';
 import { mergeById } from '../core/useMessages';
@@ -49,6 +49,17 @@ describe('groupByDay', () => {
       ['bob', 1],
     ]);
     expect(days[1]?.runs).toHaveLength(1);
+  });
+
+  it('starts a new run when the same sender writes again more than 10 minutes later', () => {
+    const at = (minutes: number) => new Date(2026, 9, 12, 9, minutes);
+    const [day] = groupByDay([
+      message({ fromJid: 'bob', sentAt: at(0) }),
+      message({ fromJid: 'bob', sentAt: at(9) }),
+      message({ fromJid: 'bob', sentAt: at(18) }),
+      message({ fromJid: 'bob', sentAt: at(29) }),
+    ]);
+    expect(day?.runs.map((run) => run.messages.length)).toEqual([3, 1]);
   });
 });
 
@@ -103,11 +114,40 @@ describe('MessageList', () => {
     expect(screen.getByTitle('Read')).toBeInTheDocument();
   });
 
-  it('calls onLoadOlder from the top button', async () => {
-    const onLoadOlder = vi.fn(noop);
+  it('loads older letters near the top, once at a time, with a line while it runs', async () => {
+    let land!: (ok: boolean) => void;
+    const onLoadOlder = vi.fn(() => new Promise<boolean>((done) => (land = done)));
     renderList([message()], { hasOlder: true, onLoadOlder });
-    fireEvent.click(screen.getByRole('button', { name: 'Load older' }));
-    expect(onLoadOlder).toHaveBeenCalled();
+    expect(screen.queryByRole('button', { name: 'Load older' })).toBeNull();
+    const log = screen.getByRole('log');
+    log.scrollTop = 500;
+    fireEvent.scroll(log);
+    expect(onLoadOlder).not.toHaveBeenCalled();
+    log.scrollTop = 150;
+    fireEvent.scroll(log);
+    fireEvent.scroll(log);
+    expect(onLoadOlder).toHaveBeenCalledTimes(1);
+    expect(screen.getByText('Fetching older letters…')).toBeInTheDocument();
+    await act(async () => land(false));
+    expect(screen.queryByText('Fetching older letters…')).toBeNull();
+  });
+
+  it('asks for nothing older when the whole history is there', () => {
+    const onLoadOlder = vi.fn(noop);
+    renderList([message()], { hasOlder: false, onLoadOlder });
+    fireEvent.scroll(screen.getByRole('log'));
+    expect(onLoadOlder).not.toHaveBeenCalled();
+    expect(screen.queryByText('Fetching older letters…')).toBeNull();
+  });
+
+  it('copies a letter’s text from its menu and says so', async () => {
+    const writeText = vi.fn(async () => {});
+    Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true });
+    renderList([message({ body: 'the address is 12 Rue' })], { onAction: vi.fn() });
+    fireEvent.click(screen.getByRole('button', { name: 'More actions' }));
+    await act(async () => fireEvent.click(screen.getByRole('menuitem', { name: 'Copy text' })));
+    expect(writeText).toHaveBeenCalledWith('the address is 12 Rue');
+    expect(screen.getByText('Text copied.').closest('[aria-live="polite"]')).not.toBeNull();
   });
 });
 
@@ -153,7 +193,7 @@ describe('MessageList scroll anchor', () => {
     const { rerender } = render(list([m3, m4]));
     const log = screen.getByRole('log');
     log.scrollTop = 0;
-    fireEvent.click(screen.getByRole('button', { name: 'Load older' }));
+    fireEvent.scroll(log);
     // A letter arrives at the bottom while the page is on its way: nothing to compensate yet.
     rerender(list([m3, m4, m5]));
     expect(log.scrollTop).toBe(0);
@@ -162,5 +202,72 @@ describe('MessageList scroll anchor', () => {
     prepend(true);
     expect(log.scrollTop).toBe(100);
     layout.mockRestore();
+  });
+});
+
+describe('MessageList scrolled up', () => {
+  /** A 1000px list in a 400px window; jsdom has no layout of its own. */
+  function sized(log: HTMLElement) {
+    Object.defineProperty(log, 'scrollHeight', { value: 1000, configurable: true });
+    Object.defineProperty(log, 'clientHeight', { value: 400, configurable: true });
+  }
+
+  function setup(initial: Message[]) {
+    const { core } = setupCore();
+    const list = (messages: Message[]) => (
+      <CoreProvider core={core} locale="en">
+        <MessageList
+          messages={messages}
+          hasOlder={false}
+          onLoadOlder={noop}
+          onRetry={() => {}}
+          onOpenLink={() => {}}
+          onReact={() => {}}
+          onSaveFile={() => {}}
+        />
+      </CoreProvider>
+    );
+    const view = render(list(initial));
+    const log = screen.getByRole('log');
+    sized(log);
+    return { log, rerender: (messages: Message[]) => view.rerender(list(messages)) };
+  }
+
+  it('holds the view and counts the letters that arrive, then the pill brings the reader down', () => {
+    const first = message({ id: 'a' });
+    const { log, rerender } = setup([first]);
+    expect(screen.queryByRole('button', { name: /latest|new letter/ })).toBeNull();
+    log.scrollTop = 100;
+    fireEvent.scroll(log);
+    expect(screen.getByRole('button', { name: 'Jump to the latest' })).toBeInTheDocument();
+    const second = message({ id: 'b' });
+    rerender([first, second]);
+    expect(log.scrollTop).toBe(100);
+    expect(screen.getByRole('button', { name: '1 new letter' })).toBeInTheDocument();
+    rerender([first, second, message({ id: 'c' })]);
+    fireEvent.click(screen.getByRole('button', { name: '2 new letters' }));
+    expect(log.scrollTop).toBe(1000);
+    expect(log).toHaveFocus();
+    expect(screen.queryByRole('button', { name: /latest|new letter/ })).toBeNull();
+  });
+
+  it('within 32px of the bottom, the reader is at the latest', () => {
+    const { log } = setup([message()]);
+    log.scrollTop = 580;
+    fireEvent.scroll(log);
+    expect(screen.queryByRole('button', { name: /latest|new letter/ })).toBeNull();
+    log.scrollTop = 560;
+    fireEvent.scroll(log);
+    expect(screen.getByRole('button', { name: 'Jump to the latest' })).toBeInTheDocument();
+  });
+
+  it('brings my own letter into view wherever the reader was', () => {
+    const first = message({ id: 'a' });
+    const { log, rerender } = setup([first]);
+    log.scrollTop = 100;
+    fireEvent.scroll(log);
+    rerender([first, message({ id: 'mine', direction: 'out', fromJid: 'me' })]);
+    expect(log.scrollTop).toBe(1000);
+    expect(screen.queryByRole('button', { name: /latest|new letter/ })).toBeNull();
   });
 });

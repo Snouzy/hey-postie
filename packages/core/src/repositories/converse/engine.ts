@@ -44,6 +44,8 @@ export class ConverseEngine {
   private loaded: Loaded | null = null;
   private readonly listeners = new Set<[string, Handler]>();
   private readonly readyHandlers: Array<(loaded: Loaded) => void> = [];
+  /** Whether XEP-0333 `displayed` markers leave (the user's "tell others I read" choice). */
+  private sendDisplayed = true;
 
   constructor(private readonly options: EngineOptions = {}) {}
 
@@ -83,6 +85,16 @@ export class ConverseEngine {
     };
   }
 
+  /**
+   * Converse reads `send_chat_markers` each time it would send one (`model-with-messages.js:839`,
+   * `muc.js:282`), including the markers it sends on its own when a hall is shown: changing the
+   * setting is the one switch for both. `received` (delivery) stays on either way.
+   */
+  setSendDisplayed(send: boolean): void {
+    this.sendDisplayed = send;
+    this.loaded?.api.settings.set('send_chat_markers', chatMarkers(send));
+  }
+
   private async load(): Promise<Loaded> {
     const headless = (await import('@converse/headless')) as unknown as ConverseHeadless;
     const { converse, api, _converse, MAMPlaceholderMessage } = headless;
@@ -120,7 +132,7 @@ export class ConverseEngine {
       enable_smacks: !mock,
       archived_messages_page_size: 50,
       mam_request_all_pages: false,
-      send_chat_markers: ['received', 'displayed', 'acknowledged'],
+      send_chat_markers: chatMarkers(this.sendDisplayed),
       // At 'warn' and above Converse still logs whole stanzas on parse errors (§10): 'fatal' only.
       loglevel: this.options.debug ? 'debug' : 'fatal',
       priority: this.options.priority ?? 0,
@@ -128,6 +140,11 @@ export class ConverseEngine {
       ...(mock ? { bosh_service_url: 'montague.lit/http-bind' } : {}),
     };
   }
+}
+
+/** The XEP-0333 markers Converse may send. */
+function chatMarkers(sendDisplayed: boolean): string[] {
+  return sendDisplayed ? ['received', 'displayed', 'acknowledged'] : ['received'];
 }
 
 /**

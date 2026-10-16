@@ -4,13 +4,16 @@ import type { SaveFile } from './components/Attachments';
 import { DevRibbon } from './components/DevRibbon';
 import { CoreProvider } from './core/CoreProvider';
 import { downloadBlob } from './core/download';
+import { clearDrafts } from './core/drafts';
 import { SettingsProvider } from './core/SettingsProvider';
 import {
   type LocaleChoice,
   readAssistantSettings,
   readLocaleChoice,
+  readSendReadMarkers,
   readShowPreview,
   writeLocaleChoice,
+  writeSendReadMarkers,
   writeShowPreview,
 } from './core/settings';
 import { useAccount } from './core/useAccount';
@@ -36,7 +39,7 @@ interface AppProps {
 }
 
 /**
- * Owns the per-viewer choices (theme, language, notification preview): read from `localStorage`
+ * Owns the per-viewer choices (theme, language, notification preview, read markers): read from `localStorage`
  * on the first render, applied at once, and handed to the Settings dialog through
  * `SettingsProvider`. A language change swaps the dictionary and the whole tree re-renders.
  */
@@ -44,6 +47,7 @@ export function App({ core, locale, onOpenLink, version, onSaveFile, devLabel }:
   const [theme, setTheme] = useTheme();
   const [localeChoice, setLocaleChoice] = useState<LocaleChoice>(readLocaleChoice);
   const [showPreview, setShowPreviewState] = useState<boolean>(readShowPreview);
+  const [sendReadMarkers, setSendReadMarkersState] = useState<boolean>(readSendReadMarkers);
   const effectiveLocale = localeChoice === 'system' ? locale : localeChoice;
 
   // Screen readers pick their voice from it; a language change must reach the document too.
@@ -56,6 +60,7 @@ export function App({ core, locale, onOpenLink, version, onSaveFile, devLabel }:
   if (!told.current) {
     told.current = true;
     core.notifications.setShowPreview(showPreview);
+    core.chats.setSendReadMarkers(sendReadMarkers);
     core.assistant.setSettings(readAssistantSettings());
   }
 
@@ -70,6 +75,12 @@ export function App({ core, locale, onOpenLink, version, onSaveFile, devLabel }:
     setShowPreviewState(value);
   }
 
+  function setSendReadMarkers(value: boolean) {
+    writeSendReadMarkers(value);
+    core.chats.setSendReadMarkers(value);
+    setSendReadMarkersState(value);
+  }
+
   return (
     <CoreProvider core={core} locale={effectiveLocale}>
       <SettingsProvider
@@ -80,6 +91,8 @@ export function App({ core, locale, onOpenLink, version, onSaveFile, devLabel }:
           setLocale,
           showPreview,
           setShowPreview,
+          sendReadMarkers,
+          setSendReadMarkers,
           version: version ?? 'dev',
         }}
       >
@@ -125,6 +138,8 @@ function Screens({
         onOpenLink={onOpenLink}
         onSaveFile={onSaveFile}
         onLeave={(next) => {
+          // Another account may sign in next: what this one was writing goes.
+          clearDrafts();
           setInside(false);
           setDoor(next);
         }}

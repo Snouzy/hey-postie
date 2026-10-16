@@ -6,7 +6,7 @@ import { edgeFade } from './EmojiPicker';
 
 function openPicker() {
   const { core } = setupCore();
-  renderWithCore(<Composer onSend={vi.fn(async () => {})} />, core);
+  renderWithCore(<Composer chatId="bob@x.org" onSend={vi.fn(async () => {})} />, core);
   const area = screen.getByRole<HTMLTextAreaElement>('textbox', { name: 'Write a letter…' });
   const smile = screen.getByRole('button', { name: 'Add an emoji' });
   fireEvent.click(smile);

@@ -1,20 +1,31 @@
-import { Paperclip, Send, Smile } from 'lucide-react';
-import { type ClipboardEvent, type KeyboardEvent, useEffect, useRef, useState } from 'react';
+import { Send, Smile } from 'lucide-react';
+import {
+  type ClipboardEvent,
+  type KeyboardEvent,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from 'react';
 import { useText } from '../core/CoreProvider';
+import { readDraft, writeDraft } from '../core/drafts';
 import type { MessageKey } from '../i18n';
 import { errorKey } from '../i18n/errors';
+import { AttachButton } from './AttachButton';
 import { Button } from './Button';
 import { completeNick, grow, insertAt, pastedImages } from './composerText';
 import { EmojiPicker } from './EmojiPicker';
+import { EmojiSuggestions } from './EmojiSuggestions';
+import { useEmojiCompletion } from './useEmojiCompletion';
 
 const AREA =
   'max-h-[200px] flex-1 resize-none rounded border border-line-strong bg-paper-raised px-3 py-2 leading-[1.4] text-ink transition-[border-color] duration-(--motion-fast) focus-visible:border-navy';
 // Paperclip and smile: the same footprint as the send button, so the row stays level.
 const TOOL = 'size-10 shrink-0';
-// The real file input stays in the accessibility tree; the paperclip is its visible face.
-const FILE_INPUT = 'absolute h-px w-px overflow-hidden [clip:rect(0_0_0_0)]';
 
 interface ComposerProps {
+  /** The chat written to: its draft is kept for the session when the user goes elsewhere. */
+  chatId: string;
   onSend: (body: string) => Promise<void>;
   /** Files picked with the attach button or pasted from the clipboard: they leave as parcels. */
   onAttach?: (files: File[]) => void;
@@ -38,10 +49,12 @@ interface ComposerProps {
 
 /**
  * Enter sends, Shift+Enter breaks the line. The textarea grows with the text. In a hall, Tab
- * completes the word before the caret into a member's nick. The paperclip picks files, the smile
- * opens the emoji picker, a pasted image leaves as a parcel.
+ * completes the word before the caret into a member's nick; `:sm` offers emojis. The paperclip
+ * picks files, the smile opens the emoji picker, a pasted image leaves as a parcel. What is typed
+ * is the chat's draft (`core/drafts.ts`), except the text of a letter being corrected.
  */
 export function Composer({
+  chatId,
   onSend,
   onAttach,
   nicks = [],
@@ -56,14 +69,27 @@ export function Composer({
 }: ComposerProps) {
   const text = useText();
   const placeholder = text(sealed ? 'composer.placeholderSealed' : 'composer.placeholder');
-  const [body, setBody] = useState('');
+  const [body, setBody] = useState(() => readDraft(chatId));
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<MessageKey | null>(null);
   const [pickerOpen, setPickerOpen] = useState(false);
   const area = useRef<HTMLTextAreaElement>(null);
-  const fileInput = useRef<HTMLInputElement>(null);
   const emojiButton = useRef<HTMLButtonElement>(null);
   const canSend = body.trim().length > 0 && !sending && !disabled;
+  const completion = useEmojiCompletion(body, (start, end, emoji) =>
+    replace(insertAt(body, start, end, emoji)),
+  );
+
+  // A draft brought back from another visit: the field takes its height at once.
+  useLayoutEffect(() => {
+    if (area.current) grow(area.current);
+  }, []);
+
+  /** The text changes: it is the chat's draft, unless it is a correction under way. */
+  function write(next: string) {
+    setBody(next);
+    if (!editing) writeDraft(chatId, next);
+  }
 
   // A correction starts from the letter's text, with the caret at its end.
   const editingId = editing?.id;
@@ -79,33 +105,45 @@ export function Composer({
     });
   }, [editingId, editingBody]);
 
+  /** Back to the draft that was there before the correction. */
   function cancelEdit() {
-    setBody('');
+    restoreDraft();
     onCancelEdit?.();
-    if (area.current) area.current.style.height = 'auto';
   }
 
-  // Claude's draft joins what the user already wrote, never replaces it; the user sends it.
+  function restoreDraft() {
+    setBody(readDraft(chatId));
+    requestAnimationFrame(() => area.current && grow(area.current));
+  }
+
+  // Claude's draft joins what the user already wrote, never replaces it; the user sends it. During
+  // a correction it waits in the chat's draft, which comes back once the correction is done.
   useEffect(() => {
     if (draft === undefined) return;
     onDraftTaken?.();
-    setBody((current) => (current.trim() ? `${current}\n${draft}` : draft));
+    const current = readDraft(chatId);
+    const next = current.trim() ? `${current}\n${draft}` : draft;
+    writeDraft(chatId, next);
+    if (editingId !== undefined) return;
+    setBody(next);
     requestAnimationFrame(() => {
       if (!area.current) return;
       area.current.focus({ preventScroll: true });
       grow(area.current);
     });
-  }, [draft, onDraftTaken]);
+  }, [draft, onDraftTaken, chatId, editingId]);
 
   async function send() {
     if (!canSend) return;
     setSending(true);
     setError(null);
+    const correcting = editing !== undefined;
     try {
       await onSend(body.trim());
-      setBody('');
       onComposing?.(false);
-      if (area.current) area.current.style.height = 'auto';
+      // A correction saved: the draft written before it comes back. A letter sent: it was the draft.
+      if (!correcting) writeDraft(chatId, '');
+      restoreDraft();
     } catch (caught) {
       setError(errorKey(caught));
     } finally {
@@ -117,7 +155,8 @@ export function Composer({
 
   /** Writes the new text and puts the caret where React will have left it. */
   function replace(next: { body: string; caret: number }) {
-    setBody(next.body);
+    write(next.body);
+    completion.setCaret(next.caret);
     requestAnimationFrame(() => {
       if (!area.current) return;
       area.current.setSelectionRange(next.caret, next.caret);
@@ -126,6 +165,7 @@ export function Composer({
   }
 
   function onKeyDown(event: KeyboardEvent<HTMLTextAreaElement>) {
+    if (completion.onKeyDown(event)) return;
     // While an IME composes (Japanese, Chinese...), Enter confirms the candidate, not the letter.
     if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) {
       event.preventDefault();
@@ -188,34 +228,18 @@ export function Composer({
           {text(error)}
         </p>
       )}
-      <div className="flex items-end gap-2">
-        {onAttach && (
-          <>
-            <input
-              ref={fileInput}
-              className={FILE_INPUT}
-              type="file"
-              multiple
-              // The paperclip is the Tab stop; the input stays in the tree for its own name.
-              tabIndex={-1}
-              aria-label={text('composer.attach')}
-              disabled={disabled}
-              onChange={(event) => {
-                onAttach([...(event.target.files ?? [])]);
-                event.target.value = '';
-              }}
-            />
-            <Button
-              variant="ghost"
-              className={TOOL}
-              aria-label={text('composer.attach')}
-              disabled={disabled}
-              onClick={() => fileInput.current?.click()}
-            >
-              <Paperclip size={18} aria-hidden />
-            </Button>
-          </>
+      {/* `relative`: the emoji matches float above the row. */}
+      <div className="relative flex items-end gap-2">
+        {completion.open && (
+          <EmojiSuggestions
+            id={completion.listId}
+            suggestions={completion.suggestions}
+            active={completion.active}
+            optionId={completion.optionId}
+            onPick={completion.pick}
+          />
         )}
+        {onAttach && <AttachButton className={TOOL} disabled={disabled} onAttach={onAttach} />}
         <Button
           ref={emojiButton}
           variant="ghost"
@@ -239,12 +263,19 @@ export function Composer({
           placeholder={placeholder}
           aria-label={placeholder}
           onChange={(event) => {
-            setBody(event.target.value);
+            write(event.target.value);
+            completion.setCaret(event.target.selectionStart);
             onComposing?.(event.target.value.length > 0);
             grow(event.target);
           }}
           onKeyDown={onKeyDown}
+          onSelect={(event) => completion.setCaret(event.currentTarget.selectionStart)}
           onPaste={onPaste}
+          aria-autocomplete="list"
+          aria-controls={completion.open ? completion.listId : undefined}
+          aria-activedescendant={
+            completion.open ? completion.optionId(completion.active) : undefined
+          }
           disabled={sending || disabled}
         />
         <Button

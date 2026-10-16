@@ -93,6 +93,12 @@ export interface ChatsService {
   hideForMe(chatId: string, messageId: string): Promise<void>;
   markRead(chatId: string): Promise<void>;
   /**
+   * The user's "tell others when I have read their letters": off, reading a chat sends no read
+   * marker (XEP-0333 `displayed`); delivery receipts still leave. On by default; the UI tells the
+   * stored choice at startup.
+   */
+  setSendReadMarkers(send: boolean): void;
+  /**
    * Call with `true` on every keystroke, `false` when the draft is cleared. The service sends
    * `composing` at most once per `COMPOSING_REPEAT_MS`, `paused` after `PAUSED_AFTER_MS` of
    * silence, and nothing extra when the message is sent (the message itself says `active`).

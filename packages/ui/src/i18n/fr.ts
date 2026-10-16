@@ -179,7 +179,18 @@ export const fr: Record<MessageKey, string> = {
 
   'message.undecryptable':
     'Cette lettre a été scellée pour un autre appareil. Je ne peux pas l’ouvrir ici.',
-  'message.loadOlder': 'Charger les plus anciennes',
+  'message.action.copy': 'Copier le texte',
+  'message.copied': 'Texte copié.',
+  'conversation.newLetter': '1 nouvelle lettre',
+  'conversation.newLetters': '{count} nouvelles lettres',
+  'conversation.jumpToLatest': 'Revenir aux plus récentes',
+  'conversation.loadingOlder': 'Je vais chercher les lettres plus anciennes…',
+  'reaction.quick': 'Réagir avec {name}',
+  'composer.emojiSuggestions': 'Suggestions d’emoji',
+  'settings.privacy.readMarkers': 'Accusés de lecture',
+  'settings.privacy.sendReadMarkers': 'Prévenir les autres quand j’ai lu leurs lettres',
+  'settings.privacy.sendReadMarkersHint':
+    'Si c’est désactivé, personne ne voit que tu as lu ses lettres. On voit toujours qu’une lettre t’est arrivée.',
   'message.retry': 'Réessayer',
   'message.actions': 'Plus d’actions',
   'message.action.edit': 'Modifier',

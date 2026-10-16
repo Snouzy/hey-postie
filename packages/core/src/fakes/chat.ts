@@ -25,6 +25,8 @@ export class FakeChat implements ChatRepository {
   private openId: string | null = null;
   readonly sent: Message[] = [];
   readonly markedRead: string[] = [];
+  /** Whether reading a chat would tell the peer (`setSendReadMarkers`). */
+  sendReadMarkers = true;
   readonly reactions: Array<{ chatId: string; messageId: string; emojis: string[] }> = [];
   readonly uploaded: Array<{ chatId: string; name: string }> = [];
   maxUpload: number | null = 5 * 1024 * 1024;
@@ -182,6 +184,10 @@ export class FakeChat implements ChatRepository {
     this.markedRead.push(chatId);
     const chat = this.chats.get(chatId);
     if (chat && chat.unreadCount > 0) this.notifyChat({ ...chat, unreadCount: 0 });
+  }
+
+  setSendReadMarkers(send: boolean): void {
+    this.sendReadMarkers = send;
   }
 
   onMessage(handler: MessageHandler): () => void {

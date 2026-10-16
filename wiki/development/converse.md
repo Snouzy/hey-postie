@@ -91,6 +91,12 @@ sorted by `time`; `chat.messages.fetched` is a promise. Message attrs (parser
   `displayed` marker when allowed).
 - Known bug in 14.0.0: incoming markers for our messages are saved under the literal key
   `field_name` (`plugins/chat/model.js:230`), so `marker_displayed` never appears on 1:1 messages.
+  The parsed attributes also keep the marker's id (`marker_id`) but not its type. Worked around in
+  `read-markers.ts`, see "Read markers" in §12.
+- Which markers leave is the `send_chat_markers` setting, read at every send
+  (`model-with-messages.js:839`, `muc.js:282`), so `api.settings.set` changes it on a running
+  instance; it also covers the `displayed` marker a hall sends on its own when it is shown
+  (`onHiddenChange` → `clearUnreadMsgCounter`).
 - Typing: `chat.setChatState('composing')`; incoming in `chat.notifications.get('chat_state')`.
 
 ## 5. MAM
@@ -273,6 +279,33 @@ installed package and by `repositories.test.ts`, which drives the real headless 
   link in a body is just a link. A file name whose percent-escapes are malformed is kept raw.
 - `room.ts` (with `room-join.ts`, `room-browse.ts`, `room-notify.ts`, `room-mappers.ts`): rooms,
   see §14.
+
+### Read markers (XEP-0333)
+
+_Added 2026-10-17 (spec 2026-10-17-conversation-slack, Lot A item 2). Sources: `read-markers.ts`,
+`chat.ts`, `engine.ts`, `mappers.ts`, `read-markers.test.ts`, `read.contract.test.ts`._
+
+- **Out.** `ChatRepository.setSendReadMarkers(send)` → `ConverseEngine.setSendDisplayed`: the
+  setting is `['received', 'displayed', 'acknowledged']` when on (Converse's default),
+  `['received']` when off. Delivery receipts (XEP-0184) and `received` markers are unchanged. The
+  engine remembers the choice made before Converse loads and starts with it.
+- **In.** Two parse hooks, `parseMessage` (a plain stanza; for a carbon Converse hands the unwrapped
+  message) and `parseEncryptedContent` (the decrypted OMEMO 2 `<content>`), add `marker_type` to
+  the attributes from the marker element, a direct child of the stanza or of the content's
+  `<payload>` (`chatMarker`: the highest of `received` < `displayed` < `acknowledged`). The
+  `message` event (live stanzas only, `plugins/chat/utils.js:169`) then calls `applyReadMarker`:
+  a `displayed` or `acknowledged` marker from the peer (`sender: 'them'`, not archived) that names
+  one of our letters (`msgid` or `origin_id`) moves the chat's **read line**, the chat attribute
+  `read_until` (that letter's `time`, persisted with the chat), forward only. Every letter of ours
+  at or before it is read: in a direct chat, a reader who displayed a letter saw the earlier ones.
+  The letters that crossed the line are emitted through `onMessageUpdate`, and the chat through
+  `onChatChange` (its preview's stamp).
+- `toMessage` maps an outgoing letter to `read` when its `time` is at or before
+  `context.readUntil` (direct chats only; halls have no read line), after `failed` and before
+  `delivered`.
+- Not handled: markers in the archive (MAM) and markers in halls (a hall's markers say who read,
+  per occupant: not in the contract). A marker for a letter not loaded in the chat's collection
+  moves nothing; the next one will.
 
 ### Contract test
 

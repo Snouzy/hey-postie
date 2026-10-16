@@ -8,7 +8,7 @@ import { Composer } from './Composer';
 function renderComposer(onSend = vi.fn(async () => {})) {
   const { core } = setupCore();
   const onComposing = vi.fn();
-  renderWithCore(<Composer onSend={onSend} onComposing={onComposing} />, core);
+  renderWithCore(<Composer chatId="bob@x.org" onSend={onSend} onComposing={onComposing} />, core);
   const area = screen.getByRole('textbox');
   return { onSend, onComposing, area };
 }
@@ -80,7 +80,10 @@ describe('Composer', () => {
 
   it('keeps the file input out of the Tab order: the paperclip is the one stop', () => {
     const { core } = setupCore();
-    renderWithCore(<Composer onSend={vi.fn(async () => {})} onAttach={vi.fn()} />, core);
+    renderWithCore(
+      <Composer chatId="bob@x.org" onSend={vi.fn(async () => {})} onAttach={vi.fn()} />,
+      core,
+    );
     const [input, button] = screen.getAllByLabelText('Attach a parcel');
     expect(input).toHaveAttribute('type', 'file');
     expect(input).toHaveAttribute('tabindex', '-1');
@@ -94,12 +97,17 @@ describe('Composer drafts', () => {
     const { core } = setupCore();
     const onSend = vi.fn(async () => {});
     const onDraftTaken = vi.fn();
-    const { rerender } = renderWithCore(<Composer onSend={onSend} />, core);
+    const { rerender } = renderWithCore(<Composer chatId="bob@x.org" onSend={onSend} />, core);
     const area = screen.getByRole('textbox');
     fireEvent.change(area, { target: { value: 'Hi Bob,' } });
     rerender(
       <CoreProvider core={core} locale="en">
-        <Composer onSend={onSend} draft="On my way" onDraftTaken={onDraftTaken} />
+        <Composer
+          chatId="bob@x.org"
+          onSend={onSend}
+          draft="On my way"
+          onDraftTaken={onDraftTaken}
+        />
       </CoreProvider>,
     );
     expect(area).toHaveValue('Hi Bob,\nOn my way');
@@ -114,6 +122,7 @@ describe('Composer editing', () => {
     const onCancelEdit = vi.fn();
     renderWithCore(
       <Composer
+        chatId="bob@x.org"
         onSend={vi.fn(async () => {})}
         editing={{ id: 'm1', body: 'Helo' }}
         onCancelEdit={onCancelEdit}
@@ -131,7 +140,10 @@ describe('Composer editing', () => {
   it('asks for my last letter on ↑ in an empty field', () => {
     const { core } = setupCore();
     const onEditLast = vi.fn();
-    renderWithCore(<Composer onSend={vi.fn(async () => {})} onEditLast={onEditLast} />, core);
+    renderWithCore(
+      <Composer chatId="bob@x.org" onSend={vi.fn(async () => {})} onEditLast={onEditLast} />,
+      core,
+    );
     const area = screen.getByRole('textbox');
     fireEvent.keyDown(area, { key: 'ArrowUp' });
     expect(onEditLast).toHaveBeenCalledTimes(1);

@@ -28,6 +28,15 @@ export function completeNick(
   };
 }
 
+/**
+ * A `:shortcode` being typed: a colon at the start of a word, then at least two letters, digits,
+ * `_`, `+` or `-` up to the caret. Its start is the colon's index. `:)` or `a:bc` are not one.
+ */
+export function shortcodeAt(body: string, caret: number): { start: number; query: string } | null {
+  const query = body.slice(0, caret).match(/(?:^|\s):([\w+-]{2,})$/)?.[1];
+  return query ? { start: caret - query.length - 1, query } : null;
+}
+
 /** `text` put where the caret is (replacing a selection); the caret lands after it. */
 export function insertAt(
   body: string,

@@ -8,6 +8,7 @@ import type {
   Reaction,
 } from '../../contracts/types';
 import type { ChatModel, ContactModel, MessageModel, ModelLike } from './models';
+import { isRead } from './read-markers';
 
 /** Pure mappings from Converse models to the contract types. Attribute names: converse.md §3-4. */
 
@@ -24,6 +25,8 @@ export interface MessageContext {
    * JID in a direct chat, our occupant id or `room@service/nick` in a room. Unknown → nothing is `mine`.
    */
   ownReactionJid?: string;
+  /** A direct chat's read line (`read-markers.ts`): our letters up to it were displayed by the peer. */
+  readUntil?: string;
 }
 
 export function toMessage(model: MessageModel, context: MessageContext): Message {
@@ -126,6 +129,7 @@ export function toContact(model: ContactModel): Contact {
 function status(model: ModelLike, direction: 'in' | 'out', context: MessageContext): MessageStatus {
   if (model.get('is_error') && model.get('error_type') !== 'Decryption') return 'failed';
   if (direction === 'in') return context.unread === 0 ? 'read' : 'delivered';
+  if (isRead(model.get('time'), context.readUntil)) return 'read';
   // `received` is only set on our own messages when a XEP-0184 receipt arrives (§4).
   if (model.get('received')) return 'delivered';
   return context.authenticated ? 'sent' : 'pending';

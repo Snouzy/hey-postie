@@ -307,6 +307,16 @@ describe('chats.markRead', () => {
   });
 });
 
+describe('chats.setSendReadMarkers', () => {
+  it('tells the repository whether read markers leave, on by default', () => {
+    expect(deps.fakes.chat.sendReadMarkers).toBe(true);
+    core.chats.setSendReadMarkers(false);
+    expect(deps.fakes.chat.sendReadMarkers).toBe(false);
+    core.chats.setSendReadMarkers(true);
+    expect(deps.fakes.chat.sendReadMarkers).toBe(true);
+  });
+});
+
 describe('chats.toggleReaction', () => {
   it('adds my emoji, then removes it, keeping the reactions of others', async () => {
     const chat = await core.chats.open('bob@x.org');

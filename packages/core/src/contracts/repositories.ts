@@ -93,6 +93,11 @@ export interface ChatRepository {
   /** Takes one of our messages back (XEP-0424). `NotRetractable` when it cannot be addressed. */
   retract(chatId: string, messageId: string): Promise<void>;
   markRead(chatId: string): Promise<void>;
+  /**
+   * Whether XEP-0333 `displayed` markers leave when chats are read (direct chats and halls);
+   * delivery receipts (`received`) are not affected. On until told otherwise.
+   */
+  setSendReadMarkers(send: boolean): void;
   /** Sends our chat state (XEP-0085): `composing` when true, `paused` when false. */
   setComposing(chatId: string, composing: boolean): Promise<void>;
   onMessage(handler: (message: Message) => void): () => void;

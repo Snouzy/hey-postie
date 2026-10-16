@@ -34,7 +34,7 @@ sentence).
 | Welcome | `screens/Welcome.tsx` | Postie `happy`, "Sign in", "Create an account". |
 | Sign in | `screens/SignIn.tsx` | JID, password, "Remember me"; an optional `prefill` (JID and sentence) when coming from account creation. On blur of a valid-looking JID, asks `accounts.rememberedPassword` and prefills. While `connecting`: Postie `delivering`, form disabled. |
 | Create account | `screens/CreateAccount.tsx`, `screens/RegistrationForm.tsx` | Two steps, see [Create account](#create-account) below. |
-| Main | `screens/Main.tsx` | Three columns: `Sidebar`, `Conversation` (keyed by chat id, so drafts and in-flight loads stay with their chat; or the `EmptyState` with Postie `waving`, "Pick a chat"; or the [first-launch card](#first-launch)), optional `Details`. Owns the selected chat, the open dialog and the error sentence of background actions. Subscribes to `chat.requested` (notification click, `xmpp:` link) and opens the chat if it is not listed yet. |
+| Main | `screens/Main.tsx` | Three columns: `Sidebar`, `Conversation` (keyed by chat id, so in-flight loads stay with their chat, and the composer's draft is kept per chat, see [Inside a conversation](#inside-a-conversation); or the `EmptyState` with Postie `waving`, "Pick a chat"; or the [first-launch card](#first-launch)), optional `Details`. Owns the selected chat, the open dialog and the error sentence of background actions. Subscribes to `chat.requested` (notification click, `xmpp:` link) and opens the chat if it is not listed yet. |
 
 ## Create account
 
@@ -163,10 +163,10 @@ avatar, status sentence, logs) is left out rather than shown dead.
 | Account | Display name and JID (read-only until a service can change them), whether the password is kept (`accounts.rememberedPassword`, nothing said until the keychain answers), "Sign out" and "Delete my account…" with a plain hint. | `accounts.signOut` through `Main`; delete opens `DeleteAccountDialog` **in place of** the window and comes back to it on close (focus on that button). |
 | Appearance | Radios "Follow the system" / "Light" / "Dark" (`fieldset` + `legend`). | `data-theme` on `<html>` (`'light'` / `'dark'`, removed for "system": the tokens then follow `prefers-color-scheme`), remembered in `localStorage` `hey-postie:theme`. |
 | Notifications | A checkbox "Show the letter in notifications" with its explanation, and a line saying a hall's bell is set in the hall's own pane. | `core.notifications.setShowPreview(value)`; remembered in `localStorage` `hey-postie:notify-preview` (`off`, or absent). |
-| Privacy and encryption | `OwnDevices` with this device's fingerprint stated above the list, then how trust works (spec 3.6: blind trust, verify after comparing, own devices follow the same rule), why a stranger's picture waits for a click, and the blocked contacts (`BlockedContacts`: one sentence on what blocking does, the JIDs in monospace with "Unblock" each, "Nobody is blocked." when the list is empty). | The rules live in the core; the sentences only explain them. The blocklist is the server's: `contacts.blocked()`, refreshed on the `contacts.blocked` event, `contacts.unblock(jid)`. |
+| Privacy and encryption | `OwnDevices` with this device's fingerprint stated above the list, then how trust works (spec 3.6: blind trust, verify after comparing, own devices follow the same rule), why a stranger's picture waits for a click, and the blocked contacts (`BlockedContacts`: one sentence on what blocking does, the JIDs in monospace with "Unblock" each, "Nobody is blocked." when the list is empty). First of all, **Read stamps**: a checkbox "Tell others when I have read their letters", on by default, with its hint (`aria-describedby`): off, nobody sees that you read their letters, they still see that a letter reached you. | The rules live in the core; the sentences only explain them. Read stamps: `core.chats.setSendReadMarkers(value)` (no XEP-0333 `displayed` marker leaves when off; delivery receipts still do), remembered in `localStorage` `hey-postie:read-markers` (`off`, or absent) and told to the core at the first render of `App`, like the notification preview. The blocklist is the server's: `contacts.blocked()`, refreshed on the `contacts.blocked` event, `contacts.unblock(jid)`. |
 | Claude | `AssistantSection` (added 2026-10-16, [spec](../specs/2026-10-16-mcp-design.md)): the access as four radios (Off, Read my chats, Read my chats and prepare letters that I send myself, Read, prepare and also send when I ask Claude) with the sentence that what Claude reads leaves the computer for Anthropic; "Let Claude read sealed chats too" (disabled while off); the port (saved on blur or Enter, Postie's sentence on `InvalidPort`); "Copy the Claude Code command" (disabled while off; the token is copied, never shown) and "New token" in `danger`. | `core.assistant` holds the rule; the choice is remembered in `localStorage` `hey-postie:assistant` (JSON) and told to the core at the first render of `App`. The token stays in the keychain. |
 | (Claude's drafts) | `draft_message` emits `assistant.draft` then `chat.requested`: `Main` keeps the draft and opens the chat, `Conversation` hands it to `Composer`, which adds it below what is already written (never replacing it), focuses the field and leaves the sending to the user. The desktop app brings the window up. | Added 2026-10-16, replacing the send approval dialog at the author's request: the user can edit what Claude wrote. |
-| (Edit and delete) | `MessageActions` in each bubble; `Conversation` owns the letter being corrected (the composer shows a kraft "Editing a letter" band, Enter saves through `chats.edit`, Esc cancels, ↑ in an empty field picks my last editable letter) and the `DeleteMessageDialog`; "Delete for me" goes straight to `chats.hideForMe`, and `useMessages` drops the letter on `message.hidden`. | [Spec](../specs/2026-10-16-edit-delete-messages-design.md), section 8. |
+| (Edit and delete) | `MessageActions` in each bubble ("Copy text" first, handled by `MessageList`, see [Inside a conversation](#inside-a-conversation)); `Conversation` owns the letter being corrected (the composer shows a kraft "Editing a letter" band, Enter saves through `chats.edit`, Esc cancels, ↑ in an empty field picks my last editable letter) and the `DeleteMessageDialog`; "Delete for me" goes straight to `chats.hideForMe`, and `useMessages` drops the letter on `message.hidden`. | [Spec](../specs/2026-10-16-edit-delete-messages-design.md), section 8. |
 | Advanced | About: "Hey Postie <version>", the AGPL-3.0 note, "Website" and "Source code" links, a "Licenses" button. | `version` prop of `App` ("dev" when absent). Links go through `onOpenLink`. |
 
 **Keyboard.** `SettingsNav` is a vertical `role="tablist"` (six panels: past the two-or-three
@@ -242,11 +242,10 @@ A letter sent from here reaches the list through `message.received`, which `chat
 for the sent message (the repository reports no echo of our own letters), so a send from anywhere
 else (the smoke driver, a notification reply) shows in the open chat too (fixed 2026-10-16, issue 1
 of the [night report](../reports/2026-10-16-night-report.md)). A parcel still joins the list through
-`add`, from the uploads store. "Load older" is offered only once the first page is a full one
-(`MESSAGE_PAGE_SIZE`, exported by the core): a shorter page is the whole history.
-`MessageList` keeps the viewport still when an older page lands by anchoring on the message that
-was first before the load (`data-message-id`) and restoring its offset once something sits above
-it; a letter arriving at the bottom meanwhile does not consume the anchor. `useChats` numbers its requests so an older `list()` answer never
+`add`, from the uploads store. Older letters are asked for only once the first page is a full one
+(`MESSAGE_PAGE_SIZE`, exported by the core): a shorter page is the whole history. How the list
+scrolls (older pages near the top, arrivals while scrolled up) is in
+[Inside a conversation](#inside-a-conversation). `useChats` numbers its requests so an older `list()` answer never
 overwrites a newer one.
 
 ## Typing (XEP-0085)
@@ -675,6 +674,59 @@ core's `files` service; the UI only shows and asks._
   `download`, the object URL revoked a minute later); the desktop app routes it to a native save
   dialog.
 
+## Inside a conversation
+
+_Added 2026-10-17, Lot A of the [spec](../specs/2026-10-17-conversation-slack-design.md) (Buzz's
+conversation screen as the model, our tokens). Sources: `core/drafts.ts`, `components/Composer.tsx`,
+`useEmojiCompletion.ts`, `EmojiSuggestions.tsx`, `composerText.ts`, `MessageList.tsx`,
+`useMessageScroll.ts`, `NewLettersPill.tsx`, `QuickReactions.tsx`, `MessageActions.tsx`,
+`data/emoji.ts`, `i18n/dates.ts`, `core/settings.ts`; tests in `ComposerDrafts.test.tsx`,
+`EmojiCompletion.test.tsx`, `MessageList.test.tsx`, `QuickReactions.test.tsx`,
+`settings/ReadMarkers.test.tsx`, `data/emoji.test.ts`, `i18n/dates.test.ts`._
+
+- **A draft per chat.** What is typed in the composer is the chat's draft (`core/drafts.ts`: a
+  `Map` by chat id, in memory for the session only, never in `localStorage` or IndexedDB: a draft
+  may be the text of a sealed letter). `Composer` (it takes `chatId`) starts from it, writes every
+  change to it, and empties it when the letter is sent. A correction is not a draft: while a letter
+  is being edited, nothing is written, and Esc or saving brings the draft back. Claude's draft
+  (`assistant.draft`) joins the chat's draft below what is there; during a correction it waits in
+  the draft and appears when the correction is done. `App` forgets every draft on sign-out.
+- **Runs and days.** A run (one sender's letters, the name and avatar above it in a hall) breaks
+  when the same sender writes again more than 10 minutes after their previous letter
+  (`RUN_GAP_MS`). The day separators read "Today", "Yesterday", the weekday within the last week
+  ("Monday", capitalised in French), then the long date, in the locale; a day ahead of our clock
+  gets its date.
+- **Scrolled up** (`useMessageScroll`). Within 32px of the bottom the list follows the letters
+  as they arrive. Further up, the view does not move: the letters from others that arrived since
+  the reader was last at the bottom are counted, and a pill sits at the bottom of the list
+  (`NewLettersPill`): "3 new letters ↓" in navy, or "Jump to the latest" with nothing new. It
+  brings the reader to the bottom and puts the focus on the list (`role="log"`); scrolling down by
+  hand releases the count too. A letter of mine always brings the view to the bottom. The letters
+  are in the list all along (only the view holds still), so the log still announces them.
+- **Older letters** load by themselves when the reader scrolls within 200px of the top, one page
+  at a time, the view held on the letter that was first (as before); "Fetching older letters…"
+  floats over the top of the list meanwhile (outside the scroller, so nothing is pushed down). No
+  more to load: nothing is shown. The "Load older" button is gone.
+- **Quick emojis.** Before "React", the toolbar offers three emojis: the viewer's most used, from
+  a per-viewer count of the emojis reacted with from a toolbar (`localStorage`
+  `hey-postie:emoji-usage`, a JSON object emoji → count, the 24 most used kept, same `try/catch`
+  rules as the other choices; `favouriteEmojis`), filled up with 👍 ❤️ 😂. Each is a button named
+  "React with <shortname>". Reacting from the toolbar (quick emoji, the quick row or the picker)
+  counts; toggling a pill does not.
+- **Copy text**, first in the "⋯" menu of a letter with a readable text (not a parcel alone, a
+  deleted letter or one sealed for another device): `navigator.clipboard.writeText(body)`, then
+  "Text copied." for two seconds in a small chip over the bottom of the list, inside an
+  `aria-live="polite"` region that is always there. A refused clipboard says nothing; the text stays
+  selectable.
+- **`:shortcode` completion.** A colon at the start of a word and two characters or more
+  (`shortcodeAt`) open a list of up to eight matches above the composer (`suggestEmojis`: the
+  shortnames that start with it, shortest first, then those that contain it or whose keywords do).
+  The text field keeps the focus: `aria-autocomplete="list"`, `aria-controls` and
+  `aria-activedescendant` point at the `role="listbox"`. Up and Down move (wrapping), Enter or Tab
+  put the emoji in place of the shortcode, a click too; Esc closes the list until another
+  shortcode is started (and closes nothing else: not the correction, not the details pane). While
+  the list is closed, Enter sends as always.
+
 ## Emoji
 
 _Added 2026-10-15. Sources: `scripts/trim-emoji.mjs`, `data/emoji.json`, `data/emoji.ts`,
@@ -706,15 +758,17 @@ _Added 2026-10-15. Sources: `scripts/trim-emoji.mjs`, `data/emoji.json`, `data/e
   the grid; Esc closes. The
   smile button of the `Composer` opens it; a pick runs `insertAt` on the textarea's selection,
   closes the picker and focuses the text with the caret after the emoji (the same
-  `requestAnimationFrame` dance as the nick completion). `:short` autocompletion is not built.
+  `requestAnimationFrame` dance as the nick completion). `:shortcode` completion in the composer:
+  see [Inside a conversation](#inside-a-conversation).
 
 ## Reactions
 
 _Added 2026-10-15. Sources: `components/ReactionBar.tsx`, `Reactions.tsx`, `core/useMessages.ts`,
 `components/Reactions.test.tsx`._
 
-- Every bubble that is not `pending` has a hover / focus toolbar with one button, "React"
-  (lucide `smile-plus`), at the top corner away from the edge. It opens a `Popover` with the
+- Every bubble that is not `pending` has a hover / focus toolbar at the top corner away from the
+  edge: three quick emojis (`QuickReactions`, see [Inside a conversation](#inside-a-conversation)),
+  then "React" (lucide `smile-plus`), then the "⋯" menu. "React" opens a `Popover` with the
   `QUICK_EMOJIS` row (each button named by its shortname, the first one takes the focus) and
   "More emojis" (the whole `EmojiPicker`). Picking calls
   `chats.toggleReaction(chat.id, message.id, emoji)` through `useMessages.react`, closes and gives
@@ -909,8 +963,17 @@ chat with no letter and no button, "No hall here" when browsing finds nothing, "
 in the pane of a hall without a record and its close X), `DeleteAccountDialog.test.tsx`
 (two clicks away, button asleep until the JID matches, `deleteCurrent` recorded and Welcome
 shown, failure sentence, not closable while deleting, Esc with focus back on the row), `ChatList.test.tsx` (empty state with Postie and no button, "Start a chat" when handed, order, badge, sealed preview),
-`MessageList.test.tsx` (grouping, day labels, retry, undecryptable, links, load older),
-`Composer.test.tsx` (Enter / Shift+Enter, empty disabled, inline error),
+`MessageList.test.tsx` (grouping and its 10-minute break, day labels, retry, undecryptable, links,
+older letters near the top one page at a time with the loading line, copy with the polite
+confirmation, scrolled up: the view held, the count, the pill and the focus, the 32px tolerance, my
+own letter brought into view), `Composer.test.tsx` (Enter / Shift+Enter, empty disabled, inline
+error), `ComposerDrafts.test.tsx` (a draft per chat across a switch, forgotten when sent, given back
+after a correction, Claude's draft kept during one, all forgotten on sign-out),
+`EmojiCompletion.test.tsx` (`shortcodeAt`, the list after two characters with the active option,
+arrows, Enter and Tab and a click put the emoji in place, Esc then Enter sends),
+`QuickReactions.test.tsx` (👍 ❤️ 😂 by default, one click reacts and counts, the most used first,
+unreadable counts), `settings/ReadMarkers.test.tsx` (on by default, off told to the core and
+remembered, the stored choice told at startup), `data/emoji.test.ts`, `i18n/dates.test.ts`,
 `MessageRequests.test.tsx` (the group with the count and the rows most recent first, a stranger
 out of the chat list, the request screen with the note and the letters held, no composer and no
 bell, accept → roster and a normal chat among the chats, ignore → declined and put away until a

@@ -8,6 +8,9 @@ export interface SettingsValue {
   setLocale: (choice: LocaleChoice) => void;
   showPreview: boolean;
   setShowPreview: (value: boolean) => void;
+  /** Whether others are told when I have read their letters (XEP-0333 `displayed`). */
+  sendReadMarkers: boolean;
+  setSendReadMarkers: (value: boolean) => void;
   /** The app's version, from the desktop; "dev" when it did not say. */
   version: string;
 }

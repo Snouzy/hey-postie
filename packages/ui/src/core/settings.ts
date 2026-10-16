@@ -20,6 +20,10 @@ const WELCOMED_KEY = 'hey-postie:welcomed';
 const PANES_KEY = 'hey-postie:panes';
 const ASSISTANT_KEY = 'hey-postie:assistant';
 const FOLDED_GROUPS_KEY = 'hey-postie:folded-groups';
+const READ_MARKERS_KEY = 'hey-postie:read-markers';
+const EMOJI_USAGE_KEY = 'hey-postie:emoji-usage';
+/** Enough to know the favourites; the rest is forgotten. */
+const EMOJI_USAGE_KEPT = 24;
 
 /** The widths of the side columns of the main screen, and whether the sidebar is folded. */
 export interface PaneSizes {
@@ -63,6 +67,39 @@ export function readShowPreview(): boolean {
 
 export function writeShowPreview(value: boolean) {
   write(NOTIFY_PREVIEW_KEY, value ? null : 'off');
+}
+
+/** "Tell others when I have read their letters": on unless the user turned it off (a rule of the core). */
+export function readSendReadMarkers(): boolean {
+  return read(READ_MARKERS_KEY) !== 'off';
+}
+
+export function writeSendReadMarkers(value: boolean) {
+  write(READ_MARKERS_KEY, value ? null : 'off');
+}
+
+/** How many times the viewer reacted with each emoji from a letter's toolbar: their quick row. */
+export function readEmojiUsage(): Record<string, number> {
+  try {
+    const parsed: unknown = JSON.parse(read(EMOJI_USAGE_KEY) ?? '{}');
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return {};
+    return Object.fromEntries(
+      Object.entries(parsed).filter(
+        (entry): entry is [string, number] => typeof entry[1] === 'number' && entry[1] > 0,
+      ),
+    );
+  } catch {
+    return {};
+  }
+}
+
+export function recordEmojiUse(emoji: string) {
+  const usage = readEmojiUsage();
+  usage[emoji] = (usage[emoji] ?? 0) + 1;
+  const kept = Object.entries(usage)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, EMOJI_USAGE_KEPT);
+  write(EMOJI_USAGE_KEY, JSON.stringify(Object.fromEntries(kept)));
 }
 
 /** Whether this account has already seen the first-launch card. */

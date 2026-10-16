@@ -21,18 +21,22 @@ function fullPage(deps: ReturnType<typeof setupCore>['deps']) {
 }
 
 describe('useMessages', () => {
-  it('offers to load older letters only when the first page is full', async () => {
+  it('asks for older letters at the top only when the first page is full', async () => {
     const short = renderConversation();
+    const shortLoad = vi.spyOn(short.core.chats, 'loadOlder');
     short.deps.fakes.chat.receive({ chatId: CHAT.id, fromJid: 'bob@example.org', body: 'only' });
     await screen.findByText('only');
-    expect(screen.queryByRole('button', { name: 'Load older' })).not.toBeInTheDocument();
+    fireEvent.scroll(screen.getByRole('log'));
+    expect(shortLoad).not.toHaveBeenCalled();
     short.view.unmount();
 
     const full = setupCore();
+    const fullLoad = vi.spyOn(full.core.chats, 'loadOlder');
     fullPage(full.deps);
     renderConversation(full);
     await screen.findByText('letter 0');
-    expect(screen.getByRole('button', { name: 'Load older' })).toBeInTheDocument();
+    await act(async () => fireEvent.scroll(screen.getByRole('log')));
+    expect(fullLoad).toHaveBeenCalledTimes(1);
   });
 
   it('lets an update that arrives during the first load win over the loaded page', async () => {
@@ -63,7 +67,7 @@ describe('useMessages', () => {
     vi.spyOn(core.chats, 'loadOlder').mockReturnValue(page.promise);
     renderConversation(setup);
     await screen.findByText('recent');
-    fireEvent.click(screen.getByRole('button', { name: 'Load older' }));
+    fireEvent.scroll(screen.getByRole('log'));
     act(() => deps.fakes.chat.update({ ...old, body: 'old final' }));
     await act(async () => page.resolve([old]));
     expect(screen.getByText('old final')).toBeInTheDocument();

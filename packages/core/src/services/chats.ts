@@ -170,6 +170,9 @@ export function createChatsService(
     markRead(chatId) {
       return deps.chat.markRead(chatId);
     },
+    setSendReadMarkers(send) {
+      deps.chat.setSendReadMarkers(send);
+    },
     setComposing(chatId, composing) {
       if (composing) typing.keystroke(chatId);
       else typing.cleared(chatId);

@@ -1,21 +1,25 @@
 import type { Message } from '@hey-postie/core';
-import { Ellipsis, EyeOff, Gavel, Pencil, Trash2 } from 'lucide-react';
+import { Copy, Ellipsis, EyeOff, Gavel, Pencil, Trash2 } from 'lucide-react';
 import { type FocusEvent, useEffect, useRef, useState } from 'react';
 import { useText } from '../core/CoreProvider';
 import { Button } from './Button';
 import { Popover } from './Popover';
 
 /** What the user can do with a letter from its hover toolbar. */
-export type MessageAction = 'edit' | 'deleteForMe' | 'deleteForEveryone' | 'moderate';
+export type MessageAction = 'copy' | 'edit' | 'deleteForMe' | 'deleteForEveryone' | 'moderate';
 
 const ITEM =
   'flex cursor-pointer items-center gap-2 rounded-sm border-none bg-transparent p-2 text-left whitespace-nowrap text-ink hover:bg-paper focus-visible:bg-paper data-[tone=danger]:text-red';
 
-/** The actions a letter offers: mine can be edited and taken back, anyone's can be hidden. */
+/**
+ * The actions a letter offers: a text that can be read can be copied, mine can be edited and
+ * taken back, anyone's can be hidden.
+ */
 export function actionsFor(message: Message, canModerate: boolean): MessageAction[] {
   if (message.status === 'pending') return [];
   const mine = message.direction === 'out' && message.status !== 'failed' && !message.retracted;
-  const actions: MessageAction[] = [];
+  const readable = message.body && !message.retracted && message.encryption !== 'undecryptable';
+  const actions: MessageAction[] = readable ? ['copy'] : [];
   if (mine && message.body && message.encryption !== 'undecryptable') actions.push('edit');
   actions.push('deleteForMe');
   if (mine) actions.push('deleteForEveryone');
@@ -23,7 +27,13 @@ export function actionsFor(message: Message, canModerate: boolean): MessageActio
   return actions;
 }
 
-const ICONS = { edit: Pencil, deleteForMe: EyeOff, deleteForEveryone: Trash2, moderate: Gavel };
+const ICONS = {
+  copy: Copy,
+  edit: Pencil,
+  deleteForMe: EyeOff,
+  deleteForEveryone: Trash2,
+  moderate: Gavel,
+};
 
 /**
  * The "⋯" of a bubble's hover toolbar and its menu. The focus goes to the first item on open and

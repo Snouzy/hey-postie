@@ -2,7 +2,9 @@
 
 _Written from a study of Buzz's conversation screen (its `desktop/src`, read 2026-10-16) against
 Hey Postie's, with what XMPP and Converse 14 offer for each point. Asked by the author: "the same
-reverse-engineering as for halls, inside a hall or a conversation". Lot A in progress._
+reverse-engineering as for halls, inside a hall or a conversation". Lot A built on 2026-10-17: see
+[ui.md](../development/ui.md#inside-a-conversation) and
+[converse.md](../development/converse.md#read-markers-xep-0333)._
 
 ## 1. What the study found in Hey Postie
 

@@ -115,7 +115,7 @@ export function Conversation({
     if (last) setEditing({ id: last.id, body: last.body });
   }
 
-  function act(message: Message, action: MessageAction) {
+  function act(message: Message, action: Exclude<MessageAction, 'copy'>) {
     if (action === 'edit') setEditing({ id: message.id, body: message.body });
     else if (action === 'deleteForMe') {
       core.chats
@@ -262,6 +262,7 @@ export function Conversation({
         {typingNames.length > 0 && typingLine(text, typingNames)}
       </p>
       <Composer
+        chatId={chat.id}
         onSend={sendOrSave}
         editing={editing}
         onCancelEdit={() => setEditing(undefined)}

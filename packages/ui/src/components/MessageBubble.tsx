@@ -1,6 +1,8 @@
 import type { Message, MessageStatus } from '@hey-postie/core';
 import { AlertCircle, Check, CheckCheck, Clock, Stamp } from 'lucide-react';
 import { useLocale, useText } from '../core/CoreProvider';
+import { recordEmojiUse } from '../core/settings';
+import type { Emoji } from '../data/emoji';
 import { formatTime } from '../i18n/dates';
 import { cn } from '../lib/cn';
 import { Attachments, type SaveFile } from './Attachments';
@@ -8,6 +10,7 @@ import { Button } from './Button';
 import { EditHistory } from './EditHistory';
 import { Linkify } from './Linkify';
 import { actionsFor, type MessageAction, MessageActions } from './MessageActions';
+import { QuickReactions } from './QuickReactions';
 import { ReactionBar } from './ReactionBar';
 import { Reactions } from './Reactions';
 
@@ -55,6 +58,8 @@ interface MessageBubbleProps {
   onAction?: ((message: Message, action: MessageAction) => void) | undefined;
   /** In a hall the user moderates: someone else's letter can be removed. */
   canModerate?: boolean;
+  /** The viewer's favourite emojis, offered in the toolbar before "React". */
+  quickEmojis?: Emoji[];
 }
 
 export function MessageBubble({
@@ -67,6 +72,7 @@ export function MessageBubble({
   onShowDevices,
   onAction,
   canModerate = false,
+  quickEmojis = [],
 }: MessageBubbleProps) {
   const text = useText();
   const locale = useLocale();
@@ -78,6 +84,12 @@ export function MessageBubble({
     !message.retracted && (sealed || message.body.length > 0 || message.attachments.length === 0);
   const incoming = message.direction === 'in';
   const { status } = message;
+
+  /** A reaction from the toolbar counts toward the viewer's favourites. */
+  function reactFromToolbar(emoji: string) {
+    recordEmojiUse(emoji);
+    onReact(message, emoji);
+  }
 
   return (
     <div
@@ -93,7 +105,8 @@ export function MessageBubble({
       )}
       {message.status !== 'pending' && !message.retracted && (
         <div className={cn(TOOLS, 'flex gap-1', incoming ? 'right-2' : 'left-2')}>
-          <ReactionBar onReact={(emoji) => onReact(message, emoji)} />
+          <QuickReactions emojis={quickEmojis} onReact={reactFromToolbar} />
+          <ReactionBar onReact={reactFromToolbar} />
           {onAction && (
             <MessageActions
               actions={actionsFor(message, canModerate)}

@@ -54,6 +54,15 @@ describe('toMessage', () => {
     expect(toMessage(model(own), context).direction).toBe('out');
   });
 
+  it('maps own messages at or before the read line to read, later ones as before', () => {
+    const own = { ...incoming, sender: 'me', received: '2026-10-15T10:00:01Z' };
+    const read = { ...context, readUntil: '2026-10-15T10:00:00.000Z' };
+    expect(toMessage(model(own), read).status).toBe('read');
+    const later = { ...own, time: '2026-10-15T10:05:00.000Z' };
+    expect(toMessage(model(later), read).status).toBe('delivered');
+    expect(toMessage(model({ ...own, is_error: true }), read).status).toBe('failed');
+  });
+
   it('maps errors to failed, except decryption errors which are undecryptable', () => {
     expect(toMessage(model({ ...incoming, is_error: true }), context).status).toBe('failed');
     const sealed = toMessage(

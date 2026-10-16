@@ -5,6 +5,7 @@ import type { ConverseEngine, Loaded } from './engine';
 import { isRoom, toChat, toMessage } from './mappers';
 import type { ChatModel, MessageModel } from './models';
 import { REACTIONS_NS, sendReactions } from './reactions';
+import { addMarkerType, applyReadMarker, READ_UNTIL } from './read-markers';
 import {
   AESGCM_OVERHEAD_BYTES,
   discoverUploadService,
@@ -60,6 +61,27 @@ export class ConverseChatRepository implements ChatRepository {
       this.survivors = new Set(models.filter(isChat));
     });
     engine.on('chatBoxesFetched', () => this.catchUp());
+    // Converse keeps a marker's id but not its type: the hooks add it, `message` applies it.
+    engine.on('parseMessage', addMarkerType);
+    engine.on('parseEncryptedContent', addMarkerType);
+    engine.on('message', (data) => this.onReadMarker(data));
+  }
+
+  /** A peer read our letters up to one of them: they and the chat's preview change status. */
+  private onReadMarker(data: unknown): void {
+    const { attrs, chatbox } = (data ?? {}) as { attrs?: unknown; chatbox?: ChatModel | null };
+    if (!chatbox || isRoom(chatbox) || !attrs || typeof attrs !== 'object') return;
+    const read = applyReadMarker(chatbox, attrs as Record<string, unknown>);
+    if (read.length === 0) return;
+    for (const model of this.displayable(read)) {
+      for (const handler of this.updateHandlers) handler(this.mapMessage(model, chatbox));
+    }
+    this.emitChat(chatbox);
+  }
+
+  /** Off: no `displayed` marker leaves, in direct chats and halls alike (see the engine). */
+  setSendReadMarkers(send: boolean): void {
+    this.engine.setSendDisplayed(send);
   }
 
   /**
@@ -391,11 +413,13 @@ export class ConverseChatRepository implements ChatRepository {
     const authenticated = this.loaded?.api.connection.authenticated() === true;
     const unread = Number(chat.get(isRoom(chat) ? 'num_unread_general' : 'num_unread')) || 0;
     const ownReactionJid = this.loaded?.env.u.reactions?.getOwnReactionJID(chat);
+    const readUntil = chat.get(READ_UNTIL);
     const context = {
       chatId: String(chat.get('jid')),
       authenticated,
       unread,
       ...(ownReactionJid ? { ownReactionJid } : {}),
+      ...(typeof readUntil === 'string' && !isRoom(chat) ? { readUntil } : {}),
     };
     return toMessage(
       model,
