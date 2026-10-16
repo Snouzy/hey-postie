@@ -96,8 +96,8 @@ sentences use.
 - Verified on 2026-10-17: unit tests, a fake endpoint, and the release binary against the real
   `packages/mcp` handler over the core fakes. **Not yet** against a running app's Rust listener
   (another session's dev window held the single instance); the guard's rules are unit-tested.
-- At the "read" level the app lets `react_to_message`, `mark_chat_read` and `set_presence`
-  through (`packages/mcp/src/tools/write.ts` checks no level for them); the skill says so as it is.
+- The "read" level used to let `react_to_message`, `mark_chat_read` and `set_presence` through;
+  fixed on 2026-10-17: they need the drafting level, like `hide_message`.
 
 - In the App Store (sandboxed) build, the app data dir sits in the app's container
   (`~/Library/Containers/com.snouzylabs.heypostie/Data/Library/Application Support/…`); the CLI

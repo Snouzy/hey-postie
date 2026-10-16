@@ -30,8 +30,8 @@ arguments. This page holds what `--help` cannot.
 | Level | You may |
 |---|---|
 | Off | nothing (exit 2) |
-| Read | `chats list/get`, `messages list`, `contacts find`, `chats mark-read`, `messages react`, `presence set` |
-| Read and draft | the above, plus `messages draft` and `messages hide` |
+| Read | `chats list/get`, `messages list`, `contacts find` |
+| Read and draft | the above, plus `messages draft`, `messages hide`, `messages react`, `chats mark-read`, `presence set` |
 | Read, draft and send | the above, plus `messages send`, `messages edit`, `messages retract` |
 
 Sealed (end-to-end encrypted) chats are hidden unless the user includes them; a hidden chat looks

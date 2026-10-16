@@ -20,6 +20,12 @@ async function chatOrContact(core: Core, ref: string): Promise<Chat | Answer> {
 /** Claude Code asks the user on every call of a tool carrying this, whatever the permissions. */
 const ASK_EVERY_TIME = { 'anthropic/requiresUserInteraction': true };
 
+/** The read level only reads: anything that changes state (even on this device only) needs more. */
+const readOnly = (core: Core): boolean => core.assistant.getSettings().mode === 'read';
+const readOnlyRefusal = refusal(
+  'Claude may only read in Hey Postie. Tell the user they can allow more in Settings › Claude.',
+);
+
 export function registerWriteTools(server: McpServer, core: Core) {
   server.registerTool(
     'draft_message',
@@ -176,11 +182,7 @@ export function registerWriteTools(server: McpServer, core: Core) {
     async ({ chat: ref, message_id }) => {
       const notOnline = offline(core);
       if (notOnline) return notOnline;
-      if (core.assistant.getSettings().mode === 'read') {
-        return refusal(
-          'Claude may only read in Hey Postie. Tell the user they can allow more in Settings › Claude.',
-        );
-      }
+      if (readOnly(core)) return readOnlyRefusal;
       try {
         const chat = await findChat(core, ref);
         if (isAnswer(chat)) return chat;
@@ -213,6 +215,7 @@ export function registerWriteTools(server: McpServer, core: Core) {
     async ({ chat: ref, message_id, emoji }) => {
       const notOnline = offline(core);
       if (notOnline) return notOnline;
+      if (readOnly(core)) return readOnlyRefusal;
       try {
         const chat = await findChat(core, ref);
         if (isAnswer(chat)) return chat;
@@ -240,6 +243,7 @@ export function registerWriteTools(server: McpServer, core: Core) {
     async ({ chat: ref }) => {
       const notOnline = offline(core);
       if (notOnline) return notOnline;
+      if (readOnly(core)) return readOnlyRefusal;
       try {
         const chat = await findChat(core, ref);
         if (isAnswer(chat)) return chat;
@@ -275,6 +279,7 @@ export function registerWriteTools(server: McpServer, core: Core) {
     async ({ show, status }) => {
       const notOnline = offline(core);
       if (notOnline) return notOnline;
+      if (readOnly(core)) return readOnlyRefusal;
       try {
         const account = await core.accounts.setPresence(status ? { show, status } : { show });
         return answer(`Presence is now ${account.presence?.show ?? show}.`);

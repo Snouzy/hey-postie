@@ -83,6 +83,10 @@ one Claude Code rule (`mcp__hey-postie__read_*` and so on) while writes keep ask
 | `mark_chat_read` | Mark a chat read. | `chats.markRead` | | | ✓ |
 | `set_presence` | Available / away / do not disturb, with an optional status. | `accounts.setPresence` | | | ✓ |
 
+The read level only reads: every tool that changes something, even on this device only (hide,
+react, mark read, presence), is refused there (fixed 2026-10-17; react, mark read and presence
+were let through before).
+
 All tools: `openWorldHint: false` except `send_message`, `react_to_message` and `set_presence` (other
 people see them). Decisions of the author on 2026-10-16, after trying an approval dialog in the app:
 `draft_message` is the default way to write (the user edits and sends), and direct sending is a

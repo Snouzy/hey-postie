@@ -213,4 +213,22 @@ describe('editing and deleting', () => {
     expect((await t.core.chats.messages('bob@x.org')).map((m) => m.id)).not.toContain(theirs?.id);
     expect(t.deps.fakes.chat.retracted).toEqual([]);
   });
+
+  it('reacts, marks read and sets the presence only from the drafting mode on', async () => {
+    const theirs = (await t.core.chats.messages('bob@x.org'))[0];
+    const calls = [
+      () =>
+        t.call('react_to_message', {
+          chat: 'bob@x.org',
+          message_id: theirs?.id ?? '',
+          emoji: '👍',
+        }),
+      () => t.call('mark_chat_read', { chat: 'bob@x.org' }),
+      () => t.call('set_presence', { show: 'away' }),
+    ];
+    for (const call of calls) expect((await call()).isError).toBe(true);
+    expect((await t.core.chats.messages('bob@x.org'))[0]?.reactions).toEqual([]);
+    t.core.assistant.setSettings({ mode: 'readAndDraft' });
+    for (const call of calls) expect((await call()).isError).toBe(false);
+  });
 });
