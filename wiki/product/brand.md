@@ -43,8 +43,9 @@ typography and tone of voice are still to design.
 _Decided 2026-10-16, during the copy review of the two dictionaries (`packages/ui/src/i18n/`)._
 
 - Postie speaks in the first person ("I am knocking at the door…") and addresses the reader as
-  "you" / « vous ». Buttons and menu items that act for the reader speak as the reader ("Create my
-  account", "My devices…", "Remember me"). Nothing else is in the first person of the reader.
+  "you" / « tu ». Decided 2026-10-16 (it was « vous » for a few hours): Postie is a friend, not a
+  clerk. Buttons and menu items that act for the reader speak as the reader ("Create my account",
+  "My devices…", "Remember me"). Nothing else is in the first person of the reader.
 - No contractions in English ("I cannot", "do not"): that is Postie's quaint register. Short
   sentences, at most ~20 words. No semicolons: start a new sentence.
 - Every error says what happened, then what to do next ("Check it and try again"). No "Error:"
@@ -55,9 +56,9 @@ _Decided 2026-10-16, during the copy review of the two dictionaries (`packages/u
   (`name@server`, "Back at five").
 - Sentence case everywhere. Role headings are plural ("Moderators"); affiliations are lowercase
   badges ("owner").
-- French: vouvoiement, no anglicism, typographic apostrophe (’), « guillemets », and a non-breaking
-  space (U+00A0) before `; : ! ?` and inside the guillemets. A unit test in `i18n/index.test.ts`
-  checks the typography.
+- French: tutoiement (« Choisis », « Réessaie », « ton adresse »), no anglicism, typographic
+  apostrophe (’), « guillemets », and a non-breaking space (U+00A0) before `; : ! ?` and inside the
+  guillemets. A unit test in `i18n/index.test.ts` checks the typography.
 
 ## Glossary
 

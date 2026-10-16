@@ -67,6 +67,8 @@ When the protocol behavior is unclear, look at how [Gajim](https://github.com/ga
 - Leaving a room must be reachable from the room row as well as from its details pane.
 - Encryption on by default when the contact has a key (spec 3.6, unchanged).
 - Big item for the night: the marketing site skeleton (hey-postie.com), after the product items.
+- Postie tutoie in French (« tu peux tutoyer, fais-en une règle »): a friend, not a clerk. The
+  rule lives in [brand.md](brand.md), "Voice".
 
 ## Points to check
 
