@@ -184,6 +184,64 @@ was first before the load (`data-message-id`) and restoring its offset once some
 it; a letter arriving at the bottom meanwhile does not consume the anchor. `useChats` numbers its requests so an older `list()` answer never
 overwrites a newer one.
 
+## Message requests
+
+_Added 2026-10-16 (decision of the author, "Night of 2026-10-16": like Signal, accept / ignore /
+block; nothing of a stranger's is loaded or notified until accepted). Sources:
+`core/useRequests.ts`, `components/RequestList.tsx`, `MessageRequest.tsx`,
+`BlockContactDialog.tsx`, `screens/Main.tsx`, `components/Sidebar.tsx`, `screens/MessageRequests.test.tsx`._
+
+The rules live in the core: `contacts.requests()` holds the pending subscription requests (name and
+sentence already sanitized), `Chat.fromStranger` marks a direct chat whose peer is not in the
+address book, the notifications service stays silent for them and `files.autoLoad` refuses their
+pictures. The UI adds one rule of its own, in `isRequest(chat)` (`core/useRequests.ts`): **a
+stranger's chat is a request only while their letter is the last one.** A chat the user opened with
+someone outside the address book, or answered, is an ordinary chat with a composer.
+
+- **`useRequests(chats)`**: `contacts.requests()` on mount, again on every `contact.requested` and
+  `contact.updated` (accepting removes one), merged by `requestRows` with the strangers' chats
+  into one row per JID (`RequestRow`: name, note, `requested`, the chat when they wrote, `at` =
+  their last letter or the moment the request was first seen; the contract carries no time).
+  Rows are sorted most recent first. Ignored and blocked JIDs go into a `hidden` set kept for the
+  session (`hide`), since the service has no notion of "ignored" for a chat; a new
+  `contact.requested` for that JID, or a new incoming letter from them, brings the row back.
+  `useChats` also re-reads the list on `contact.updated`: whether a chat is a stranger's depends
+  on the address book, and no `chat.updated` follows an accept.
+- **Sidebar**: `RequestList` above the chats (Chats tab only): a heading button
+  (`aria-expanded`, folded by default) "Message requests" with the count on stamp yellow, then
+  one row per stranger (name, time, their note or last letter as preview); arrows move between
+  rows with `ChatList.moveWithArrows`. `ChatList` receives the chats **minus** the requests, so a
+  stranger's letter never sits among the chats; the search filters both lists by name. No rows:
+  no group at all (a plain absence, the empty-state illustrations are another lane's).
+- **`Main`** keeps `requestJid` next to `selected`; `select(chat)` routes a chat that is a
+  request (from the list, a `chat.requested` event, or `chats.open` from the "New chat" dialog or
+  a contact click) to the request screen, and the screen also takes over when a stranger's
+  letter lands in the chat that is open. The request's chat, when there is one, is still told to
+  `notifications.setOpenChat` and `chats.markRead`.
+- **`MessageRequest`**: name, JID, Postie's explanation (nothing of theirs rings or loads until
+  accepted), their note as text (`<blockquote>`, React escapes it, no HTML), what accepting means,
+  then three buttons, disabled while a call is in flight, a failure as a `role="alert"` sentence:
+  - **Accept** → `contacts.accept(jid)`, then `Main.openWith(jid)`: the roster now holds them, so
+    `chats.open` comes back without `fromStranger` and the chat opens as a normal one, listed
+    among the chats.
+  - **Ignore** → `contacts.ignore(jid)` only when a request is pending (declining someone who
+    never asked would send a stray stanza), then `hide(jid)` and back to the empty state.
+  - **Block…** → `BlockContactDialog`, the one confirmation: their name in the sentence (the
+    server drops everything they send: letters, parcels, requests), Cancel and a `danger`
+    "Block"; the dialog calls `contacts.block(jid)` itself, not closable in flight, a refusal keeps
+    it open with Postie's sentence. Then `hide(jid)`, `requests.refresh()` and the empty state.
+  - Their letters, when they wrote, sit below in the ordinary `MessageList` (`HeldLetters`,
+    keyed by the chat, on `useMessages`): the existing `Attachments` path keeps a stranger's
+    picture behind "Load image" (`files.autoLoad` says no). No composer: one answers after accepting.
+- **Not built**: a "Blocked contacts" list in Settings > Privacy. `ContactsService` exposes
+  `block` and `unblock` but no way to list the blocked JIDs, so there is nothing to show; it
+  comes with a contract change (`contacts.blocked()`), in its own pull request first.
+
+**Points to check.** `Chat.fromStranger` says "not in the roster", not "they wrote first": if the
+user starts a chat with a non-contact and the other side answers, their answer is the last letter
+and the chat moves to the requests group until the user replies again or accepts. A `wroteFirst`
+flag from the service would settle it (checked on 2026-10-16).
+
 ## Rooms (halls)
 
 _Added 2026-10-15, leaving from the row added 2026-10-16. Sources: `components/JoinRoom.tsx`,
@@ -485,7 +543,12 @@ links, link through `onOpenLink`, grouping and sorting), `DeleteAccountDialog.te
 (two clicks away, button asleep until the JID matches, `deleteCurrent` recorded and Welcome
 shown, failure sentence, not closable while deleting, Esc with focus back on the row), `ChatList.test.tsx` (order, badge, sealed preview),
 `MessageList.test.tsx` (grouping, day labels, retry, undecryptable, links, load older),
-`Composer.test.tsx` (Enter / Shift+Enter, empty disabled, inline error), `Main.test.tsx`
+`Composer.test.tsx` (Enter / Shift+Enter, empty disabled, inline error),
+`MessageRequests.test.tsx` (the group with the count and the rows most recent first, a stranger
+out of the chat list, the request screen with the note and the letters held, no composer and no
+bell, accept → roster and a normal chat among the chats, ignore → declined and put away until a
+new request, block with the confirmation (Cancel first) → blocklist and a later request dropped,
+no group when nobody is at the door), `Main.test.tsx`
 (empty state, markRead and notification rules, new chat dialog, contacts, sign out through the
 account menu),
 `LeaveRoom.test.tsx` ("More" only on a hall row, the menu with the focus on its item, right-click,

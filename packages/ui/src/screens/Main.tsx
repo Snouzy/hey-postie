@@ -8,6 +8,7 @@ import { DetailsPane } from '../components/DetailsPane';
 import { JoinRoom } from '../components/JoinRoom';
 import { LeaveRoomDialog } from '../components/LeaveRoomDialog';
 import { Licenses } from '../components/Licenses';
+import { MessageRequest } from '../components/MessageRequest';
 import { MyDevices } from '../components/MyDevices';
 import { NewChat } from '../components/NewChat';
 import { Sidebar } from '../components/Sidebar';
@@ -17,6 +18,7 @@ import { useCore, useText } from '../core/CoreProvider';
 import { useChats } from '../core/useChats';
 import { useContacts } from '../core/useContacts';
 import { useCoreEvent } from '../core/useCoreEvent';
+import { isRequest, type RequestRow, useRequests } from '../core/useRequests';
 import { roomChat, useRooms, withRooms } from '../core/useRooms';
 import { useUploads } from '../core/useUploads';
 import type { MessageKey } from '../i18n';
@@ -51,6 +53,7 @@ export function Main({ account, onOpenLink, onSaveFile, onLeave }: MainProps) {
   const contacts = useContacts();
   const uploads = useUploads();
   const [selected, setSelected] = useState<Chat | null>(null);
+  const [requestJid, setRequestJid] = useState<string | null>(null); // the open message request
   const [dialog, setDialog] = useState<OpenDialog>(null);
   const [leavingRoom, setLeavingRoom] = useState<Room | null>(null); // from a room row's menu
   const [settingsSection, setSettingsSection] = useState<SettingsSection>('general');
@@ -64,10 +67,16 @@ export function Main({ account, onOpenLink, onSaveFile, onLeave }: MainProps) {
 
   // The list is the fresh source once the chat is in it (title, unread count).
   const chats = withRooms(directChats, rooms);
-  const chat = selected ? (chats.find((c) => c.id === selected.id) ?? selected) : null;
+  const requests = useRequests(chats);
+  const selectedChat = selected ? (chats.find((c) => c.id === selected.id) ?? selected) : null;
+  // A stranger's chat shows the request screen, even if their letter came while it was open.
+  const wanted =
+    requestJid ?? (selectedChat && isRequest(selectedChat) ? selectedChat.peerJid : null);
+  const request = wanted ? requests.rows.find((row) => row.jid === wanted) : undefined;
+  const chat = request ? null : selectedChat;
   const contact = chat ? contacts.find((c) => c.jid === chat.peerJid) : undefined;
   const room = chat?.kind === 'room' ? rooms.find((r) => r.jid === chat.id) : undefined;
-  const chatId = chat?.id ?? null;
+  const chatId = chat?.id ?? request?.chat?.id ?? null;
 
   useEffect(() => {
     core.notifications.setOpenChat(chatId);
@@ -102,15 +111,26 @@ export function Main({ account, onOpenLink, onSaveFile, onLeave }: MainProps) {
   // A notification click or an `xmpp:` link asks for a chat, by id (the bare JID for a direct chat).
   useCoreEvent('chat.requested', ({ chatId: requested }) => {
     const known = chats.find((c) => c.id === requested);
-    if (known) setSelected(known);
+    if (known) select(known);
     else void openWith(requested);
   });
+
+  /** A chat from the list, or a stranger's chat that belongs to the requests group. */
+  function select(next: Chat) {
+    setRequestJid(isRequest(next) ? next.peerJid : null);
+    setSelected(next);
+  }
+
+  function selectRequest(row: RequestRow) {
+    setRequestJid(row.jid);
+    setSelected(null);
+  }
 
   async function openWith(jid: string) {
     try {
       const opened = await core.chats.open(jid);
       await refresh();
-      setSelected(opened);
+      select(opened);
       setDialog(null);
       setError(null);
     } catch (caught) {
@@ -160,11 +180,14 @@ export function Main({ account, onOpenLink, onSaveFile, onLeave }: MainProps) {
         chats={chats}
         rooms={rooms}
         contacts={contacts}
-        selectedChatId={chatId}
+        requests={requests.rows}
+        selectedChatId={chat?.id ?? null}
+        selectedRequestJid={request?.jid ?? null}
         searchRef={searchRef}
         error={dialog ? null : error}
-        onSelectChat={setSelected}
+        onSelectChat={select}
         onSelectContact={(c: Contact) => void openWith(c.jid)}
+        onSelectRequest={selectRequest}
         onLeaveRoom={setLeavingRoom}
         onNewChat={() => setDialog('newChat')}
         onJoinRoom={() => setDialog('joinRoom')}
@@ -175,7 +198,27 @@ export function Main({ account, onOpenLink, onSaveFile, onLeave }: MainProps) {
         onDeleteAccount={() => setDialog('deleteAccount')}
         onSignInAgain={() => void leave('signIn')}
       />
-      {chat ? (
+      {request ? (
+        <MessageRequest
+          key={request.jid}
+          row={request}
+          // Accepted: the service put them in the address book; open the chat as a normal one.
+          onAccepted={(jid) => void openWith(jid)}
+          onIgnored={(jid) => {
+            requests.hide(jid);
+            setRequestJid(null);
+            setSelected(null);
+          }}
+          onBlocked={(jid) => {
+            requests.hide(jid);
+            void requests.refresh().catch(() => {});
+            setRequestJid(null);
+            setSelected(null);
+          }}
+          onOpenLink={onOpenLink}
+          onSaveFile={onSaveFile}
+        />
+      ) : chat ? (
         <Conversation
           // A new key per chat: the draft, the loaded messages and in-flight work stay with their chat.
           key={chat.id}

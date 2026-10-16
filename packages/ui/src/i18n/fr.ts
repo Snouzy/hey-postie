@@ -120,6 +120,22 @@ export const fr: Record<MessageKey, string> = {
   'details.confirm': 'Retirer',
   'conversation.log': 'Messages',
 
+  'requests.title': 'Demandes de messages',
+  'requests.waiting': 'en attente',
+  'requests.explain':
+    'Quelqu’un hors de votre carnet d’adresses voudrait vous écrire. Tant que vous n’avez pas décidé, je garde ses lettres ici : aucune sonnette, aucune image chargée.',
+  'requests.theirNote': 'Son mot',
+  'requests.accepting':
+    'Accepter l’ajoute à votre carnet d’adresses, lui permet de voir quand vous êtes là, et range cette discussion avec les autres.',
+  'requests.accept': 'Accepter',
+  'requests.ignore': 'Ignorer',
+  'requests.block': 'Bloquer…',
+  'requests.blockTitle': 'Bloquer',
+  'requests.confirmBlock':
+    'Bloquer {name} ? Le serveur jettera tout ce qu’il envoie : lettres, colis et demandes. Je n’en entendrai plus parler.',
+  'requests.confirm': 'Bloquer',
+  'requests.lettersHeld': 'Lettres gardées à la porte',
+
   'message.undecryptable':
     'Cette lettre a été scellée pour un autre appareil. Je ne peux pas l’ouvrir ici.',
   'message.loadOlder': 'Charger les plus anciens',

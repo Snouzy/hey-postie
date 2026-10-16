@@ -11,6 +11,19 @@ async function twoChats() {
   render(<App core={core} locale="en" />);
   await act(() => core.accounts.signIn({ jid: 'alice@x.org', password: 'pw', remember: false }));
   act(() => {
+    // A contact: a stranger's letter waits in the requests group, not in the chat list.
+    deps.fakes.roster.seed({
+      jid: 'bob@x.org',
+      name: 'bob',
+      presence: 'offline',
+      subscription: 'both',
+    });
+    deps.fakes.roster.seed({
+      jid: 'carol@x.org',
+      name: 'carol',
+      presence: 'offline',
+      subscription: 'both',
+    });
     deps.fakes.chat.receive({ chatId: 'bob@x.org', fromJid: 'bob@x.org', body: 'hi from bob' });
     deps.fakes.chat.receive({
       chatId: 'carol@x.org',

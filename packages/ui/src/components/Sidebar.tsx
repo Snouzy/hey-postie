@@ -2,12 +2,14 @@ import type { Account, Chat, Contact, Room } from '@hey-postie/core';
 import { Search } from 'lucide-react';
 import { type RefObject, useState } from 'react';
 import { useText } from '../core/CoreProvider';
+import { isRequest, type RequestRow } from '../core/useRequests';
 import type { MessageKey } from '../i18n';
 import { AccountMenu } from './AccountMenu';
 import { AddMenu } from './AddMenu';
 import { Button } from './Button';
 import { ChatList } from './ChatList';
 import { ContactList } from './ContactList';
+import { RequestList } from './RequestList';
 import styles from './Sidebar.module.css';
 
 export type SidebarTab = 'chats' | 'contacts';
@@ -18,12 +20,16 @@ interface SidebarProps {
   chats: Chat[];
   rooms: Room[];
   contacts: Contact[];
+  /** The message requests: strangers asking, or writing before asking. */
+  requests: RequestRow[];
   selectedChatId: string | null;
+  selectedRequestJid: string | null;
   searchRef: RefObject<HTMLInputElement | null>;
   /** A failed background action (sign out, opening a chat), in Postie's words. */
   error: MessageKey | null;
   onSelectChat: (chat: Chat) => void;
   onSelectContact: (contact: Contact) => void;
+  onSelectRequest: (row: RequestRow) => void;
   /** "Leave the hall…" from a room row. */
   onLeaveRoom: (room: Room) => void;
   onNewChat: () => void;
@@ -43,9 +49,14 @@ export function Sidebar(props: SidebarProps) {
   const [tab, setTab] = useState<SidebarTab>('chats');
   const [query, setQuery] = useState('');
   const needle = query.trim().toLowerCase();
+  // A stranger's chat waits in the requests group, not among the chats.
+  const listed = props.chats.filter((chat) => !isRequest(chat));
   const chats = needle
-    ? props.chats.filter((chat) => chat.title.toLowerCase().includes(needle))
-    : props.chats;
+    ? listed.filter((chat) => chat.title.toLowerCase().includes(needle))
+    : listed;
+  const requests = needle
+    ? props.requests.filter((row) => row.name.toLowerCase().includes(needle))
+    : props.requests;
   const contacts = needle
     ? props.contacts.filter((contact) => contact.name.toLowerCase().includes(needle))
     : props.contacts;
@@ -114,13 +125,20 @@ export function Sidebar(props: SidebarProps) {
 
       <div className={styles.body}>
         {tab === 'chats' ? (
-          <ChatList
-            chats={chats}
-            rooms={props.rooms}
-            selectedId={props.selectedChatId}
-            onSelect={props.onSelectChat}
-            onLeaveRoom={props.onLeaveRoom}
-          />
+          <>
+            <RequestList
+              rows={requests}
+              selectedJid={props.selectedRequestJid}
+              onSelect={props.onSelectRequest}
+            />
+            <ChatList
+              chats={chats}
+              rooms={props.rooms}
+              selectedId={props.selectedChatId}
+              onSelect={props.onSelectChat}
+              onLeaveRoom={props.onLeaveRoom}
+            />
+          </>
         ) : (
           <ContactList contacts={contacts} onSelect={props.onSelectContact} />
         )}

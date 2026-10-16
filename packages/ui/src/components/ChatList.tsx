@@ -110,7 +110,8 @@ function Badge({ mentions, unread }: { mentions: number; unread: number }) {
   return null;
 }
 
-function moveWithArrows(event: KeyboardEvent<HTMLUListElement>) {
+/** Up and Down move between the `button[data-row]` of a list; shared with `RequestList`. */
+export function moveWithArrows(event: KeyboardEvent<HTMLUListElement>) {
   if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') return;
   const rows = [...event.currentTarget.querySelectorAll<HTMLButtonElement>('button[data-row]')];
   const active = document.activeElement;
