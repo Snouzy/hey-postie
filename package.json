@@ -20,7 +20,8 @@
     "desktop:dev": "pnpm --filter @hey-postie/desktop dev",
     "desktop:build": "pnpm --filter @hey-postie/desktop bundle",
     "desktop:smoke": "pnpm --filter @hey-postie/desktop smoke",
-    "desktop:smoke:login": "pnpm --filter @hey-postie/desktop smoke:login"
+    "desktop:smoke:login": "pnpm --filter @hey-postie/desktop smoke:login",
+    "desktop:smoke:scenario": "pnpm --filter @hey-postie/desktop smoke:scenario"
   },
   "devDependencies": {
     "@biomejs/biome": "2.5.15",

@@ -47,6 +47,7 @@ tasks/             agents' plans and lessons, untracked
 | `pnpm desktop:dev` | Opens the app with Vite hot reload. |
 | `pnpm desktop:smoke` | Debug build, starts the app with `--smoke`, exits 0 when the webview has rendered. |
 | `pnpm desktop:smoke:login` | The same, plus a real sign-in as `alice` on the local Prosody (see the Desktop section). |
+| `pnpm desktop:smoke:scenario` | The scripted end-to-end scenario in the real app: `alice` in the Tauri window, `bob` from Node, direct and room messages both ways, a server restart and the reconnection (see the Desktop section). |
 | `pnpm check` | TypeScript, every package. |
 | `pnpm lint` | Biome (lint and format). `pnpm lint:fix` writes the fixes. |
 | `pnpm test` | Vitest, every package. |
@@ -209,6 +210,49 @@ pnpm --filter @hey-postie/desktop smoke:login
   relay, TLS trust, keychain, dev-server and Converse paths one by one; the cause was a browser
   tab on `localhost:1420` instead of the Tauri window (see the note above). The run stays as the
   regression gate for the whole sign-in path.
+
+### End-to-end scenario (`scripts/smoke-scenario.mjs`, driven `--smoke`)
+
+`pnpm desktop:smoke:scenario` goes further than the sign-in: it proves, in the real app, that
+messages travel both ways, that rooms work and that the app comes back after the server drops.
+
+```sh
+pnpm desktop:smoke:scenario
+# = tauri build --debug --no-bundle && NODE_EXTRA_CA_CERTS="$(mkcert -CAROOT)/rootCA.pem" node scripts/smoke-scenario.mjs
+```
+
+- The steps, in order, each with a timeout and a name that the failure line repeats: `server`
+  (Prosody of `tools/xmpp-server/` running or started, `users.sh` for alice and bob), `app`
+  (the debug build with `--smoke`, `HEY_POSTIE_SMOKE_LOGIN` and `HEY_POSTIE_SMOKE_DRIVE=1`),
+  `sign-in`, `bob` (the hand-written client of the contract tests,
+  `packages/core/src/repositories/converse/test-support/bobClient.ts`, over `wss://localhost:5281`),
+  `direct bob->alice` (the app reports `message-received`), `direct alice->bob` (the app sends
+  through `core.chats`, bob sees the stanza), `room join` (alice through `core.rooms.join` in
+  `rooms.localhost`, bob after her), `room bob->alice`, `room alice->bob`, `reconnect` (Prosody is
+  stopped and started again; the app must report a state other than `online`, then `online`
+  again within 60 s), the two direct exchanges again, `room leave` (so that no bookmark makes the
+  next sign-in rejoin). Exit 0 when all passed, 1 with `FAILED at step "<name>"` otherwise.
+- The driven mode is the third face of `--smoke` (`smoke.rs`): with `HEY_POSTIE_SMOKE_DRIVE=1`
+  (and a login, debug builds only) the app stays up after `smoke-online`, forwards every stdin
+  line to the webview as a `smoke-command` event, prints every `smoke-step` event as
+  `smoke: step {json}` on stderr, and exits on `quit` or when stdin closes (the driver dying
+  takes the app with it) or after 180 s. `app/smoke.ts` answers four commands (`open`, `send`,
+  `join`, `leave`, each acknowledged by a `done` or `failed` step) and reports `account` (state)
+  and `message-received` (chat id, message id, direction, nick) steps. Steps carry identifiers
+  only, never a body: the driver's output is safe to paste in a report.
+- Cleanup: bob leaves the room and closes, the app gets `quit` (SIGKILL after 5 s), and Prosody is
+  stopped only when this run started it.
+- Shared server: the built Prosody is git-ignored, so it lives in one checkout. Another folder is
+  used with `HEY_POSTIE_XMPP_SERVER_DIR=<checkout>/tools/xmpp-server`. When port 5222 is served by
+  a Prosody whose pidfile is not in that folder, the run stops at `server` and says so: `start.sh`
+  would start a second Prosody that fails to bind quietly, and the restart would stop the wrong
+  one (observed on 2026-10-16: the app kept talking to the other server and never saw a drop).
+- No new dependency: bob needs a `DOMParser`, which the driver borrows from `jsdom`, core's test
+  dependency, resolved from `packages/core`. Node 24 runs `bobClient.ts` directly (type stripping).
+- Observed on 2026-10-16 (debug build, Prosody 13.0.7 shared with the contract tests): the
+  thirteen steps passed in 5.4 s after the build. Around the restart the app reported
+  `connecting` (twice: the drop, then Converse's own retry) and `online` within a few seconds,
+  then both direct exchanges went through again.
 
 ### Transport (`app/repositories/transport.ts`)
 

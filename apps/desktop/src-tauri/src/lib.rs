@@ -66,6 +66,7 @@ pub fn run() {
     let smoke = std::env::args().any(|argument| argument == "--smoke");
     let login = smoke::login_from_env(smoke);
     let with_login = login.0.is_some();
+    let driven = smoke::driven_from_env(&login);
     keychain::install_platform_store();
 
     let app = tauri::Builder::default()
@@ -111,7 +112,7 @@ pub fn run() {
             tray::install(app.handle(), *app.state::<i18n::Language>())?;
             links::arm(app.handle());
             if smoke {
-                smoke::arm(app.handle().clone(), with_login);
+                smoke::arm(app.handle().clone(), with_login, driven);
             }
             Ok(())
         })

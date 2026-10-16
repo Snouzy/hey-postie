@@ -13,6 +13,7 @@
     "bundle": "tauri build",
     "smoke": "tauri build --debug --no-bundle && src-tauri/target/debug/hey-postie --smoke",
     "smoke:login": "HEY_POSTIE_SMOKE_LOGIN=alice@localhost:alice-pw RELAY_DEBUG=1 pnpm smoke",
+    "smoke:scenario": "tauri build --debug --no-bundle && NODE_EXTRA_CA_CERTS=\"$(mkcert -CAROOT)/rootCA.pem\" node scripts/smoke-scenario.mjs",
     "tauri": "tauri"
   },
   "dependencies": {
